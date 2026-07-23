@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Generador de Menús Digitales</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: linear-gradient(135deg, #0a0a0f 0%, #1a1a2e 100%);
+    color: #fff;
+    min-height: 100vh;
+    padding: 20px;
+  }
+  .container {
+    max-width: 800px;
+    margin: 0 auto;
+  }
+  .header-top {
+    text-align: center;
+    margin-bottom: 30px;
+    padding: 30px 20px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 20px;
+  }
+  .header-top h1 {
+    font-size: 28px;
+    font-weight: 800;
+    margin-bottom: 8px;
+    background: linear-gradient(135deg, #ff6b35, #ffd60a);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .header-top p {
+    color: #aaa;
+    font-size: 14px;
+  }
+  .card {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 20px;
+  }
+  .card-title {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 18px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .card-title .num {
+    width: 28px; height: 28px;
+    background: linear-gradient(135deg, #ff6b35, #ffd60a);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 700;
+  }
+  .field { margin-bottom: 16px; }
+  .field label {
+    display: block;
+    font-size: 13px;
+    color: #ccc;
+    margin-bottom: 6px;
+    font-weight: 500;
+  }
+  .field label .req { color: #ff6b35; }
+  .field input, .field textarea {
+    width: 100%;
+    padding: 12px 14px;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 10px;
+    color: #fff;
+    font-size: 14px;
+    font-family: inherit;
+    transition: border 0.2s;
+  }
+  .field input:focus, .field textarea:focus {
+    outline: none;
+    border-color: #ff6b35;
+  }
+  .field textarea { resize: vertical; min-height: 70px; }
+  .field .hint { font-size: 11px; color: #777; margin-top: 4px; }
+  .row { display: flex; gap: 12px; }
+  .row .field { flex: 1; }
+  .colors {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 10px;
+  }
+  .color-swatch {
+    aspect-ratio: 1;
+    border-radius: 12px;
+    cursor: pointer;
+    border: 3px solid transparent;
+    transition: all 0.2s;
+    position: relative;
+  }
+  .color-swatch.selected {
+    border-color: #fff;
+    transform: scale(1.05);
+  }
+  .color-swatch.selected::after {
+    content: '✓';
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    color: #fff;
+    font-size: 18px;
+    font-weight: 700;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+  }
+  .category {
+    background: rgba(0,0,0,0.2);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 14px;
+  }
+  .category-head {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  .category-head input { flex: 1; }
+  .btn-icon {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: #fff;
+    width: 42px; height: 42px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: all 0.2s;
+  }
+  .btn-icon:hover { background: rgba(255,255,255,0.12); }
+  .btn-icon.danger:hover { background: rgba(230,57,70,0.3); border-color: #e63946; }
+  .dish-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 100px 40px;
+    gap: 8px;
+    margin-bottom: 8px;
+    align-items: center;
+  }
+  .dish-row input {
+    padding: 9px 11px;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 8px;
+    color: #fff;
+    font-size: 13px;
+    font-family: inherit;
+  }
+  .dish-row input:focus { outline: none; border-color: #ff6b35; }
+  .dish-full {
+    grid-column: 1 / -1;
+  }
+  .btn-add-dish, .btn-add-cat {
+    background: rgba(255,107,53,0.15);
+    border: 1px dashed rgba(255,107,53,0.5);
+    color: #ff6b35;
+    padding: 10px;
+    border-radius: 10px;
+    cursor: pointer;
+    width: 100%;
+    font-size: 13px;
+    font-weight: 600;
+    margin-top: 6px;
+    transition: all 0.2s;
+  }
+  .btn-add-dish:hover, .btn-add-cat:hover {
+    background: rgba(255,107,53,0.25);
+  }
+  .btn-generate {
+    width: 100%;
+    background: linear-gradient(135deg, #ff6b35, #ffd60a);
+    color: #fff;
+    border: none;
+    padding: 18px;
+    border-radius: 14px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    margin-top: 10px;
+    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: 0 4px 20px rgba(255,107,53,0.3);
+  }
+  .btn-generate:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 28px rgba(255,107,53,0.45);
+  }
+  .btn-generate:active { transform: translateY(0); }
+  .toast {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%) translateY(120px);
+    background: #06d6a0;
+    color: #fff;
+    padding: 14px 24px;
+    border-radius: 12px;
+    font-weight: 600;
+    box-shadow: 0 8px 28px rgba(0,0,0,0.4);
+    transition: transform 0.3s;
+    z-index: 1000;
+  }
+  .toast.visible { transform: translateX(-50%) translateY(0); }
+  .toast.error { background: #e63946; }
+  @media (max-width: 600px) {
+    .dish-row {
+      grid-template-columns: 1fr 1fr;
+    }
+    .dish-row .price-input { grid-column: 1; }
+    .dish-row .remove-dish { grid-column: 2; }
+    .colors { grid-template-columns: repeat(3, 1fr); }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header-top">
+    <h1>Generador de Menús Digitales</h1>
+    <p>Crea un menú digital profesional con carrito y WhatsApp en minutos</p>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span class="num">1</span> Información del restaurante</div>
+    <div class="field">
+      <label>Nombre del restaurante <span class="req">*</span></label>
+      <input type="text" id="rName" placeholder="Ej: La Parrilla del Chef">
+    </div>
+    <div class="field">
+      <label>Descripción</label>
+      <textarea id="rDesc" placeholder="Ej: Auténtica cocina peruana con ingredientes frescos"></textarea>
+    </div>
+    <div class="field">
+      <label>Número de WhatsApp con código de país <span class="req">*</span></label>
+      <input type="text" id="rWhatsapp" placeholder="Ej: 51987654321">
+      <div class="hint">Solo números, sin + ni espacios. Ej: 51 para Perú, 34 para España, 52 para México</div>
+    </div>
+    <div class="field">
+      <label>URL del logo (opcional)</label>
+      <input type="text" id="rLogo" placeholder="https://...logo.png">
+    </div>
+    <div class="field">
+      <label>Color principal</label>
+      <div class="colors" id="colors"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span class="num">2</span> Categorías y platos</div>
+    <div id="categories"></div>
+    <button class="btn-add-cat" onclick="addCategory()">+ Agregar categoría</button>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span class="num">3</span> Generar menú</div>
+    <button class="btn-generate" onclick="generateMenu()">Generar Menú Digital</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ====== Color palette ======
+var COLORS = [
+  { hex: '#ff6b35', name: 'Naranja' },
+  { hex: '#e63946', name: 'Rojo' },
+  { hex: '#06d6a0', name: 'Verde' },
+  { hex: '#118ab2', name: 'Azul' },
+  { hex: '#9d4edd', name: 'Morado' },
+  { hex: '#ffd60a', name: 'Amarillo' }
+];
+var selectedColor = COLORS[0].hex;
+
+function renderColors() {
+  var container = document.getElementById('colors');
+  var html = '';
+  COLORS.forEach(function(c) {
+    var sel = c.hex === selectedColor ? ' selected' : '';
+    html += '<div class="color-swatch' + sel + '" style="background:' + c.hex + '" data-color="' + c.hex + '" title="' + c.name + '"></div>';
+  });
+  container.innerHTML = html;
+  container.querySelectorAll('.color-swatch').forEach(function(el) {
+    el.addEventListener('click', function() {
+      selectedColor = this.dataset.color;
+      renderColors();
+    });
+  });
+}
+
+// ====== Categories & dishes ======
+var categoryCounter = 0;
+
+function addCategory(name) {
+  var id = 'cat_' + (categoryCounter++);
+  var wrap = document.createElement('div');
+  wrap.className = 'category';
+  wrap.id = id;
+  wrap.innerHTML =
+    '<div class="category-head">' +
+      '<input type="text" class="cat-name" placeholder="Nombre de categoría (Ej: Entradas)">' +
+      '<button class="btn-icon danger" onclick="removeElement(\'' + id + '\')" title="Eliminar categoría">×</button>' +
+    '</div>' +
+    '<div class="dishes"></div>' +
+    '<button class="btn-add-dish" onclick="addDish(\'' + id + '\')">+ Agregar plato</button>';
+  document.getElementById('categories').appendChild(wrap);
+  if (name) wrap.querySelector('.cat-name').value = name;
+  addDish(id);
+  return id;
+}
+
+function addDish(catId) {
+  var cat = document.getElementById(catId);
+  var dishes = cat.querySelector('.dishes');
+  var id = 'dish_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
+  var row = document.createElement('div');
+  row.className = 'dish-row';
+  row.id = id;
+  row.innerHTML =
+    '<input type="text" class="d-name dish-full" placeholder="Nombre del plato">' +
+    '<input type="text" class="d-desc dish-full" placeholder="Descripción">' +
+    '<input type="text" class="d-img dish-full" placeholder="URL de imagen">' +
+    '<input type="number" class="d-price price-input" placeholder="S/ 0.00" step="0.10" min="0">' +
+    '<button class="btn-icon danger remove-dish" onclick="removeElement(\'' + id + '\')" title="Eliminar plato">×</button>';
+  dishes.appendChild(row);
+}
+
+function removeElement(id) {
+  var el = document.getElementById(id);
+  if (el) el.remove();
+}
+
+// ====== Toast ======
+function showToast(msg, isError) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast' + (isError ? ' error' : '') + ' visible';
+  setTimeout(function() { t.className = 'toast' + (isError ? ' error' : ''); }, 3000);
+}
+
+// ====== Validation & data collection ======
+function collectData() {
+  var name = document.getElementById('rName').value.trim();
+  var whatsapp = document.getElementById('rWhatsapp').value.trim();
+  if (!name) { showToast('Ingresa el nombre del restaurante', true); return null; }
+  if (!whatsapp) { showToast('Ingresa el número de WhatsApp', true); return null; }
+  if (!/^\d{8,15}$/.test(whatsapp)) { showToast('WhatsApp inválido. Solo dígitos, 8-15 números', true); return null; }
+
+  var categories = [];
+  var catEls = document.querySelectorAll('.category');
+  if (catEls.length === 0) { showToast('Agrega al menos una categoría', true); return null; }
+
+  for (var i = 0; i < catEls.length; i++) {
+    var catName = catEls[i].querySelector('.cat-name').value.trim();
+    if (!catName) { showToast('Toda categoría debe tener nombre', true); return null; }
+    var dishes = [];
+    var dishEls = catEls[i].querySelectorAll('.dish-row');
+    for (var j = 0; j < dishEls.length; j++) {
+      var dName = dishEls[j].querySelector('.d-name').value.trim();
+      var dPrice = parseFloat(dishEls[j].querySelector('.d-price').value);
+      if (!dName) { showToast('Todo plato debe tener nombre', true); return null; }
+      if (isNaN(dPrice) || dPrice < 0) { showToast('Precio inválido en: ' + dName, true); return null; }
+      dishes.push({
+        name: dName,
+        description: dishEls[j].querySelector('.d-desc').value.trim(),
+        price: dPrice,
+        image: dishEls[j].querySelector('.d-img').value.trim()
+      });
+    }
+    if (dishes.length === 0) { showToast('La categoría "' + catName + '" necesita al menos un plato', true); return null; }
+    categories.push({ name: catName, dishes: dishes });
+  }
+
+  return {
+    name: name,
+    description: document.getElementById('rDesc').value.trim(),
+    whatsapp: whatsapp,
+    logo: document.getElementById('rLogo').value.trim(),
+    color: selectedColor,
+    categories: categories
+  };
+}
+
+// ====== Menu template builder ======
+// IMPORTANT: Use string concatenation with + (no nested template literals)
+// to avoid quoting issues. Restaurant data is injected via JSON.stringify().
+
+function buildMenuHTML(data) {
+  var css = MENU_CSS();
+  var js = MENU_JS();
+  var html = '';
+  html += '<!DOCTYPE html>\n';
+  html += '<html lang="es">\n';
+  html += '<head>\n';
+  html += '<meta charset="UTF-8">\n';
+  html += '<meta name="viewport" content="width=device-width, initial-scale=1.0">\n';
+  html += '<title>' + escapeHtml(data.name) + '</title>\n';
+  html += '<style>' + css + '</style>\n';
+  html += '</head>\n';
+  html += '<body>\n';
+  html += '<div id="app"></div>\n';
+  html += '<script>\n';
+  html += 'var RESTAURANT = ' + JSON.stringify(data) + ';\n';
+  html += 'document.documentElement.style.setProperty("--accent", "' + data.color + '");\n';
+  html += js + '\n';
+  html += '</scr' + 'ipt>\n'; // split to avoid breaking this script
+  html += '</body>\n';
+  html += '</html>';
+  return html;
+}
+
+function escapeHtml(s) {
+  if (s == null) return '';
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+// ====== Menu CSS (kept as a single string) ======
+function MENU_CSS() {
+  var c = '';
+  c += '*{margin:0;padding:0;box-sizing:border-box;}';
+  c += 'body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;';
+  c += 'background:linear-gradient(135deg,#0a0a0f 0%,#1a1a2e 100%);';
+  c += 'color:#fff;min-height:100vh;padding-bottom:120px;';
+  c += '--accent:#ff6b35;}';
+  c += '.header{padding:28px 20px 20px;text-align:center;';
+  c += 'background:rgba(255,255,255,0.03);border-bottom:1px solid rgba(255,255,255,0.08);}';
+  c += '.logo{width:90px;height:90px;border-radius:50%;object-fit:cover;margin-bottom:12px;';
+  c += 'border:3px solid var(--accent);box-shadow:0 4px 20px rgba(0,0,0,0.3);}';
+  c += '.restaurant-name{font-size:26px;font-weight:800;margin-bottom:6px;letter-spacing:-0.5px;}';
+  c += '.restaurant-desc{color:#aaa;font-size:14px;margin-bottom:14px;max-width:400px;margin-left:auto;margin-right:auto;}';
+  c += '.open-badge{display:inline-flex;align-items:center;gap:6px;';
+  c += 'background:rgba(6,214,160,0.15);color:#06d6a0;';
+  c += 'padding:6px 14px;border-radius:20px;font-size:13px;font-weight:600;}';
+  c += '.open-badge::before{content:"";width:8px;height:8px;border-radius:50%;';
+  c += 'background:#06d6a0;animation:pulse 2s infinite;}';
+  c += '@keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.3;}}';
+  c += '.nav{position:sticky;top:0;background:rgba(10,10,15,0.92);';
+  c += 'backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);';
+  c += 'border-bottom:1px solid rgba(255,255,255,0.08);z-index:100;';
+  c += 'padding:12px 0;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;}';
+  c += '.nav::-webkit-scrollbar{display:none;}';
+  c += '.nav-inner{display:flex;gap:8px;padding:0 16px;}';
+  c += '.nav-item{white-space:nowrap;padding:8px 16px;';
+  c += 'background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);';
+  c += 'border-radius:20px;color:#ccc;font-size:14px;font-weight:500;';
+  c += 'cursor:pointer;transition:all 0.2s;}';
+  c += '.nav-item:hover{background:rgba(255,255,255,0.1);color:#fff;}';
+  c += '.nav-item.active{background:var(--accent);color:#fff;border-color:var(--accent);}';
+  c += '.section{padding:20px 16px 8px;}';
+  c += '.section-title{font-size:20px;font-weight:700;margin-bottom:14px;padding-left:4px;';
+  c += 'border-left:3px solid var(--accent);padding-left:10px;}';
+  c += '.dish{display:flex;gap:12px;background:rgba(255,255,255,0.04);';
+  c += 'border:1px solid rgba(255,255,255,0.06);border-radius:14px;padding:12px;';
+  c += 'margin-bottom:12px;transition:transform 0.2s,border-color 0.2s;';
+  c += 'animation:fadeIn 0.4s ease;}';
+  c += '.dish:hover{border-color:rgba(255,255,255,0.15);}';
+  c += '.dish:active{transform:scale(0.98);}';
+  c += '@keyframes fadeIn{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}';
+  c += '.dish-img{width:80px;height:80px;border-radius:10px;object-fit:cover;flex-shrink:0;';
+  c += 'background:rgba(255,255,255,0.05);}';
+  c += '.dish-info{flex:1;min-width:0;display:flex;flex-direction:column;}';
+  c += '.dish-name{font-size:16px;font-weight:600;margin-bottom:4px;}';
+  c += '.dish-desc{font-size:13px;color:#999;margin-bottom:8px;';
+  c += 'display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}';
+  c += '.dish-bottom{display:flex;justify-content:space-between;align-items:center;margin-top:auto;}';
+  c += '.dish-price{font-size:17px;font-weight:700;color:var(--accent);}';
+  c += '.add-btn{width:34px;height:34px;border-radius:50%;background:var(--accent);';
+  c += 'color:#fff;border:none;font-size:22px;cursor:pointer;';
+  c += 'display:flex;align-items:center;justify-content:center;';
+  c += 'transition:transform 0.2s;line-height:1;font-weight:400;}';
+  c += '.add-btn:hover{transform:scale(1.15);}';
+  c += '.add-btn:active{transform:scale(0.9);}';
+  c += '.cart{position:fixed;bottom:20px;left:50%;';
+  c += 'transform:translateX(-50%) translateY(140px);';
+  c += 'width:calc(100% - 32px);max-width:480px;';
+  c += 'background:var(--accent);color:#fff;border-radius:14px;';
+  c += 'padding:16px 20px;display:flex;justify-content:space-between;align-items:center;';
+  c += 'box-shadow:0 8px 32px rgba(0,0,0,0.5);cursor:pointer;';
+  c += 'transition:transform 0.3s ease;z-index:90;}';
+  c += '.cart.visible{transform:translateX(-50%) translateY(0);}';
+  c += '.cart-left{display:flex;align-items:center;gap:8px;font-weight:600;font-size:15px;}';
+  c += '.cart-count{background:rgba(255,255,255,0.25);padding:2px 10px;';
+  c += 'border-radius:12px;font-size:13px;font-weight:700;}';
+  c += '.cart-total{font-size:18px;font-weight:800;}';
+  c += '.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.75);';
+  c += 'backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);';
+  c += 'z-index:200;display:none;align-items:flex-end;justify-content:center;}';
+  c += '.modal-overlay.visible{display:flex;}';
+  c += '.modal{background:#1a1a2e;width:100%;max-width:500px;';
+  c += 'border-radius:20px 20px 0 0;padding:24px 20px;max-height:85vh;overflow-y:auto;';
+  c += 'animation:slideUp 0.3s ease;}';
+  c += '@keyframes slideUp{from{transform:translateY(100%);}to{transform:translateY(0);}}';
+  c += '.modal-title{font-size:22px;font-weight:700;margin-bottom:20px;text-align:center;}';
+  c += '.cart-item{display:flex;justify-content:space-between;align-items:center;';
+  c += 'padding:14px 0;border-bottom:1px solid rgba(255,255,255,0.08);gap:10px;}';
+  c += '.cart-item-info{flex:1;min-width:0;}';
+  c += '.cart-item-name{font-weight:600;font-size:15px;margin-bottom:2px;}';
+  c += '.cart-item-price{color:#999;font-size:13px;}';
+  c += '.qty-control{display:flex;align-items:center;gap:10px;}';
+  c += '.qty-btn{width:30px;height:30px;border-radius:50%;';
+  c += 'background:rgba(255,255,255,0.1);color:#fff;border:none;';
+  c += 'cursor:pointer;font-size:18px;line-height:1;transition:background 0.2s;}';
+  c += '.qty-btn:hover{background:rgba(255,255,255,0.2);}';
+  c += '.qty{min-width:24px;text-align:center;font-weight:600;}';
+  c += '.cart-item-total{font-weight:700;color:var(--accent);min-width:70px;text-align:right;}';
+  c += '.cart-empty{text-align:center;padding:40px 0;color:#666;font-size:14px;}';
+  c += '.cart-summary{margin-top:20px;padding-top:16px;border-top:2px solid rgba(255,255,255,0.1);}';
+  c += '.summary-row{display:flex;justify-content:space-between;margin-bottom:8px;font-size:15px;color:#ccc;}';
+  c += '.summary-total{font-size:20px;font-weight:700;margin-top:10px;color:#fff;}';
+  c += '.summary-total .amount{color:var(--accent);}';
+  c += '.wa-btn{width:100%;background:#25d366;color:#fff;border:none;';
+  c += 'padding:16px;border-radius:12px;font-size:16px;font-weight:700;';
+  c += 'cursor:pointer;margin-top:20px;display:flex;align-items:center;';
+  c += 'justify-content:center;gap:8px;transition:transform 0.2s;}';
+  c += '.wa-btn:hover{transform:translateY(-2px);}';
+  c += '.wa-btn:active{transform:translateY(0);}';
+  c += '.close-btn{width:100%;background:rgba(255,255,255,0.08);color:#fff;';
+  c += 'border:none;padding:12px;border-radius:12px;font-size:14px;';
+  c += 'cursor:pointer;margin-top:10px;transition:background 0.2s;}';
+  c += '.close-btn:hover{background:rgba(255,255,255,0.14);}';
+  c += '.qty-flash{animation:flash 0.4s ease;}';
+  c += '@keyframes flash{0%{transform:scale(1);}50%{transform:scale(1.4);color:var(--accent);}100%{transform:scale(1);}}';
+  c += '@media (min-width:600px){.dish{padding:16px;}.dish-img{width:100px;height:100px;}';
+  c += '.restaurant-name{font-size:32px;}}';
+  return c;
+}
+
+// ====== Menu JS (kept as a single string, no nested template literals) ======
+function MENU_JS() {
+  var s = '';
+  s += 'var cart = [];\n';
+  s += 'function escapeHtml(s){if(s==null)return "";return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/\'/g,"&#39;");}\n';
+  s += 'function formatPrice(n){return "S/ "+Number(n).toFixed(2);}\n';
+  s += 'function renderApp(){\n';
+  s += '  var app=document.getElementById("app");\n';
+  s += '  var html="";\n';
+  s += '  html+="<header class=\\\"header\\">";\n';
+  s += '  if(RESTAURANT.logo){html+="<img src=\\\""+escapeHtml(RESTAURANT.logo)+"\\\" class=\\\"logo\\\" alt=\\\"logo\\\" onerror=\\\"this.style.display=\\"none\\"\\"/>";}\n';
+  s += '  html+="<h1 class=\\\"restaurant-name\\\">"+escapeHtml(RESTAURANT.name)+"</h1>";\n';
+  s += '  if(RESTAURANT.description){html+="<p class=\\\"restaurant-desc\\\">"+escapeHtml(RESTAURANT.description)+"</p>";}\n';
+  s += '  html+="<span class=\\\"open-badge\\\">Abierto ahora</span>";\n';
+  s += '  html+="</header>";\n';
+  s += '  html+="<nav class=\\\"nav\\\"><div class=\\\"nav-inner\\\" id=\\\"navInner\\\">";\n';
+  s += '  RESTAURANT.categories.forEach(function(cat,i){\n';
+  s += '    html+="<div class=\\\"nav-item"+(i===0?" active":"")+"\\\" data-idx=\\\""+i+"\\\">"+escapeHtml(cat.name)+"</div>";\n';
+  s += '  });\n';
+  s += '  html+="</div></nav>";\n';
+  s += '  RESTAURANT.categories.forEach(function(cat,i){\n';
+  s += '    html+="<section class=\\\"section\\\" id=\\\"cat-"+i+"\\\">";\n';
+  s += '    html+="<h2 class=\\\"section-title\\\">"+escapeHtml(cat.name)+"</h2>";\n';
+  s += '    cat.dishes.forEach(function(dish,j){\n';
+  s += '      html+="<div class=\\\"dish\\\">";\n';
+  s += '      if(dish.image){html+="<img src=\\\""+escapeHtml(dish.image)+"\\\" class=\\\"dish-img\\\" alt=\\\"\\\" onerror=\\\"this.style.display=\\"none\\"\\"/>";}\n';
+  s += '      else{html+="<div class=\\\"dish-img\\\"></div>";}\n';
+  s += '      html+="<div class=\\\"dish-info\\\">";\n';
+  s += '      html+="<div class=\\\"dish-name\\\">"+escapeHtml(dish.name)+"</div>";\n';
+  s += '      if(dish.description){html+="<div class=\\\"dish-desc\\\">"+escapeHtml(dish.description)+"</div>";}\n';
+  s += '      html+="<div class=\\\"dish-bottom\\\">";\n';
+  s += '      html+="<div class=\\\"dish-price\\\">"+formatPrice(dish.price)+"</div>";\n';
+  s += '      html+="<button class=\\\"add-btn\\\" data-cat=\\\""+i+"\\\" data-dish=\\\""+j+"\\\" title=\\\"Agregar\\\">+</button>";\n';
+  s += '      html+="</div></div></div>";\n';
+  s += '    });\n';
+  s += '    html+="</section>";\n';
+  s += '  });\n';
+  s += '  html+="<div class=\\\"cart\\\" id=\\\"cartBar\\\">";\n';
+  s += '  html+="<div class=\\\"cart-left\\\"><span>Ver pedido</span><span class=\\\"cart-count\\\" id=\\\"cartCount\\\">0</span></div>";\n';
+  s += '  html+="<div class=\\\"cart-total\\\" id=\\\"cartTotal\\\">S/ 0.00</div>";\n';
+  s += '  html+="</div>";\n';
+  s += '  html+="<div class=\\\"modal-overlay\\\" id=\\\"modal\\\"><div class=\\\"modal\\">";\n';
+  s += '  html+="<h2 class=\\\"modal-title\\\">Tu Pedido</h2>";\n';
+  s += '  html+="<div id=\\\"cartItems\\\"></div>";\n';
+  s += '  html+="<div class=\\\"cart-summary\\\" id=\\\"cartSummary\\\"></div>";\n';
+  s += '  html+="<button class=\\\"wa-btn\\\" id=\\\"waBtn\\\">Enviar Pedido por WhatsApp</button>";\n';
+  s += '  html+="<button class=\\\"close-btn\\\" id=\\\"closeBtn\\\">Seguir agregando</button>";\n';
+  s += '  html+="</div></div>";\n';
+  s += '  app.innerHTML=html;\n';
+  s += '  attachEvents();\n';
+  s += '  updateCart();\n';
+  s += '}\n';
+  s += 'function attachEvents(){\n';
+  s += '  document.querySelectorAll(".add-btn").forEach(function(btn){\n';
+  s += '    btn.addEventListener("click",function(){\n';
+  s += '      addToCart(parseInt(this.dataset.cat),parseInt(this.dataset.dish));\n';
+  s += '    });\n';
+  s += '  });\n';
+  s += '  document.querySelectorAll(".nav-item").forEach(function(item){\n';
+  s += '    item.addEventListener("click",function(){\n';
+  s += '      document.querySelectorAll(".nav-item").forEach(function(n){n.classList.remove("active");});\n';
+  s += '      this.classList.add("active");\n';
+  s += '      var idx=parseInt(this.dataset.idx);\n';
+  s += '      var el=document.getElementById("cat-"+idx);\n';
+  s += '      if(el){var top=el.getBoundingClientRect().top+window.pageYOffset-70;window.scrollTo({top:top,behavior:"smooth"});}\n';
+  s += '    });\n';
+  s += '  });\n';
+  s += '  document.getElementById("cartBar").addEventListener("click",openModal);\n';
+  s += '  document.getElementById("closeBtn").addEventListener("click",closeModal);\n';
+  s += '  document.getElementById("waBtn").addEventListener("click",sendWhatsApp);\n';
+  s += '  document.getElementById("modal").addEventListener("click",function(e){if(e.target===this)closeModal();});\n';
+  s += '  window.addEventListener("scroll",updateActiveNav);\n';
+  s += '}\n';
+  s += 'function updateActiveNav(){\n';
+  s += '  var scrollPos=window.pageYOffset+100;\n';
+  s += '  var sections=document.querySelectorAll(".section");\n';
+  s += '  var activeIdx=0;\n';
+  s += '  for(var i=0;i<sections.length;i++){if(sections[i].offsetTop<=scrollPos)activeIdx=i;}\n';
+  s += '  document.querySelectorAll(".nav-item").forEach(function(n,i){n.classList.toggle("active",i===activeIdx);});\n';
+  s += '}\n';
+  s += 'function addToCart(catIdx,dishIdx){\n';
+  s += '  var dish=RESTAURANT.categories[catIdx].dishes[dishIdx];\n';
+  s += '  var existing=null;\n';
+  s += '  for(var i=0;i<cart.length;i++){if(cart[i].catIdx===catIdx&&cart[i].dishIdx===dishIdx){existing=cart[i];break;}}\n';
+  s += '  if(existing){existing.qty++;}\n';
+  s += '  else{cart.push({catIdx:catIdx,dishIdx:dishIdx,name:dish.name,price:dish.price,qty:1});}\n';
+  s += '  updateCart();\n';
+  s += '}\n';
+  s += 'function updateCart(){\n';
+  s += '  var count=0,total=0;\n';
+  s += '  cart.forEach(function(c){count+=c.qty;total+=c.price*c.qty;});\n';
+  s += '  document.getElementById("cartCount").textContent=count;\n';
+  s += '  document.getElementById("cartTotal").textContent=formatPrice(total);\n';
+  s += '  var cartBar=document.getElementById("cartBar");\n';
+  s += '  if(count>0){cartBar.classList.add("visible");}else{cartBar.classList.remove("visible");}\n';
+  s += '  renderCartItems();\n';
+  s += '}\n';
+  s += 'function renderCartItems(){\n';
+  s += '  var container=document.getElementById("cartItems");\n';
+  s += '  var summary=document.getElementById("cartSummary");\n';
+  s += '  if(cart.length===0){\n';
+  s += '    container.innerHTML="<div class=\\\"cart-empty\\\">Tu carrito esta vacio</div>";\n';
+  s += '    summary.innerHTML="";\n';
+  s += '    return;\n';
+  s += '  }\n';
+  s += '  var html="";\n';
+  s += '  cart.forEach(function(item,i){\n';
+  s += '    html+="<div class=\\\"cart-item\\\">";\n';
+  s += '    html+="<div class=\\\"cart-item-info\\\">";\n';
+  s += '    html+="<div class=\\\"cart-item-name\\\">"+escapeHtml(item.name)+"</div>";\n';
+  s += '    html+="<div class=\\\"cart-item-price\\\">"+formatPrice(item.price)+" c/u</div>";\n';
+  s += '    html+="</div>";\n';
+  s += '    html+="<div class=\\\"qty-control\\\">";\n';
+  s += '    html+="<button class=\\\"qty-btn\\\" data-action=\\\"dec\\\" data-idx=\\\""+i+"\\\">-</button>";\n';
+  s += '    html+="<span class=\\\"qty\\\">"+item.qty+"</span>";\n';
+  s += '    html+="<button class=\\\"qty-btn\\\" data-action=\\\"inc\\\" data-idx=\\\""+i+"\\\">+</button>";\n';
+  s += '    html+="</div>";\n';
+  s += '    html+="<div class=\\\"cart-item-total\\\">"+formatPrice(item.price*item.qty)+"</div>";\n';
+  s += '    html+="</div>";\n';
+  s += '  });\n';
+  s += '  container.innerHTML=html;\n';
+  s += '  var total=0;cart.forEach(function(c){total+=c.price*c.qty;});\n';
+  s += '  summary.innerHTML="<div class=\\\"summary-row\\\"><span>Subtotal</span><span>"+formatPrice(total)+"</span></div>";\n';
+  s += '  summary.innerHTML+="<div class=\\\"summary-total\\\"><span>Total</span><span class=\\\"amount\\\">"+formatPrice(total)+"</span></div>";\n';
+  s += '  container.querySelectorAll(".qty-btn").forEach(function(btn){\n';
+  s += '    btn.addEventListener("click",function(){\n';
+  s += '      var idx=parseInt(this.dataset.idx);\n';
+  s += '      if(this.dataset.action==="inc"){cart[idx].qty++;}\n';
+  s += '      else{cart[idx].qty--;if(cart[idx].qty<=0)cart.splice(idx,1);}\n';
+  s += '      updateCart();\n';
+  s += '    });\n';
+  s += '  });\n';
+  s += '}\n';
+  s += 'function openModal(){\n';
+  s += '  if(cart.length===0){return;}\n';
+  s += '  document.getElementById("modal").classList.add("visible");\n';
+  s += '}\n';
+  s += 'function closeModal(){document.getElementById("modal").classList.remove("visible");}\n';
+  s += 'function sendWhatsApp(){\n';
+  s += '  if(cart.length===0){return;}\n';
+  s += '  var msg="*Pedido - "+RESTAURANT.name+"*\\n\\n";\n';
+  s += '  cart.forEach(function(item){\n';
+  s += '    msg+=item.qty+"x "+item.name+" - "+formatPrice(item.price*item.qty)+"\\n";\n';
+  s += '  });\n';
+  s += '  var total=0;cart.forEach(function(c){total+=c.price*c.qty;});\n';
+  s += '  msg+="\\n*Total: "+formatPrice(total)+"*";\n';
+  s += '  var url="https://wa.me/"+RESTAURANT.whatsapp+"?text="+encodeURIComponent(msg);\n';
+  s += '  window.open(url,"_blank");\n';
+  s += '}\n';
+  s += 'renderApp();\n';
+  return s;
+}
+
+// ====== Generate & download ======
+function generateMenu() {
+  var data = collectData();
+  if (!data) return;
+  try {
+    var html = buildMenuHTML(data);
+    var blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    var safeName = data.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'menu';
+    a.download = 'menu-' + safeName + '.html';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
+    showToast('Menú generado con éxito');
+  } catch (err) {
+    showToast('Error: ' + err.message, true);
+  }
+}
+
+// ====== Init ======
+renderColors();
+addCategory('Entradas');
+addCategory('Platos de Fondo');
+</script>
+</body>
+</html>
