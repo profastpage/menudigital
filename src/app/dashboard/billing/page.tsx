@@ -1,0 +1,53 @@
+import { createClient } from '@/lib/supabase/server';
+import { redirect } from 'next/navigation';
+import { PLANS } from '@/lib/plans';
+import { BillingClient } from './billing-client';
+
+export default async function BillingPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ success?: string; canceled?: string }>;
+}) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect('/login');
+  }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', user.id)
+    .single();
+
+  // Contar uso
+  const { count: menusCount } = await supabase
+    .from('menus')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', user.id);
+
+  const { data: userFiles } = await supabase.storage
+    .from('menus')
+    .list(user.id, { limit: 1000 });
+
+  const params = await searchParams;
+
+  return (
+    <BillingClient
+      profile={{
+        plan: profile?.plan || 'free',
+        email: profile?.email || user.email || '',
+        currentPeriodEnd: profile?.current_period_end || null,
+        stripeCustomerId: profile?.stripe_customer_id || null,
+      }}
+      usage={{
+        menusCount: menusCount || 0,
+        imagesCount: userFiles?.length || 0,
+      }}
+      queryParams={params}
+    />
+  );
+}
