@@ -7,7 +7,7 @@ export function createClient() {
   if (!url || !key) {
     throw new Error(
       'Faltan NEXT_PUBLIC_SUPABASE_URL o NEXT_PUBLIC_SUPABASE_ANON_KEY. ' +
-      'Configúralos en Vercel → Settings → Environment Variables.'
+      'Configúralos en tu archivo .env.local.'
     );
   }
 

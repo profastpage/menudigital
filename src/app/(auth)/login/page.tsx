@@ -18,6 +18,7 @@ export default async function LoginPage({
 
   const params = await searchParams;
   const redirectTo = params.redirect || '/dashboard';
+  const oauthError = params.error_description || params.error;
 
   return (
     <main className="min-h-screen flex bg-[#07070b]">
@@ -156,6 +157,14 @@ export default async function LoginPage({
               Inicia sesión para gestionar tu carta digital
             </p>
           </div>
+
+          {oauthError && (
+            <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-sm">
+              {params.error === 'access_denied'
+                ? 'Autenticación cancelada. Intenta de nuevo.'
+                : oauthError}
+            </div>
+          )}
 
           <LoginForm redirect={redirectTo} />
         </div>
