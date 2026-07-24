@@ -45,6 +45,8 @@ export interface ProfileData {
   mp_preapproval_id: string | null;
   mp_status: string | null;
   current_period_end: string | null;
+  bg_removals_used: number | null;
+  bg_removals_reset_at: string | null;
 }
 
 // Generar slug desde nombre

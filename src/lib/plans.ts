@@ -74,7 +74,7 @@ export const PLANS: Record<PlanId, Plan> = {
       hasBranding: false,
       hasAnalytics: true,
       hasBgRemoval: true,
-      bgRemovalCredits: 5, // 5 quitadores de fondo por mes incluidos
+      bgRemovalCredits: 30, // 30 quitadores de fondo por mes incluidos
       hasMultiLanguage: true,
       hasHDQR: true,
     },
@@ -84,7 +84,7 @@ export const PLANS: Record<PlanId, Plan> = {
       'Platos ilimitados',
       'Imágenes ilimitadas + optimización WebP',
       'Categorías ilimitadas + etiquetas (vegano, picante, popular)',
-      '5 créditos de "Quitar fondo" por mes',
+      '30 créditos de "Quitar fondo" por mes (auto-centra la comida)',
       'Carrito integrado con WhatsApp',
       'URL pública personalizada',
       'QR profesional en HD + dinámico (editable sin reimprimir)',

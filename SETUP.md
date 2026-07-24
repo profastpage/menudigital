@@ -25,20 +25,68 @@ Hosting:   Vercel
 5. Espera 2-3 min a que termine el provisioning
 
 ### 1.2 Ejecutar schema SQL
+
+Tienes **dos opciones** — usa la que prefieras:
+
+#### Opción A — Supabase CLI (recomendado, reproducible)
+
+```bash
+# 1. Instalar Supabase CLI (una sola vez)
+#    macOS:  brew install supabase/tap/supabase
+#    Linux:  npm install -g supabase
+#    Windows: scoop install supabase
+
+# 2. Obtener access token: https://supabase.com/dashboard/account/tokens
+
+# 3. Linkear y aplicar migraciones
+export SUPABASE_ACCESS_TOKEN=sbp_xxxxxxxxxxxx
+./scripts/supabase-migrate.sh
+```
+
+Esto ejecuta:
+- `supabase link --project-ref bkxtploibraiovgrjtwn`
+- `supabase db push` (aplica todos los archivos en `supabase/migrations/`)
+
+#### Opción B — SQL Editor manual
+
 1. En el dashboard del proyecto → **SQL Editor** → **New query**
 2. Copia y pega TODO el contenido de `supabase/schema.sql` (en este repo)
 3. Click **Run** — deberías ver "Success. No rows returned"
 4. Verifica: **Table Editor** debe mostrar tablas `profiles`, `menus`, `categories`, `dishes`, `menu_views`
 
-> Si ya tenías el schema anterior con columnas `stripe_*`, ejecuta esta migración antes de volver a correr el schema completo:
-> ```sql
-> ALTER TABLE profiles
->   DROP COLUMN IF EXISTS stripe_customer_id,
->   DROP COLUMN IF EXISTS stripe_subscription_id,
->   DROP COLUMN IF EXISTS stripe_price_id,
->   ADD COLUMN IF NOT EXISTS mp_preapproval_id TEXT,
->   ADD COLUMN IF NOT EXISTS mp_status TEXT;
-> ```
+#### Crear nueva migración (workflow)
+
+```bash
+# Crear archivo de migración vacío con timestamp
+npx supabase migration new nombre_descriptivo
+# → crea supabase/migrations/<timestamp>_nombre_descriptivo.sql
+
+# Editar el archivo SQL con tus cambios
+
+# Aplicar al proyecto remoto
+npx supabase db push
+```
+
+#### Para actualizar el schema de un proyecto que ya existe
+
+Si ya tenías la versión anterior (con `stripe_*` o sin `bg_removals_*`), ejecuta
+la migración `supabase/migrations/20250102000000_bg_removals.sql` que es idempotente:
+
+```bash
+npx supabase db push
+```
+
+O manualmente en SQL Editor:
+```sql
+ALTER TABLE profiles
+  DROP COLUMN IF EXISTS stripe_customer_id,
+  DROP COLUMN IF EXISTS stripe_subscription_id,
+  DROP COLUMN IF EXISTS stripe_price_id,
+  ADD COLUMN IF NOT EXISTS mp_preapproval_id TEXT,
+  ADD COLUMN IF NOT EXISTS mp_status TEXT,
+  ADD COLUMN IF NOT EXISTS bg_removals_used INTEGER NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS bg_removals_reset_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+```
 
 ### 1.3 Configurar Auth
 1. Ve a **Authentication** → **Providers**
@@ -164,7 +212,34 @@ git push -u origin main
 4. Click **Deploy** — tarda 1-2 min
 5. Obtén tu URL (ej: `menupro-xxx.vercel.app`)
 
-### 5.3 Actualizar URLs externas
+### 5.3 Sincronizar Supabase → Vercel con un clic (API)
+
+En vez de copiar/pegar variables manualmente, usa el script `scripts/sync-vercel-env.js`
+que obtiene las credenciales de Supabase via Management API y las sube a Vercel via REST API.
+
+```bash
+# 1. Crea un archivo .env.local con estos valores:
+SUPABASE_PROJECT_REF=bkxtploibraiovgrjtwn
+SUPABASE_ACCESS_TOKEN=sbp_xxxxxxxxxxxx       # https://supabase.com/dashboard/account/tokens
+VERCEL_TOKEN=vercel_xxxxxxxxxxxx             # https://vercel.com/account/tokens
+VERCEL_PROJECT_ID=prj_xxxxxxxxxxxx           # Vercel → Settings → General → Project ID
+MERCADOPAGO_ACCESS_TOKEN=APP_USR-xxxxx
+NEXT_PUBLIC_SITE_URL=https://menupro-xxx.vercel.app
+
+# 2. Ejecuta el script
+node scripts/sync-vercel-env.js
+```
+
+El script:
+1. Llama a `https://api.supabase.com/v1/projects/{ref}/api-keys` → obtiene `anon` y `service_role`
+2. Llama a `https://api.supabase.com/v1/projects/{ref}` → obtiene la URL del proyecto
+3. Construye todas las env vars necesarias (Supabase + MercadoPago + URL del sitio)
+4. Llama a `POST https://api.vercel.com/v9/projects/{projectId}/env` por cada variable
+5. Si la variable ya existe, la elimina y la recrea (idempotente)
+
+Después de correrlo, haz un **redeploy** en Vercel para que las nuevas variables tengan efecto.
+
+### 5.4 Actualizar URLs externas
 Una vez desplegado, actualiza:
 
 **Supabase**:
@@ -213,6 +288,14 @@ Visita estos endpoints en producción:
 - ✅ En el editor de tu menú, ya no aparece el badge "Creado con MenuPro" en la vista previa
 - ✅ Visita `/dashboard/[menuId]/qr` → QR se genera y se puede descargar
 
+### Verificar "Quitar fondo" (solo Pro)
+- ✅ Como usuario Pro, sube una imagen de un plato en el editor
+- ✅ Aparece el botón **"Quitar fondo"** debajo de la imagen
+- ✅ Click → se descarga el modelo IA (~50MB, primera vez) y se procesa
+- ✅ La imagen se reemplaza por una sin fondo, centrada y cuadrada
+- ✅ El contador "X/30 restantes este mes" baja en 1
+- ✅ Como usuario Free, NO aparece el botón — solo un enlace "Upgrade a Pro"
+
 ---
 
 ## Troubleshooting
@@ -242,6 +325,16 @@ Visita estos endpoints en producción:
 - Revisa los logs del webhook en Vercel → Functions → `/api/mercadopago/webhook`
 - Verifica que el `external_reference` (userId) coincide con el `id` en `profiles`
 - En sandbox, la activación puede tardar hasta 1 minuto en llegar al webhook
+
+### "Quitar fondo" no aparece o no funciona
+- El botón solo aparece para usuarios con plan `pro` (verifica en `/dashboard/billing`)
+- Verifica que la RPC `increment_bg_removals` y `get_bg_removals_quota` existen en Supabase:
+  ```sql
+  SELECT proname FROM pg_proc WHERE proname LIKE '%bg_removal%';
+  ```
+- Si no existen, ejecuta `npx supabase db push` para aplicar las migraciones
+- Si la primera carga tarda mucho, es normal: el modelo IA (~50MB) se descarga una sola vez y se cachea
+- Si el modelo falla en cargar (offline/CORS), recarga la página — el CDN `staticimgly.com` debe ser accesible
 
 ---
 

@@ -1,6 +1,7 @@
 -- ============================================================
--- MenuPro — Supabase Schema
--- Ejecutar en: Supabase Dashboard → SQL Editor → New query
+-- MenuPro — Migración inicial
+-- Generada para: supabase db push
+-- Project ref: bkxtploibraiovgrjtwn
 -- ============================================================
 
 -- 1) ENUM para planes
@@ -16,7 +17,6 @@ CREATE TABLE IF NOT EXISTS profiles (
   mp_preapproval_id TEXT,
   mp_status TEXT,
   current_period_end TIMESTAMPTZ,
-  -- Contador de "Quitar fondo" (Pro: 30/mes)
   bg_removals_used INTEGER NOT NULL DEFAULT 0,
   bg_removals_reset_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -25,11 +25,13 @@ CREATE TABLE IF NOT EXISTS profiles (
 
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 
--- Cada usuario solo ve/edita su propio profile
+DROP POLICY IF EXISTS "profiles_select_self" ON profiles;
 CREATE POLICY "profiles_select_self" ON profiles
   FOR SELECT USING (auth.uid() = id);
+DROP POLICY IF EXISTS "profiles_update_self" ON profiles;
 CREATE POLICY "profiles_update_self" ON profiles
   FOR UPDATE USING (auth.uid() = id);
+DROP POLICY IF EXISTS "profiles_insert_self" ON profiles;
 CREATE POLICY "profiles_insert_self" ON profiles
   FOR INSERT WITH CHECK (auth.uid() = id);
 
@@ -74,20 +76,20 @@ CREATE TABLE IF NOT EXISTS menus (
 
 ALTER TABLE menus ENABLE ROW LEVEL SECURITY;
 
--- Indices
 CREATE INDEX IF NOT EXISTS idx_menus_user_id ON menus(user_id);
 CREATE INDEX IF NOT EXISTS idx_menus_slug ON menus(slug);
-
--- Slug único por usuario (no global — permite "la-parrilla" en cuentas distintas)
 CREATE UNIQUE INDEX IF NOT EXISTS menus_user_slug_unique ON menus(user_id, slug);
 
--- Policies menus: usuario solo ve/edita los suyos
+DROP POLICY IF EXISTS "menus_select_own" ON menus;
 CREATE POLICY "menus_select_own" ON menus
   FOR SELECT USING (auth.uid() = user_id);
+DROP POLICY IF EXISTS "menus_insert_own" ON menus;
 CREATE POLICY "menus_insert_own" ON menus
   FOR INSERT WITH CHECK (auth.uid() = user_id);
+DROP POLICY IF EXISTS "menus_update_own" ON menus;
 CREATE POLICY "menus_update_own" ON menus
   FOR UPDATE USING (auth.uid() = user_id);
+DROP POLICY IF EXISTS "menus_delete_own" ON menus;
 CREATE POLICY "menus_delete_own" ON menus
   FOR DELETE USING (auth.uid() = user_id);
 
@@ -104,19 +106,22 @@ ALTER TABLE categories ENABLE ROW LEVEL SECURITY;
 
 CREATE INDEX IF NOT EXISTS idx_categories_menu_id ON categories(menu_id);
 
--- Policies: heredan del menu (usuario dueño del menu)
+DROP POLICY IF EXISTS "categories_select_own" ON categories;
 CREATE POLICY "categories_select_own" ON categories
   FOR SELECT USING (
     EXISTS (SELECT 1 FROM menus WHERE menus.id = categories.menu_id AND menus.user_id = auth.uid())
   );
+DROP POLICY IF EXISTS "categories_insert_own" ON categories;
 CREATE POLICY "categories_insert_own" ON categories
   FOR INSERT WITH CHECK (
     EXISTS (SELECT 1 FROM menus WHERE menus.id = categories.menu_id AND menus.user_id = auth.uid())
   );
+DROP POLICY IF EXISTS "categories_update_own" ON categories;
 CREATE POLICY "categories_update_own" ON categories
   FOR UPDATE USING (
     EXISTS (SELECT 1 FROM menus WHERE menus.id = categories.menu_id AND menus.user_id = auth.uid())
   );
+DROP POLICY IF EXISTS "categories_delete_own" ON categories;
 CREATE POLICY "categories_delete_own" ON categories
   FOR DELETE USING (
     EXISTS (SELECT 1 FROM menus WHERE menus.id = categories.menu_id AND menus.user_id = auth.uid())
@@ -138,7 +143,7 @@ ALTER TABLE dishes ENABLE ROW LEVEL SECURITY;
 
 CREATE INDEX IF NOT EXISTS idx_dishes_category_id ON dishes(category_id);
 
--- Policies: heredan del menu via category
+DROP POLICY IF EXISTS "dishes_select_own" ON dishes;
 CREATE POLICY "dishes_select_own" ON dishes
   FOR SELECT USING (
     EXISTS (
@@ -147,6 +152,7 @@ CREATE POLICY "dishes_select_own" ON dishes
       WHERE categories.id = dishes.category_id AND menus.user_id = auth.uid()
     )
   );
+DROP POLICY IF EXISTS "dishes_insert_own" ON dishes;
 CREATE POLICY "dishes_insert_own" ON dishes
   FOR INSERT WITH CHECK (
     EXISTS (
@@ -155,6 +161,7 @@ CREATE POLICY "dishes_insert_own" ON dishes
       WHERE categories.id = dishes.category_id AND menus.user_id = auth.uid()
     )
   );
+DROP POLICY IF EXISTS "dishes_update_own" ON dishes;
 CREATE POLICY "dishes_update_own" ON dishes
   FOR UPDATE USING (
     EXISTS (
@@ -163,6 +170,7 @@ CREATE POLICY "dishes_update_own" ON dishes
       WHERE categories.id = dishes.category_id AND menus.user_id = auth.uid()
     )
   );
+DROP POLICY IF EXISTS "dishes_delete_own" ON dishes;
 CREATE POLICY "dishes_delete_own" ON dishes
   FOR DELETE USING (
     EXISTS (
@@ -172,7 +180,7 @@ CREATE POLICY "dishes_delete_own" ON dishes
     )
   );
 
--- 7) Tabla menu_views (analytics simple)
+-- 7) Tabla menu_views (analytics)
 CREATE TABLE IF NOT EXISTS menu_views (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   menu_id UUID NOT NULL REFERENCES menus(id) ON DELETE CASCADE,
@@ -185,37 +193,37 @@ ALTER TABLE menu_views ENABLE ROW LEVEL SECURITY;
 
 CREATE INDEX IF NOT EXISTS idx_menu_views_menu_id ON menu_views(menu_id);
 
--- Solo el dueño del menu puede ver las visitas
+DROP POLICY IF EXISTS "menu_views_select_own" ON menu_views;
 CREATE POLICY "menu_views_select_own" ON menu_views
   FOR SELECT USING (
     EXISTS (SELECT 1 FROM menus WHERE menus.id = menu_views.menu_id AND menus.user_id = auth.uid())
   );
-
--- Cualquiera puede insertar (registro de visita pública, sin auth)
+DROP POLICY IF EXISTS "menu_views_insert_any" ON menu_views;
 CREATE POLICY "menu_views_insert_any" ON menu_views
   FOR INSERT WITH CHECK (true);
 
--- 8) Storage bucket para logos y platos
--- Ejecutar en Supabase Dashboard → Storage → New bucket → "menus" (public)
--- O vía SQL:
+-- 8) Storage bucket
 INSERT INTO storage.buckets (id, name, public)
 VALUES ('menus', 'menus', true)
 ON CONFLICT (id) DO NOTHING;
 
--- Policies para storage: usuarios autenticados pueden subir a su propia carpeta
+DROP POLICY IF EXISTS "menus_storage_select_all" ON storage.objects;
 CREATE POLICY "menus_storage_select_all" ON storage.objects
   FOR SELECT USING (bucket_id = 'menus');
 
+DROP POLICY IF EXISTS "menus_storage_insert_own" ON storage.objects;
 CREATE POLICY "menus_storage_insert_own" ON storage.objects
   FOR INSERT WITH CHECK (
     bucket_id = 'menus' AND auth.uid()::text = (storage.foldername(name))[1]
   );
 
+DROP POLICY IF EXISTS "menus_storage_update_own" ON storage.objects;
 CREATE POLICY "menus_storage_update_own" ON storage.objects
   FOR UPDATE USING (
     bucket_id = 'menus' AND auth.uid()::text = (storage.foldername(name))[1]
   );
 
+DROP POLICY IF EXISTS "menus_storage_delete_own" ON storage.objects;
 CREATE POLICY "menus_storage_delete_own" ON storage.objects
   FOR DELETE USING (
     bucket_id = 'menus' AND auth.uid()::text = (storage.foldername(name))[1]
@@ -238,7 +246,7 @@ DROP TRIGGER IF EXISTS touch_menus ON menus;
 CREATE TRIGGER touch_menus BEFORE UPDATE ON menus
   FOR EACH ROW EXECUTE FUNCTION public.touch_updated_at();
 
--- 10) Función para incrementar contador de vistas
+-- 10) RPC: incrementar vistas
 CREATE OR REPLACE FUNCTION public.increment_menu_views(menu_uuid UUID)
 RETURNS void AS $$
 BEGIN
@@ -246,9 +254,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- 11) Función: incrementar contador de "Quitar fondo"
---     Si pasaron 30+ días desde reset_at, primero resetea a 0+1.
---     Devuelve el nuevo valor de bg_removals_used.
+-- 11) RPC: incrementar "Quitar fondo" con reset mensual automático
 CREATE OR REPLACE FUNCTION public.increment_bg_removals(user_uuid UUID)
 RETURNS INTEGER AS $$
 DECLARE
@@ -260,7 +266,6 @@ BEGIN
     INTO current_used, current_reset
   FROM profiles WHERE id = user_uuid;
 
-  -- Si nunca se usó o ya pasó un mes, resetear
   IF current_reset IS NULL OR NOW() - current_reset >= INTERVAL '30 days' THEN
     new_value := 1;
     UPDATE profiles
@@ -277,8 +282,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- 12) Función: obtener créditos disponibles de "Quitar fondo"
---     Devuelve { used, limit, remaining, reset_at }
+-- 12) RPC: obtener cuota disponible de "Quitar fondo"
 CREATE OR REPLACE FUNCTION public.get_bg_removals_quota(user_uuid UUID, monthly_limit INTEGER)
 RETURNS JSON AS $$
 DECLARE
@@ -291,7 +295,6 @@ BEGIN
     INTO current_used, current_reset
   FROM profiles WHERE id = user_uuid;
 
-  -- Si nunca se usó o ya pasó un mes, el contador efectivo es 0
   IF current_reset IS NULL OR NOW() - current_reset >= INTERVAL '30 days' THEN
     effective_used := 0;
     effective_reset := NOW();
