@@ -13,6 +13,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
 import {
   ArrowLeft,
@@ -26,6 +32,7 @@ import {
   Loader2,
   Image as ImageIcon,
   CheckCircle2,
+  Download,
 } from 'lucide-react';
 import { COLORS, CURRENCIES, type Plan } from '@/lib/plans';
 import type { MenuData, ProfileData } from '@/lib/menu-utils';
@@ -79,11 +86,13 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount }: Props)
     })) || [{ id: 'new-1', name: '', dishes: [{ id: 'd-1', name: '', description: '', price: '', image: '' }] }]
   );
   const [saving, setSaving] = useState(false);
+  const [importing, setImporting] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [savedAt, setSavedAt] = useState<Date | null>(null);
   const [previewHtml, setPreviewHtml] = useState('');
   const dirtyRef = useRef(false);
   const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const importFileRef = useRef<HTMLInputElement>(null);
 
   // Marcar como dirty cuando cambia algo
   useEffect(() => {
@@ -298,6 +307,79 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount }: Props)
     updateDish(catId, dishId, 'image', url);
   }
 
+  async function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImporting(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetch(`/api/menus/${initialMenu.id}/import`, {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Error importando');
+      toast.success(data.message || `Importados: ${data.imported?.categories} categorías, ${data.imported?.dishes} platos`);
+      router.refresh();
+      // Reload menu data from server
+      const menuRes = await fetch(`/api/menus/${initialMenu.id}`);
+      const menuData = await menuRes.json();
+      if (menuData.menu) {
+        const m = menuData.menu;
+        setMenu({
+          name: m.name || '',
+          slogan: m.slogan || '',
+          description: m.description || '',
+          whatsapp: m.whatsapp || '',
+          logo: m.logo_url || '',
+          color: m.color || '#ff6b35',
+          currency: m.currency || 'S/',
+          is_published: m.is_published || false,
+        });
+        setCategories(
+          (m.categories || []).map((c: { id: string; name: string; dishes?: Array<{ id: string; name: string; description: string; price: number; image_url: string }> }) => ({
+            id: c.id,
+            name: c.name,
+            dishes: (c.dishes || []).map((d) => ({
+              id: d.id,
+              name: d.name,
+              description: d.description || '',
+              price: String(d.price),
+              image: d.image_url || '',
+            })),
+          }))
+        );
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Error al importar');
+    } finally {
+      setImporting(false);
+      if (importFileRef.current) importFileRef.current.value = '';
+    }
+  }
+
+  async function handleExportMenu(format: string) {
+    try {
+      const res = await fetch(`/api/menus/${initialMenu.id}/export?format=${format}`);
+      if (!res.ok) throw new Error('Error exportando');
+      const blob = await res.blob();
+      const ext = format === 'excel' ? 'xls' : format === 'word' ? 'doc' : format;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const safeName = (menu.name || 'menu').replace(/[^a-zA-Z0-9áéíóúñÁÉÍÓÚÑ ]/g, '').replace(/\s+/g, '-');
+      a.download = `${safeName}.${ext}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success(`Exportado como .${ext}`);
+    } catch {
+      toast.error('Error al exportar');
+    }
+  }
+
   return (
     <div className="min-h-screen bg-[#07070b] text-white">
       {/* Top bar */}
@@ -478,7 +560,41 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount }: Props)
                 2
               </div>
               <h2 className="font-semibold">Categorías y platos</h2>
+              <div className="ml-auto flex items-center gap-2">
+                <input ref={importFileRef} type="file" accept=".json,.csv,.xls,.xlsx" className="hidden" onChange={handleImport} />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => importFileRef.current?.click()}
+                  disabled={importing}
+                  className="text-white/60 hover:text-white hover:bg-white/5 text-xs"
+                >
+                  {importing ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <Upload className="w-3.5 h-3.5 mr-1" />}
+                  Importar
+                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="text-white/60 hover:text-white hover:bg-white/5 text-xs">
+                      <Download className="w-3.5 h-3.5 mr-1" />
+                      Exportar
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="bg-[#15152a] border-white/10">
+                    <DropdownMenuItem onClick={() => handleExportMenu('json')} className="text-white focus:bg-white/5">JSON</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleExportMenu('csv')} className="text-white focus:bg-white/5">CSV</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleExportMenu('excel')} className="text-white focus:bg-white/5">Excel (.xls)</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleExportMenu('word')} className="text-white focus:bg-white/5">Word (.doc)</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </div>
+
+            {importing && (
+              <div className="flex items-center gap-2 p-3 rounded-xl bg-[#d4af37]/10 border border-[#d4af37]/30 text-sm text-[#d4af37]">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Importando platos desde archivo...
+              </div>
+            )}
 
             <div className="space-y-4">
               {categories.map((cat, ci) => (

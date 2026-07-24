@@ -1,5 +1,5 @@
 -- ============================================================
--- MenuPro — Supabase Schema
+-- MenuPro SaaS — Supabase Schema Completo
 -- Ejecutar en: Supabase Dashboard → SQL Editor → New query
 -- ============================================================
 
@@ -16,7 +16,6 @@ CREATE TABLE IF NOT EXISTS profiles (
   mp_preapproval_id TEXT,
   mp_status TEXT,
   current_period_end TIMESTAMPTZ,
-  -- Contador de "Quitar fondo" (Pro: 30/mes)
   bg_removals_used INTEGER NOT NULL DEFAULT 0,
   bg_removals_reset_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -25,7 +24,6 @@ CREATE TABLE IF NOT EXISTS profiles (
 
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 
--- Cada usuario solo ve/edita su propio profile
 CREATE POLICY "profiles_select_self" ON profiles
   FOR SELECT USING (auth.uid() = id);
 CREATE POLICY "profiles_update_self" ON profiles
@@ -61,7 +59,7 @@ CREATE TABLE IF NOT EXISTS menus (
   slug TEXT NOT NULL,
   slogan TEXT,
   description TEXT,
-  whatsapp TEXT NOT NULL,
+  whatsapp TEXT NOT NULL DEFAULT '',
   logo_url TEXT,
   color TEXT NOT NULL DEFAULT '#ff6b35',
   currency TEXT NOT NULL DEFAULT 'S/',
@@ -74,14 +72,10 @@ CREATE TABLE IF NOT EXISTS menus (
 
 ALTER TABLE menus ENABLE ROW LEVEL SECURITY;
 
--- Indices
 CREATE INDEX IF NOT EXISTS idx_menus_user_id ON menus(user_id);
 CREATE INDEX IF NOT EXISTS idx_menus_slug ON menus(slug);
-
--- Slug único por usuario (no global — permite "la-parrilla" en cuentas distintas)
 CREATE UNIQUE INDEX IF NOT EXISTS menus_user_slug_unique ON menus(user_id, slug);
 
--- Policies menus: usuario solo ve/edita los suyos
 CREATE POLICY "menus_select_own" ON menus
   FOR SELECT USING (auth.uid() = user_id);
 CREATE POLICY "menus_insert_own" ON menus
@@ -104,7 +98,6 @@ ALTER TABLE categories ENABLE ROW LEVEL SECURITY;
 
 CREATE INDEX IF NOT EXISTS idx_categories_menu_id ON categories(menu_id);
 
--- Policies: heredan del menu (usuario dueño del menu)
 CREATE POLICY "categories_select_own" ON categories
   FOR SELECT USING (
     EXISTS (SELECT 1 FROM menus WHERE menus.id = categories.menu_id AND menus.user_id = auth.uid())
@@ -138,7 +131,6 @@ ALTER TABLE dishes ENABLE ROW LEVEL SECURITY;
 
 CREATE INDEX IF NOT EXISTS idx_dishes_category_id ON dishes(category_id);
 
--- Policies: heredan del menu via category
 CREATE POLICY "dishes_select_own" ON dishes
   FOR SELECT USING (
     EXISTS (
@@ -172,7 +164,7 @@ CREATE POLICY "dishes_delete_own" ON dishes
     )
   );
 
--- 7) Tabla menu_views (analytics simple)
+-- 7) Tabla menu_views (analytics)
 CREATE TABLE IF NOT EXISTS menu_views (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   menu_id UUID NOT NULL REFERENCES menus(id) ON DELETE CASCADE,
@@ -185,24 +177,52 @@ ALTER TABLE menu_views ENABLE ROW LEVEL SECURITY;
 
 CREATE INDEX IF NOT EXISTS idx_menu_views_menu_id ON menu_views(menu_id);
 
--- Solo el dueño del menu puede ver las visitas
 CREATE POLICY "menu_views_select_own" ON menu_views
   FOR SELECT USING (
     EXISTS (SELECT 1 FROM menus WHERE menus.id = menu_views.menu_id AND menus.user_id = auth.uid())
   );
-
--- Cualquiera puede insertar (registro de visita pública, sin auth)
 CREATE POLICY "menu_views_insert_any" ON menu_views
   FOR INSERT WITH CHECK (true);
 
--- 8) Storage bucket para logos y platos
--- Ejecutar en Supabase Dashboard → Storage → New bucket → "menus" (public)
--- O vía SQL:
+-- ============================================================
+-- 8) Tabla custom_domains (solo Pro)
+-- Permite a los usuarios Pro conectar su propio dominio
+-- Ej: menu.mirestaurante.com → apunta al menú del usuario
+-- ============================================================
+CREATE TABLE IF NOT EXISTS custom_domains (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  menu_id UUID REFERENCES menus(id) ON DELETE SET NULL,
+  domain TEXT NOT NULL,
+  is_verified BOOLEAN NOT NULL DEFAULT false,
+  verification_token TEXT NOT NULL,
+  dns_checked_at TIMESTAMPTZ,
+  ssl_status TEXT NOT NULL DEFAULT 'pending',
+  -- pending → provisioning → active → failed
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE custom_domains ENABLE ROW LEVEL SECURITY;
+
+CREATE INDEX IF NOT EXISTS idx_custom_domains_user_id ON custom_domains(user_id);
+CREATE INDEX IF NOT EXISTS idx_custom_domains_domain ON custom_domains(domain);
+CREATE UNIQUE INDEX IF NOT EXISTS custom_domains_domain_unique ON custom_domains(domain);
+
+CREATE POLICY "custom_domains_select_own" ON custom_domains
+  FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "custom_domains_insert_own" ON custom_domains
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "custom_domains_update_own" ON custom_domains
+  FOR UPDATE USING (auth.uid() = user_id);
+CREATE POLICY "custom_domains_delete_own" ON custom_domains
+  FOR DELETE USING (auth.uid() = user_id);
+
+-- 9) Storage bucket para logos y platos
 INSERT INTO storage.buckets (id, name, public)
 VALUES ('menus', 'menus', true)
 ON CONFLICT (id) DO NOTHING;
 
--- Policies para storage: usuarios autenticados pueden subir a su propia carpeta
 CREATE POLICY "menus_storage_select_all" ON storage.objects
   FOR SELECT USING (bucket_id = 'menus');
 
@@ -221,7 +241,7 @@ CREATE POLICY "menus_storage_delete_own" ON storage.objects
     bucket_id = 'menus' AND auth.uid()::text = (storage.foldername(name))[1]
   );
 
--- 9) Trigger updated_at
+-- 10) Triggers updated_at
 CREATE OR REPLACE FUNCTION public.touch_updated_at()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -238,7 +258,11 @@ DROP TRIGGER IF EXISTS touch_menus ON menus;
 CREATE TRIGGER touch_menus BEFORE UPDATE ON menus
   FOR EACH ROW EXECUTE FUNCTION public.touch_updated_at();
 
--- 10) Función para incrementar contador de vistas
+DROP TRIGGER IF EXISTS touch_custom_domains ON custom_domains;
+CREATE TRIGGER touch_custom_domains BEFORE UPDATE ON custom_domains
+  FOR EACH ROW EXECUTE FUNCTION public.touch_updated_at();
+
+-- 11) Función para incrementar contador de vistas
 CREATE OR REPLACE FUNCTION public.increment_menu_views(menu_uuid UUID)
 RETURNS void AS $$
 BEGIN
@@ -246,9 +270,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- 11) Función: incrementar contador de "Quitar fondo"
---     Si pasaron 30+ días desde reset_at, primero resetea a 0+1.
---     Devuelve el nuevo valor de bg_removals_used.
+-- 12) Función: incrementar contador de "Quitar fondo"
 CREATE OR REPLACE FUNCTION public.increment_bg_removals(user_uuid UUID)
 RETURNS INTEGER AS $$
 DECLARE
@@ -259,8 +281,6 @@ BEGIN
   SELECT bg_removals_used, bg_removals_reset_at
     INTO current_used, current_reset
   FROM profiles WHERE id = user_uuid;
-
-  -- Si nunca se usó o ya pasó un mes, resetear
   IF current_reset IS NULL OR NOW() - current_reset >= INTERVAL '30 days' THEN
     new_value := 1;
     UPDATE profiles
@@ -272,13 +292,11 @@ BEGIN
       SET bg_removals_used = current_used + 1
       WHERE id = user_uuid;
   END IF;
-
   RETURN new_value;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- 12) Función: obtener créditos disponibles de "Quitar fondo"
---     Devuelve { used, limit, remaining, reset_at }
+-- 13) Función: obtener créditos disponibles de "Quitar fondo"
 CREATE OR REPLACE FUNCTION public.get_bg_removals_quota(user_uuid UUID, monthly_limit INTEGER)
 RETURNS JSON AS $$
 DECLARE
@@ -290,8 +308,6 @@ BEGIN
   SELECT bg_removals_used, bg_removals_reset_at
     INTO current_used, current_reset
   FROM profiles WHERE id = user_uuid;
-
-  -- Si nunca se usó o ya pasó un mes, el contador efectivo es 0
   IF current_reset IS NULL OR NOW() - current_reset >= INTERVAL '30 days' THEN
     effective_used := 0;
     effective_reset := NOW();
@@ -299,7 +315,6 @@ BEGIN
     effective_used := COALESCE(current_used, 0);
     effective_reset := current_reset;
   END IF;
-
   RETURN json_build_object(
     'used', effective_used,
     'limit', monthly_limit,
