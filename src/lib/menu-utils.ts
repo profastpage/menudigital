@@ -42,8 +42,8 @@ export interface ProfileData {
   full_name: string | null;
   avatar_url: string | null;
   plan: 'free' | 'pro';
-  stripe_customer_id: string | null;
-  stripe_subscription_id: string | null;
+  mp_preapproval_id: string | null;
+  mp_status: string | null;
   current_period_end: string | null;
 }
 

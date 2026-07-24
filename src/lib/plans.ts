@@ -4,8 +4,8 @@ export interface Plan {
   id: PlanId;
   name: string;
   priceMonthly: number; // en Soles (PEN)
-  priceUsd: number; // para Stripe
-  stripePriceId?: string;
+  priceUsd: number; // referencia
+  mpAmount?: number; // monto cobrado por MercadoPago (solo Pro)
   limits: {
     maxMenus: number; // -1 = ilimitado
     maxDishesPerMenu: number;
@@ -47,7 +47,7 @@ export const PLANS: Record<PlanId, Plan> = {
     name: 'Pro',
     priceMonthly: 35,
     priceUsd: 9,
-    stripePriceId: process.env.STRIPE_PRICE_ID,
+    mpAmount: 35, // cobrado por MercadoPago cada mes
     limits: {
       maxMenus: -1,
       maxDishesPerMenu: -1,

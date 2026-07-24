@@ -1,6 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
-import { PLANS } from '@/lib/plans';
 import { BillingClient } from './billing-client';
 
 export default async function BillingPage({
@@ -41,7 +40,8 @@ export default async function BillingPage({
         plan: profile?.plan || 'free',
         email: profile?.email || user.email || '',
         currentPeriodEnd: profile?.current_period_end || null,
-        stripeCustomerId: profile?.stripe_customer_id || null,
+        mpStatus: profile?.mp_status || null,
+        mpPreapprovalId: profile?.mp_preapproval_id || null,
       }}
       usage={{
         menusCount: menusCount || 0,

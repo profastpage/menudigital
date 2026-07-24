@@ -1,8 +1,8 @@
 # MenuPro — Cartas digitales premium para restaurantes
 
-SaaS MVP para que restaurantes creen su carta digital con carrito, integración con WhatsApp, código QR y diseño ultra premium. Construido con Next.js 16, Supabase y Stripe.
+SaaS MVP para que restaurantes creen su carta digital con carrito, integración con WhatsApp, código QR y diseño ultra premium. Construido con Next.js 16, Supabase y MercadoPago.
 
-![Stack](https://img.shields.io/badge/Next.js-16-black) ![Supabase](https://img.shields.io/badge/Supabase-Postgres+Auth+Storage-green) ![Stripe](https://img.shields.io/badge/Stripe-Subscriptions-blue) ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue)
+![Stack](https://img.shields.io/badge/Next.js-16-black) ![Supabase](https://img.shields.io/badge/Supabase-Postgres+Auth+Storage-green) ![MercadoPago](https://img.shields.io/badge/MercadoPago-Checkout_Pro-blue) ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue)
 
 ---
 
@@ -23,7 +23,7 @@ SaaS MVP para que restaurantes creen su carta digital con carrito, integración 
 - **Planes**:
   - **Free**: 1 menú, 15 platos, 5 imágenes, branding MenuPro, sin QR
   - **Pro (S/35/mes ≈ $9 USD)**: menús y platos ilimitados, 30 imágenes, sin branding, QR
-- **Pagos** vía Stripe Checkout + Customer Portal + Webhooks (3 eventos).
+- **Pagos** vía MercadoPago Checkout Pro (suscripción mensual) + Webhooks.
 - **Row Level Security** en todas las tablas de Supabase.
 
 ---
@@ -36,7 +36,7 @@ SaaS MVP para que restaurantes creen su carta digital con carrito, integración 
 | Auth | Supabase Auth (email+pass, Google OAuth) |
 | DB | Supabase Postgres (RLS habilitado) |
 | Storage | Supabase Storage (bucket público `menus`) |
-| Pagos | Stripe (Checkout, Portal, Webhooks) |
+| Pagos | MercadoPago (Checkout Pro + Subscriptions + Webhooks) |
 | QR | `qrcode` (Node) |
 | Hosting | Vercel |
 
@@ -51,11 +51,11 @@ src/
 │   ├── api/
 │   │   ├── auth/logout/
 │   │   ├── menus/         # CRUD con límites de plan
-│   │   ├── stripe/        # checkout, portal, webhook
+│   │   ├── mercadopago/   # checkout, cancel, webhook
 │   │   └── upload/        # Subida a Supabase Storage
 │   ├── dashboard/
 │   │   ├── [menuId]/      # Editor + sub-página QR
-│   │   ├── billing/       # Planes + Stripe
+│   │   ├── billing/       # Planes + MercadoPago
 │   │   └── dashboard-client.tsx
 │   ├── r/[slug]/          # Menú público SSR
 │   ├── auth/callback/     # OAuth callback
@@ -65,8 +65,8 @@ src/
 │   └── ui/                # shadcn/ui
 └── lib/
     ├── supabase/          # client, server, middleware
+    ├── mercadopago.ts     # Cliente MP (lazy-init) + helpers
     ├── plans.ts           # Definición de planes + límites
-    ├── stripe.ts          # Cliente Stripe
     └── menu-utils.ts      # Helpers de menú
 
 supabase/
@@ -99,7 +99,7 @@ bun dev
 # Abre http://localhost:3000
 ```
 
-Para producción en Vercel + Supabase + Stripe, sigue la guía completa en **`SETUP.md`** (~30 min).
+Para producción en Vercel + Supabase + MercadoPago, sigue la guía completa en **`SETUP.md`** (~30 min).
 
 ---
 
@@ -114,17 +114,16 @@ Los límites se validan tanto en API routes (server-side) como en RLS policies (
 
 ---
 
-## Webhooks de Stripe
+## Webhooks de MercadoPago
 
-El endpoint `/api/stripe/webhook` maneja 3 eventos:
+El endpoint `/api/mercadopago/webhook` recibe notificaciones de tipo:
 
-| Evento | Acción |
+| `type` | Acción |
 |--------|--------|
-| `checkout.session.completed` | `plan = 'pro'` |
-| `customer.subscription.updated` | Si `status !== 'active'` → `plan = 'free'` |
-| `customer.subscription.deleted` | `plan = 'free'` |
+| `subscription_preapproval` | Fetch del PreApproval → actualiza `plan` y `mp_status` según el estado (`authorized` → `pro`, resto → `free`) |
+| `payment` | Solo log (el status del preapproval ya refleja fallos de pago) |
 
-Configura el endpoint en Stripe Dashboard → Webhooks con el signing secret `whsec_xxx` → `STRIPE_WEBHOOK_SECRET`.
+Configura el webhook en MercadoPago Developers → Tu aplicación → Webhooks con la URL `https://tu-dominio.vercel.app/api/mercadopago/webhook`.
 
 ---
 

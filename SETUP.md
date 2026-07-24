@@ -9,7 +9,7 @@ Frontend:  Next.js 16 + TypeScript + Tailwind + shadcn/ui
 Auth:      Supabase Auth (email+password + Google OAuth)
 DB:        Supabase Postgres (con Row Level Security)
 Storage:   Supabase Storage (imágenes de logos y platos)
-Pagos:     Stripe (suscripción mensual S/35 ≈ $9 USD)
+Pagos:     MercadoPago (suscripción mensual S/35 ≈ $9 USD)
 Hosting:   Vercel
 ```
 
@@ -29,6 +29,16 @@ Hosting:   Vercel
 2. Copia y pega TODO el contenido de `supabase/schema.sql` (en este repo)
 3. Click **Run** — deberías ver "Success. No rows returned"
 4. Verifica: **Table Editor** debe mostrar tablas `profiles`, `menus`, `categories`, `dishes`, `menu_views`
+
+> Si ya tenías el schema anterior con columnas `stripe_*`, ejecuta esta migración antes de volver a correr el schema completo:
+> ```sql
+> ALTER TABLE profiles
+>   DROP COLUMN IF EXISTS stripe_customer_id,
+>   DROP COLUMN IF EXISTS stripe_subscription_id,
+>   DROP COLUMN IF EXISTS stripe_price_id,
+>   ADD COLUMN IF NOT EXISTS mp_preapproval_id TEXT,
+>   ADD COLUMN IF NOT EXISTS mp_status TEXT;
+> ```
 
 ### 1.3 Configurar Auth
 1. Ve a **Authentication** → **Providers**
@@ -55,54 +65,43 @@ Hosting:   Vercel
 
 ---
 
-## 2) Configurar Stripe (~10 min)
+## 2) Configurar MercadoPago (~10 min)
 
-### 2.1 Crear cuenta
-1. Ve a https://dashboard.stripe.com → regístrate
-2. Completa la verificación de cuenta (puede tardar 1-2 días en aprobarse, pero puedes usar **test mode** inmediatamente)
+### 2.1 Crear cuenta y aplicación
+1. Ve a https://www.mercadopago.com → regístrate (o inicia sesión)
+2. Entra a https://www.mercadopago.com/developers/panel → **Tu aplicación** → **Crear aplicación**
+3. Nombre: `MenuPro`
+4. Producto: **Pagos** → **Suscripciones**
+5. Una vez creada, entra a la app para obtener las credenciales
 
-### 2.2 Crear producto y precio
-1. Ve a **Products** → **Add product**
-2. Nombre: `MenuPro Pro`
-3. Descripción: `Suscripción mensual MenuPro Pro`
-4. **Pricing**:
-   - Type: **Recurring**
-   - Interval: **Monthly**
-   - Amount: `$9.00` (USD) — se mostrará como ≈S/35
-   - Currency: **USD**
-5. Click **Save product**
-6. En la página del producto, copia el **Price ID** (`price_xxxxx`) → `STRIPE_PRICE_ID`
-
-### 2.3 Obtener API keys
-1. Ve a **Developers** → **API keys**
+### 2.2 Obtener credenciales
+1. En la app → **Credenciales**
 2. Copia:
-   - `Publishable key` (`pk_test_xxx`) → `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`
-   - `Secret key` (`sk_test_xxx`) → `STRIPE_SECRET_KEY`
+   - **Access Token** (`APP_USR-xxxxx` en prod, `TEST-xxxxx` en sandbox) → `MERCADOPAGO_ACCESS_TOKEN`
+3. Opcionalmente copia también la **Public Key** si la necesitas para el SDK frontend.
 
-### 2.4 Configurar webhook
-1. Ve a **Developers** → **Webhooks** → **Add endpoint**
-2. Endpoint URL: `https://TU-DOMINIO/api/stripe/webhook` (ej: `https://menupro.vercel.app/api/stripe/webhook`)
-3. En desarrollo local: usa **Stripe CLI** (ver abajo)
-4. Events to send:
-   - `checkout.session.completed`
-   - `customer.subscription.updated`
-   - `customer.subscription.deleted`
-5. Click **Add endpoint**
-6. En la página del endpoint → **Signing secret** → **Reveal** → copia (`whsec_xxx`) → `STRIPE_WEBHOOK_SECRET`
+> Para probar primero en sandbox: usa el Access Token `TEST-xxxxx` y setea `MERCADOPAGO_SANDBOX=true`. Las suscripciones se simulan sin cobro real.
 
-### 2.5 Stripe CLI para desarrollo local
-```bash
-# Instalar Stripe CLI (macOS: brew install stripe/stripe-cli/stripe)
-stripe login
+### 2.3 Configurar webhook
+1. En tu app → **Webhooks** → **Crear webhook**
+2. URL del webhook: `https://TU-DOMINIO/api/mercadopago/webhook` (ej: `https://menupro.vercel.app/api/mercadopago/webhook`)
+3. Eventos a notificar:
+   - `subscription_preapproval` (cambios de estado de la suscripción)
+   - `payment` (opcional — para detectar fallos de cobro)
+4. Guarda. Marketplace te mostrará un **secret de validación** (header `x-signature`) — opcional para validar la procedencia.
+5. Para desarrollo local, MercadoPago no puede llamar a `localhost`. Usa **ngrok**:
+   ```bash
+   ngrok http 3000
+   # Copia la URL https://xxx.ngrok.io/api/mercadopago/webhook
+   # y regístrala como webhook temporal
+   ```
 
-# Escuchar eventos y reenviarlos a tu localhost
-stripe listen --forward-to localhost:3000/api/stripe/webhook
-
-# Copia el whsec_XXX que aparece en la consola → STRIPE_WEBHOOK_SECRET en .env.local
-
-# En otra terminal, para simular un pago:
-stripe trigger checkout.session.completed
-```
+### 2.4 Probar el flujo de suscripción
+1. En sandbox, MercadoPago te da tarjetas de prueba (visa: `4509 9535 6623 3704`, master: `5031 7557 3453 0604`, cualquier CVV y fecha futura).
+2. Inicia sesión en MenuPro → `/dashboard/billing` → click **Upgrade a Pro**.
+3. Se abre Checkout Pro (hosted en mercadopago.com) → paga con tarjeta de prueba.
+4. MP redirige de vuelta a `/dashboard/billing?success=1`.
+5. El webhook debe llegar en ~5-30 segundos y actualizar el plan a `pro`.
 
 ---
 
@@ -115,11 +114,10 @@ Crea `.env.local` en la raíz del proyecto:
 NEXT_PUBLIC_SUPABASE_URL=https://xxxxx.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJxxxxx
 
-# Stripe
-STRIPE_SECRET_KEY=sk_test_xxxxx
-STRIPE_WEBHOOK_SECRET=whsec_xxxxx
-STRIPE_PRICE_ID=price_xxxxx
-NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_xxxxx
+# MercadoPago
+MERCADOPAGO_ACCESS_TOKEN=APP_USR-xxxxx
+MERCADOPAGO_SANDBOX=false
+MERCADOPAGO_CURRENCY_ID=PEN   # PEN=Soles, MXN, COP, CLP, ARS, BRL, USD...
 
 # App
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
@@ -159,10 +157,9 @@ git push -u origin main
 3. **Environment Variables** → agrega TODAS las variables de `.env.local`:
    - `NEXT_PUBLIC_SUPABASE_URL`
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-   - `STRIPE_SECRET_KEY`
-   - `STRIPE_WEBHOOK_SECRET`
-   - `STRIPE_PRICE_ID`
-   - `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`
+   - `MERCADOPAGO_ACCESS_TOKEN`
+   - `MERCADOPAGO_SANDBOX=false`
+   - `MERCADOPAGO_CURRENCY_ID=PEN`
    - `NEXT_PUBLIC_SITE_URL` = `https://tu-app.vercel.app` (la URL que Vercel te dé)
 4. Click **Deploy** — tarda 1-2 min
 5. Obtén tu URL (ej: `menupro-xxx.vercel.app`)
@@ -174,8 +171,8 @@ Una vez desplegado, actualiza:
 - Authentication → URL Configuration → Site URL: `https://menupro-xxx.vercel.app`
 - Redirect URLs: añade `https://menupro-xxx.vercel.app/auth/callback`
 
-**Stripe**:
-- Developers → Webhooks → edita tu endpoint → URL: `https://menupro-xxx.vercel.app/api/stripe/webhook`
+**MercadoPago**:
+- Tu aplicación → Webhooks → edita tu webhook → URL: `https://menupro-xxx.vercel.app/api/mercadopago/webhook`
 
 **.env en Vercel**:
 - `NEXT_PUBLIC_SITE_URL` = `https://menupro-xxx.vercel.app`
@@ -193,7 +190,7 @@ Una vez desplegado, actualiza:
 - `NEXT_PUBLIC_SITE_URL` = `https://menupro.app`
 - Supabase Site URL = `https://menupro.app`
 - Supabase Redirect URLs = `https://menupro.app/auth/callback`
-- Stripe Webhook URL = `https://menupro.app/api/stripe/webhook`
+- MercadoPago Webhook URL = `https://menupro.app/api/mercadopago/webhook`
 
 ---
 
@@ -209,8 +206,8 @@ Visita estos endpoints en producción:
 - ✅ Edita el menú → se guarda automáticamente
 - ✅ Click "Publicar" → se abre `/r/tu-slug` en otra pestaña
 - ✅ En el menú público, agrega items al carrito → envía pedido por WhatsApp
-- ✅ `/dashboard/billing` → click "Upgrade a Pro" → Checkout de Stripe se abre
-- ✅ Completa el pago con tarjeta de prueba `4242 4242 4242 4242`
+- ✅ `/dashboard/billing` → click "Upgrade a Pro" → Checkout Pro de MercadoPago se abre
+- ✅ Completa el pago con tarjeta de prueba (sandbox)
 - ✅ Webhook se recibe → tu plan cambia a `pro` automáticamente
 - ✅ Vuelves al dashboard → plan badge dice "Pro"
 - ✅ En el editor de tu menú, ya no aparece el badge "Creado con MenuPro" en la vista previa
@@ -223,10 +220,11 @@ Visita estos endpoints en producción:
 ### "Invalid login credentials" al registrarse
 - Supabase por defecto requiere confirmación por email. Ve a **Authentication → Settings** y desactiva "Confirm email" si quieres login inmediato en desarrollo.
 
-### Webhook de Stripe no llega
-- Verifica `STRIPE_WEBHOOK_SECRET` en Vercel
-- Usa Stripe CLI en local: `stripe listen --forward-to localhost:3000/api/stripe/webhook`
-- En Stripe Dashboard → Webhooks → tu endpoint → debería mostrar eventos recibidos
+### Webhook de MercadoPago no llega
+- Verifica `MERCADOPAGO_ACCESS_TOKEN` en Vercel
+- Verifica que la URL del webhook en MercadoPago Developers coincida con tu dominio de Vercel
+- En MercadoPago → tu app → Webhooks → debería mostrar intentos de envío (con `200 OK` si llegó)
+- Para local: usa ngrok o smee.io
 
 ### Google OAuth redirige pero no vuelve
 - Verifica Redirect URLs en Supabase → Authentication → URL Configuration
@@ -236,9 +234,14 @@ Visita estos endpoints en producción:
 - Verifica que el bucket `menus` existe y es **public** en Supabase Storage
 - Verifica las policies de storage (sección 8 del schema.sql)
 
-### "STRIPE_PRICE_ID no configurado"
-- Asegúrate de que el env var `STRIPE_PRICE_ID` está seteado en Vercel (no solo en `.env.local`)
+### "MERCADOPAGO_ACCESS_TOKEN no está configurado"
+- Asegúrate de que el env var está seteado en Vercel (no solo en `.env.local`)
 - Después de cambiar env vars, necesitas **redeploy**
+
+### El plan no se actualiza tras el pago
+- Revisa los logs del webhook en Vercel → Functions → `/api/mercadopago/webhook`
+- Verifica que el `external_reference` (userId) coincide con el `id` en `profiles`
+- En sandbox, la activación puede tardar hasta 1 minuto en llegar al webhook
 
 ---
 

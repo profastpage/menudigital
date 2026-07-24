@@ -13,9 +13,8 @@ CREATE TABLE IF NOT EXISTS profiles (
   full_name TEXT,
   avatar_url TEXT,
   plan user_plan NOT NULL DEFAULT 'free',
-  stripe_customer_id TEXT,
-  stripe_subscription_id TEXT,
-  stripe_price_id TEXT,
+  mp_preapproval_id TEXT,
+  mp_status TEXT,
   current_period_end TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()

@@ -2,7 +2,14 @@
 
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Check, Loader2, Crown, Sparkles } from 'lucide-react';
+import {
+  Check,
+  Loader2,
+  Crown,
+  Sparkles,
+  CreditCard,
+  XOctagon,
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { PLANS } from '@/lib/plans';
 
@@ -11,7 +18,8 @@ interface Props {
     plan: 'free' | 'pro';
     email: string;
     currentPeriodEnd: string | null;
-    stripeCustomerId: string | null;
+    mpStatus: string | null;
+    mpPreapprovalId: string | null;
   };
   usage: { menusCount: number; imagesCount: number };
   queryParams: { success?: string; canceled?: string };
@@ -19,12 +27,17 @@ interface Props {
 
 export function BillingClient({ profile, usage, queryParams }: Props) {
   const [loading, setLoading] = useState(false);
-  const [portalLoading, setPortalLoading] = useState(false);
+  const [cancelLoading, setCancelLoading] = useState(false);
+  const [confirmCancel, setConfirmCancel] = useState(false);
   const currentPlan = PLANS[profile.plan];
 
   useEffect(() => {
     if (queryParams.success === '1') {
-      toast.success('¡Bienvenido a Pro! Tu suscripción está activa.');
+      // MP confirma el checkout redirigiendo a back_url?success=1
+      // El webhook puede tardar unos segundos en llegar — toast optimista
+      toast.success('¡Gracias! Estamos confirmando tu pago con MercadoPago…');
+      // Recargar para reflejar el plan actualizado
+      setTimeout(() => window.location.reload(), 2500);
     }
     if (queryParams.canceled === '1') {
       toast.info('Pago cancelado. Puedes intentar nuevamente cuando quieras.');
@@ -34,7 +47,9 @@ export function BillingClient({ profile, usage, queryParams }: Props) {
   async function handleUpgrade() {
     setLoading(true);
     try {
-      const res = await fetch('/api/stripe/checkout', { method: 'POST' });
+      const res = await fetch('/api/mercadopago/checkout', {
+        method: 'POST',
+      });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Error');
       window.location.href = data.url;
@@ -44,16 +59,20 @@ export function BillingClient({ profile, usage, queryParams }: Props) {
     }
   }
 
-  async function handlePortal() {
-    setPortalLoading(true);
+  async function handleCancel() {
+    setCancelLoading(true);
     try {
-      const res = await fetch('/api/stripe/portal', { method: 'POST' });
+      const res = await fetch('/api/mercadopago/cancel', {
+        method: 'POST',
+      });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Error');
-      window.location.href = data.url;
+      toast.success('Suscripción cancelada. Conservarás Pro hasta fin de período.');
+      setConfirmCancel(false);
+      setTimeout(() => window.location.reload(), 1500);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Error');
-      setPortalLoading(false);
+      setCancelLoading(false);
     }
   }
 
@@ -61,7 +80,10 @@ export function BillingClient({ profile, usage, queryParams }: Props) {
     <div className="min-h-screen bg-[#07070b] text-white">
       <header className="border-b border-white/10 bg-[#0a0a14]">
         <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
-          <a href="/dashboard" className="flex items-center gap-3 text-white/70 hover:text-white">
+          <a
+            href="/dashboard"
+            className="flex items-center gap-3 text-white/70 hover:text-white"
+          >
             <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-[#d4af37] to-[#f4d35e] flex items-center justify-center text-lg font-bold text-[#1a1a2e]">
               M
             </div>
@@ -80,14 +102,22 @@ export function BillingClient({ profile, usage, queryParams }: Props) {
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold mb-3">Planes y facturación</h1>
           <p className="text-white/60">
-            Estás en el plan <span className="text-[#d4af37] font-semibold">{currentPlan.name}</span>
+            Estás en el plan{' '}
+            <span className="text-[#d4af37] font-semibold">
+              {currentPlan.name}
+            </span>
             {profile.plan === 'pro' && profile.currentPeriodEnd && (
               <span className="ml-2">
-                · Renueva el {new Date(profile.currentPeriodEnd).toLocaleDateString('es-PE', {
-                  day: 'numeric',
-                  month: 'long',
-                  year: 'numeric',
-                })}
+                · Renueva el{' '}
+                {new Date(profile.currentPeriodEnd).toLocaleDateString(
+                  'es-PE',
+                  { day: 'numeric', month: 'long', year: 'numeric' }
+                )}
+              </span>
+            )}
+            {profile.mpStatus && profile.mpStatus !== 'authorized' && (
+              <span className="ml-2 text-white/40">
+                (estado MP: {profile.mpStatus})
               </span>
             )}
           </p>
@@ -99,7 +129,10 @@ export function BillingClient({ profile, usage, queryParams }: Props) {
             <div className="text-3xl font-bold text-[#d4af37]">
               {usage.menusCount}
               <span className="text-lg text-white/40">
-                /{currentPlan.limits.maxMenus === -1 ? '∞' : currentPlan.limits.maxMenus}
+                /
+                {currentPlan.limits.maxMenus === -1
+                  ? '∞'
+                  : currentPlan.limits.maxMenus}
               </span>
             </div>
             <div className="text-sm text-white/60 mt-1">Menús</div>
@@ -133,7 +166,10 @@ export function BillingClient({ profile, usage, queryParams }: Props) {
             </div>
             <ul className="space-y-3 mb-8">
               {PLANS.free.features.map((f) => (
-                <li key={f} className="flex items-start gap-2 text-sm text-white/80">
+                <li
+                  key={f}
+                  className="flex items-start gap-2 text-sm text-white/80"
+                >
                   <Check className="w-4 h-4 text-white/60 mt-0.5 flex-shrink-0" />
                   {f}
                 </li>
@@ -167,16 +203,22 @@ export function BillingClient({ profile, usage, queryParams }: Props) {
             <div className="mb-6">
               <span className="text-4xl font-bold">S/ 35</span>
               <span className="text-white/50">/mes</span>
-              <div className="text-xs text-white/40 mt-1">≈ $9 USD</div>
+              <div className="text-xs text-white/40 mt-1">
+                ≈ $9 USD · Cobrado por MercadoPago
+              </div>
             </div>
             <ul className="space-y-3 mb-8">
               {PLANS.pro.features.map((f) => (
-                <li key={f} className="flex items-start gap-2 text-sm text-white">
+                <li
+                  key={f}
+                  className="flex items-start gap-2 text-sm text-white"
+                >
                   <Check className="w-4 h-4 text-[#d4af37] mt-0.5 flex-shrink-0" />
                   {f}
                 </li>
               ))}
             </ul>
+
             {profile.plan === 'free' ? (
               <Button
                 onClick={handleUpgrade}
@@ -188,21 +230,57 @@ export function BillingClient({ profile, usage, queryParams }: Props) {
                 ) : (
                   <Sparkles className="w-4 h-4 mr-2" />
                 )}
-                Upgrade a Pro
+                Upgrade a Pro con MercadoPago
               </Button>
-            ) : (
+            ) : !confirmCancel ? (
               <Button
-                onClick={handlePortal}
-                disabled={portalLoading}
+                onClick={() => setConfirmCancel(true)}
                 variant="outline"
                 className="w-full bg-transparent border-white/20 text-white hover:bg-white/5"
               >
-                {portalLoading ? (
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                ) : null}
-                Administrar suscripción
+                <XOctagon className="w-4 h-4 mr-2" />
+                Cancelar suscripción
               </Button>
+            ) : (
+              <div className="space-y-2">
+                <p className="text-sm text-white/80 text-center">
+                  ¿Cancelar ahora? Conservarás acceso Pro hasta el fin del
+                  período pagado.
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    onClick={() => setConfirmCancel(false)}
+                    variant="outline"
+                    className="bg-transparent border-white/20 text-white hover:bg-white/5"
+                  >
+                    No, seguir Pro
+                  </Button>
+                  <Button
+                    onClick={handleCancel}
+                    disabled={cancelLoading}
+                    className="bg-red-600 hover:bg-red-700 text-white"
+                  >
+                    {cancelLoading ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : null}
+                    Sí, cancelar
+                  </Button>
+                </div>
+              </div>
             )}
+          </div>
+        </div>
+
+        {/* Payment methods info */}
+        <div className="max-w-2xl mx-auto mt-12 p-5 bg-white/[0.03] border border-white/10 rounded-2xl flex items-start gap-4">
+          <CreditCard className="w-6 h-6 text-[#00b1ea] flex-shrink-0 mt-0.5" />
+          <div className="text-sm text-white/70">
+            <div className="font-semibold text-white mb-1">
+              Pagos procesados por MercadoPago
+            </div>
+            Aceptamos tarjetas Visa, Mastercard, American Express, Diners,
+            Yape, Plin y otros métodos según tu país. El cobro es mensual y
+            puedes cancelar cuando quieras.
           </div>
         </div>
 
@@ -211,23 +289,43 @@ export function BillingClient({ profile, usage, queryParams }: Props) {
           <h3 className="text-2xl font-bold mb-6">Preguntas frecuentes</h3>
           <div className="space-y-4 text-left">
             <div className="bg-white/[0.03] border border-white/10 rounded-xl p-5">
-              <div className="font-semibold mb-1">¿Puedo cancelar cuando quiera?</div>
+              <div className="font-semibold mb-1">
+                ¿Puedo cancelar cuando quiera?
+              </div>
               <div className="text-sm text-white/60">
-                Sí, puedes cancelar en cualquier momento desde el portal de Stripe.
-                Conservarás acceso Pro hasta el fin del período pagado.
+                Sí. Haz clic en &quot;Cancelar suscripción&quot; y confirma.
+                El cobro recurrente se detiene, pero conservarás acceso Pro
+                hasta el fin del período que ya pagaste.
               </div>
             </div>
             <div className="bg-white/[0.03] border border-white/10 rounded-xl p-5">
-              <div className="font-semibold mb-1">¿Qué métodos de pago aceptan?</div>
+              <div className="font-semibold mb-1">
+                ¿Qué métodos de pago aceptan?
+              </div>
               <div className="text-sm text-white/60">
-                Aceptamos tarjetas Visa, Mastercard, American Express y otras a través de Stripe.
+                Todos los que soporta MercadoPago en tu país: tarjetas de
+                crédito/débito, Yape, Plin, pago en efectivo en agentes
+                autorizados y más.
               </div>
             </div>
             <div className="bg-white/[0.03] border border-white/10 rounded-xl p-5">
-              <div className="font-semibold mb-1">¿Hay comisión por venta?</div>
+              <div className="font-semibold mb-1">
+                ¿Hay comisión por venta?
+              </div>
               <div className="text-sm text-white/60">
-                No. Los pedidos van directo al WhatsApp del restaurante. MenuPro no cobra
-                comisión por venta.
+                No. Los pedidos van directo al WhatsApp del restaurante.
+                MenuPro no cobra comisión por venta — solo la suscripción
+                mensual fija de S/35.
+              </div>
+            </div>
+            <div className="bg-white/[0.03] border border-white/10 rounded-xl p-5">
+              <div className="font-semibold mb-1">
+                Mi pago dice &quot;pendiente&quot;
+              </div>
+              <div className="text-sm text-white/60">
+                Si pagaste con método efectivo (ej. Yape/Plin) la
+                activación es inmediata. Si elegiste transferencia o agente,
+                puede tardar hasta 2 horas hábiles en confirmarse.
               </div>
             </div>
           </div>
