@@ -1,6 +1,16 @@
 -- ============================================================
 -- MenuPro SaaS — Supabase Schema Completo
--- Ejecutar en: Supabase Dashboard → SQL Editor → New query
+-- 
+-- COMO EJECUTAR:
+-- 1. Abre tu proyecto en Supabase Dashboard
+-- 2. Ve a SQL Editor (ícono de base de datos en la barra lateral)
+-- 3. Haz clic en "New query"
+-- 4. COPIA Y PEGA TODO EL CONTENIDO DE ESTE ARCHIVO (no el nombre del archivo)
+-- 5. Haz clic en "Run" (o Ctrl+Enter)
+-- 6. Espera a que termine — deberías ver "Success" al final
+-- 
+-- NOTA: No escribas "supabase/schema.sql" en el editor.
+-- Debes copiar el CONTENIDO SQL de este archivo, no su nombre.
 -- ============================================================
 
 -- 1) ENUM para planes
@@ -13,6 +23,7 @@ CREATE TABLE IF NOT EXISTS profiles (
   full_name TEXT,
   avatar_url TEXT,
   plan user_plan NOT NULL DEFAULT 'free',
+  is_super_admin BOOLEAN NOT NULL DEFAULT false,
   mp_preapproval_id TEXT,
   mp_status TEXT,
   current_period_end TIMESTAMPTZ,
@@ -30,6 +41,20 @@ CREATE POLICY "profiles_update_self" ON profiles
   FOR UPDATE USING (auth.uid() = id);
 CREATE POLICY "profiles_insert_self" ON profiles
   FOR INSERT WITH CHECK (auth.uid() = id);
+
+-- Super admin policies (bypass RLS para administradores)
+CREATE POLICY "profiles_select_admin" ON profiles
+  FOR SELECT USING (
+    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND is_super_admin = true)
+  );
+CREATE POLICY "profiles_update_admin" ON profiles
+  FOR UPDATE USING (
+    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND is_super_admin = true)
+  );
+CREATE POLICY "profiles_delete_admin" ON profiles
+  FOR DELETE USING (
+    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND is_super_admin = true)
+  );
 
 -- 3) Trigger: crear profile automáticamente al registrarse
 CREATE OR REPLACE FUNCTION public.handle_new_user()
@@ -85,6 +110,16 @@ CREATE POLICY "menus_update_own" ON menus
 CREATE POLICY "menus_delete_own" ON menus
   FOR DELETE USING (auth.uid() = user_id);
 
+-- Admin: puede ver y eliminar menús de cualquier usuario
+CREATE POLICY "menus_select_admin" ON menus
+  FOR SELECT USING (
+    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND is_super_admin = true)
+  );
+CREATE POLICY "menus_delete_admin" ON menus
+  FOR DELETE USING (
+    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND is_super_admin = true)
+  );
+
 -- 5) Tabla categories
 CREATE TABLE IF NOT EXISTS categories (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -113,6 +148,12 @@ CREATE POLICY "categories_update_own" ON categories
 CREATE POLICY "categories_delete_own" ON categories
   FOR DELETE USING (
     EXISTS (SELECT 1 FROM menus WHERE menus.id = categories.menu_id AND menus.user_id = auth.uid())
+  );
+
+-- Admin categories
+CREATE POLICY "categories_select_admin" ON categories
+  FOR SELECT USING (
+    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND is_super_admin = true)
   );
 
 -- 6) Tabla dishes
@@ -164,6 +205,12 @@ CREATE POLICY "dishes_delete_own" ON dishes
     )
   );
 
+-- Admin dishes
+CREATE POLICY "dishes_select_admin" ON dishes
+  FOR SELECT USING (
+    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND is_super_admin = true)
+  );
+
 -- 7) Tabla menu_views (analytics)
 CREATE TABLE IF NOT EXISTS menu_views (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -183,6 +230,12 @@ CREATE POLICY "menu_views_select_own" ON menu_views
   );
 CREATE POLICY "menu_views_insert_any" ON menu_views
   FOR INSERT WITH CHECK (true);
+
+-- Admin menu_views
+CREATE POLICY "menu_views_select_admin" ON menu_views
+  FOR SELECT USING (
+    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND is_super_admin = true)
+  );
 
 -- ============================================================
 -- 8) Tabla custom_domains (solo Pro)
@@ -217,6 +270,12 @@ CREATE POLICY "custom_domains_update_own" ON custom_domains
   FOR UPDATE USING (auth.uid() = user_id);
 CREATE POLICY "custom_domains_delete_own" ON custom_domains
   FOR DELETE USING (auth.uid() = user_id);
+
+-- Admin custom_domains
+CREATE POLICY "custom_domains_select_admin" ON custom_domains
+  FOR SELECT USING (
+    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND is_super_admin = true)
+  );
 
 -- 9) Storage bucket para logos y platos
 INSERT INTO storage.buckets (id, name, public)
@@ -323,3 +382,18 @@ BEGIN
   );
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- 14) Migración: agregar is_super_admin si la tabla ya existe sin esta columna
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'profiles' AND column_name = 'is_super_admin'
+  ) THEN
+    ALTER TABLE profiles ADD COLUMN is_super_admin BOOLEAN NOT NULL DEFAULT false;
+  END IF;
+END $$;
+
+-- 15) Marcar al primer usuario como super admin
+-- Descomenta y cambia el email por el tuyo después de registrarte:
+-- UPDATE profiles SET is_super_admin = true WHERE email = 'tu-email@gmail.com';

@@ -34,6 +34,7 @@ export default async function DashboardPage() {
       user={{ email: user.email || '', name: profile?.full_name || user.email?.split('@')[0] || '' }}
       plan={plan}
       menus={menus || []}
+      isSuperAdmin={profile?.is_super_admin === true}
     />
   );
 }

@@ -38,6 +38,8 @@ import {
   MoreVertical,
   LayoutDashboard,
   Copy,
+  Crown,
+  Shield,
 } from 'lucide-react';
 import type { Plan } from '@/lib/plans';
 import type { MenuData } from '@/lib/menu-utils';
@@ -53,9 +55,10 @@ interface Props {
   user: { email: string; name: string };
   plan: Plan;
   menus: MenuData[];
+  isSuperAdmin?: boolean;
 }
 
-export function DashboardClient({ user, plan, menus }: Props) {
+export function DashboardClient({ user, plan, menus, isSuperAdmin = false }: Props) {
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState('');
   const router = useRouter();
@@ -221,6 +224,15 @@ export function DashboardClient({ user, plan, menus }: Props) {
             <CreditCard className="w-4 h-4" />
             Planes
           </a>
+          {isSuperAdmin && (
+            <a
+              href="/dashboard/admin"
+              className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-amber-400/80 hover:text-amber-400 hover:bg-amber-400/5 text-sm transition-colors border border-amber-400/20 mt-2"
+            >
+              <Shield className="w-4 h-4" />
+              Super Admin
+            </a>
+          )}
         </nav>
 
         {/* User section */}
@@ -281,6 +293,9 @@ export function DashboardClient({ user, plan, menus }: Props) {
             <a href="/dashboard/analytics" className="px-3 py-1.5 rounded-lg text-white/50 text-xs whitespace-nowrap">Analíticas</a>
             <a href="/dashboard/domains" className="px-3 py-1.5 rounded-lg text-white/50 text-xs whitespace-nowrap">Dominios</a>
             <a href="/dashboard/billing" className="px-3 py-1.5 rounded-lg text-white/50 text-xs whitespace-nowrap">Planes</a>
+            {isSuperAdmin && (
+              <a href="/dashboard/admin" className="px-3 py-1.5 rounded-lg text-amber-400 text-xs whitespace-nowrap">Admin</a>
+            )}
           </div>
         </header>
 
