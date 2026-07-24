@@ -58,3 +58,7 @@ server.log
 .zscripts/
 db/*.db
 db/*.db-journal
+
+# Stray dev artifacts
+/upload/
+/3210

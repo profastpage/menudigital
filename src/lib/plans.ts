@@ -9,15 +9,25 @@ export interface Plan {
   limits: {
     maxMenus: number; // -1 = ilimitado
     maxDishesPerMenu: number;
-    maxImages: number;
+    maxImages: number; // -1 = ilimitado
+    maxCategories: number; // -1 = ilimitado
     hasQR: boolean;
     hasBranding: boolean; // true = muestra marca MenuPro
     hasAnalytics: boolean;
+    hasBgRemoval: boolean;
+    bgRemovalCredits: number; // créditos mensuales incluidos en Pro
+    hasMultiLanguage: boolean;
+    hasHDQR: boolean;
   };
   features: string[];
   highlight?: boolean;
 }
 
+/**
+ * PLAN FREE — Adquisición + Viralidad
+ * Útil pero incompleto: suficiente para probar y compartir,
+ * pero con límites que empujan el upgrade cuando el restaurante crece.
+ */
 export const PLANS: Record<PlanId, Plan> = {
   free: {
     id: 'free',
@@ -26,19 +36,26 @@ export const PLANS: Record<PlanId, Plan> = {
     priceUsd: 0,
     limits: {
       maxMenus: 1,
-      maxDishesPerMenu: 15,
+      maxDishesPerMenu: 10,
       maxImages: 5,
-      hasQR: false,
+      maxCategories: 3,
+      hasQR: true, // QR básico (vista web, no descargable en HD)
       hasBranding: true,
       hasAnalytics: false,
+      hasBgRemoval: false,
+      bgRemovalCredits: 0,
+      hasMultiLanguage: false,
+      hasHDQR: false,
     },
     features: [
-      '1 menú digital',
-      'Hasta 15 platos',
+      '1 menú activo',
+      'Hasta 10 platos',
       'Hasta 5 imágenes',
-      'Carrito con WhatsApp',
+      'Hasta 3 categorías',
+      'Carrito integrado con WhatsApp',
       'URL pública /r/tu-restaurante',
       'Vista previa en vivo',
+      'QR básico (solo vista web)',
       'Marca "Creado con MenuPro"',
     ],
   },
@@ -51,23 +68,31 @@ export const PLANS: Record<PlanId, Plan> = {
     limits: {
       maxMenus: -1,
       maxDishesPerMenu: -1,
-      maxImages: 30,
+      maxImages: -1,
+      maxCategories: -1,
       hasQR: true,
       hasBranding: false,
       hasAnalytics: true,
+      hasBgRemoval: true,
+      bgRemovalCredits: 5, // 5 quitadores de fondo por mes incluidos
+      hasMultiLanguage: true,
+      hasHDQR: true,
     },
     highlight: true,
     features: [
       'Menús ilimitados',
       'Platos ilimitados',
-      'Hasta 30 imágenes',
-      'Carrito con WhatsApp',
+      'Imágenes ilimitadas + optimización WebP',
+      'Categorías ilimitadas + etiquetas (vegano, picante, popular)',
+      '5 créditos de "Quitar fondo" por mes',
+      'Carrito integrado con WhatsApp',
       'URL pública personalizada',
-      'Vista previa en vivo',
-      'Sin marca MenuPro',
-      'Código QR descargable',
-      'Analytics de visitas',
-      'Soporte prioritario',
+      'QR profesional en HD + dinámico (editable sin reimprimir)',
+      'Analytics: visitas, clics WhatsApp, platos más vistos',
+      'Menú multi-idioma (ES/EN)',
+      '100% white-label (sin marca MenuPro)',
+      'Soporte prioritario por WhatsApp',
+      'Próximamente: integración con apps de delivery',
     ],
   },
 };
@@ -86,7 +111,13 @@ export function canAddDish(currentCount: number, plan: Plan): boolean {
   return currentCount < plan.limits.maxDishesPerMenu;
 }
 
+export function canAddCategory(currentCount: number, plan: Plan): boolean {
+  if (plan.limits.maxCategories === -1) return true;
+  return currentCount < plan.limits.maxCategories;
+}
+
 export function canUploadImage(currentCount: number, plan: Plan): boolean {
+  if (plan.limits.maxImages === -1) return true;
   return currentCount < plan.limits.maxImages;
 }
 

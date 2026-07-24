@@ -1,22 +1,44 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { Loader2, Mail, Lock, User } from 'lucide-react';
+import { Loader2, Mail, Lock, User, Eye, EyeOff } from 'lucide-react';
+
+function getPasswordStrength(pw: string) {
+  let score = 0;
+  if (pw.length >= 6) score++;
+  if (pw.length >= 10) score++;
+  if (/[A-Z]/.test(pw)) score++;
+  if (/[0-9]/.test(pw)) score++;
+  if (/[^A-Za-z0-9]/.test(pw)) score++;
+  return score; // 0-5
+}
+
+const STRENGTH_LABELS = ['Muy débil', 'Débil', 'Aceptable', 'Buena', 'Fuerte', 'Muy fuerte'];
+const STRENGTH_COLORS = [
+  'bg-red-500',
+  'bg-red-500',
+  'bg-orange-500',
+  'bg-yellow-500',
+  'bg-[#06d6a0]',
+  'bg-[#06d6a0]',
+];
 
 export function RegisterForm() {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const router = useRouter();
-  const supabase = createClient();
+
+  const strength = useMemo(() => getPasswordStrength(password), [password]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -28,6 +50,7 @@ export function RegisterForm() {
 
     setLoading(true);
     try {
+      const supabase = createClient();
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -44,7 +67,7 @@ export function RegisterForm() {
         return;
       }
 
-      toast.success('¡Cuenta creada!');
+      toast.success('¡Cuenta creada! Redirigiendo…');
       router.push('/dashboard');
       router.refresh();
     } catch (err) {
@@ -58,6 +81,7 @@ export function RegisterForm() {
   async function handleGoogle() {
     setGoogleLoading(true);
     try {
+      const supabase = createClient();
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
@@ -72,14 +96,18 @@ export function RegisterForm() {
     }
   }
 
+  const inputCls =
+    'pl-10 h-12 bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-[#d4af37] focus:ring-[#d4af37]/20 transition';
+
   return (
     <div className="space-y-4">
+      {/* Google */}
       <Button
         type="button"
         variant="outline"
         onClick={handleGoogle}
         disabled={googleLoading || loading}
-        className="w-full h-12 bg-white/5 border-white/10 text-white hover:bg-white/10 hover:text-white"
+        className="w-full h-12 bg-white/5 border-white/10 text-white hover:bg-white/10 hover:text-white transition"
       >
         {googleLoading ? (
           <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -89,20 +117,21 @@ export function RegisterForm() {
         Registrarme con Google
       </Button>
 
+      {/* Divider */}
       <div className="relative py-2">
         <div className="absolute inset-0 flex items-center">
           <div className="w-full border-t border-white/10" />
         </div>
         <div className="relative flex justify-center">
-          <span className="px-3 bg-[#07070b] text-xs text-white/40 uppercase tracking-wider">
-            o con email
+          <span className="px-3 bg-[#07070b] text-[10px] text-white/40 uppercase tracking-wider">
+            o con tu email
           </span>
         </div>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="name" className="text-white/80">
+          <Label htmlFor="name" className="text-white/80 text-sm">
             Nombre completo
           </Label>
           <div className="relative">
@@ -114,13 +143,14 @@ export function RegisterForm() {
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
               required
-              className="pl-10 h-12 bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-[#d4af37]"
+              autoComplete="name"
+              className={inputCls}
             />
           </div>
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="email" className="text-white/80">
+          <Label htmlFor="email" className="text-white/80 text-sm">
             Email
           </Label>
           <div className="relative">
@@ -132,45 +162,89 @@ export function RegisterForm() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="pl-10 h-12 bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-[#d4af37]"
+              autoComplete="email"
+              className={inputCls}
             />
           </div>
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="password" className="text-white/80">
+          <Label htmlFor="password" className="text-white/80 text-sm">
             Contraseña
           </Label>
           <div className="relative">
             <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
             <Input
               id="password"
-              type="password"
+              type={showPassword ? 'text' : 'password'}
               placeholder="Mínimo 6 caracteres"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
               minLength={6}
-              className="pl-10 h-12 bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-[#d4af37]"
+              autoComplete="new-password"
+              className={inputCls + ' pr-10'}
             />
+            <button
+              type="button"
+              onClick={() => setShowPassword((v) => !v)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70 transition"
+              tabIndex={-1}
+              aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+            >
+              {showPassword ? (
+                <EyeOff className="w-4 h-4" />
+              ) : (
+                <Eye className="w-4 h-4" />
+              )}
+            </button>
           </div>
+
+          {/* Strength meter */}
+          {password.length > 0 && (
+            <div className="pt-1.5">
+              <div className="flex gap-1">
+                {[0, 1, 2, 3, 4].map((i) => (
+                  <div
+                    key={i}
+                    className={`h-1 flex-1 rounded-full transition-all ${
+                      i < strength ? STRENGTH_COLORS[strength] : 'bg-white/10'
+                    }`}
+                  />
+                ))}
+              </div>
+              <p className="text-[10px] text-white/40 mt-1">
+                {STRENGTH_LABELS[strength]}
+              </p>
+            </div>
+          )}
         </div>
 
         <Button
           type="submit"
           disabled={loading || googleLoading}
-          className="w-full h-12 bg-gradient-to-r from-[#d4af37] to-[#f4d35e] text-[#1a1a2e] hover:opacity-90 font-semibold"
+          className="w-full h-12 bg-gradient-to-r from-[#d4af37] to-[#f4d35e] text-[#1a1a2e] hover:opacity-90 font-semibold shadow-lg shadow-[#d4af37]/20 transition"
         >
-          {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+          {loading ? (
+            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+          ) : null}
           Crear cuenta gratis
         </Button>
       </form>
 
-      <p className="text-center text-xs text-white/40">
-        Al registrarte aceptas nuestros términos y política de privacidad.
+      <p className="text-center text-[11px] text-white/40 leading-relaxed">
+        Al registrarte aceptas nuestros{' '}
+        <a href="#" className="text-white/60 hover:underline">
+          términos
+        </a>{' '}
+        y{' '}
+        <a href="#" className="text-white/60 hover:underline">
+          política de privacidad
+        </a>
+        .
       </p>
 
-      <p className="text-center text-sm text-white/60">
+      <p className="text-center text-sm text-white/60 pt-1">
         ¿Ya tienes cuenta?{' '}
         <a
           href="/login"

@@ -28,7 +28,8 @@ export function ImageUploader({
   const [dragOver, setDragOver] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const canUpload = imagesCount < plan.limits.maxImages;
+  const maxImages = plan.limits.maxImages;
+  const canUpload = maxImages === -1 || imagesCount < maxImages;
 
   const handleFile = useCallback(async (file: File) => {
     if (!file.type.startsWith('image/')) {
@@ -40,7 +41,11 @@ export function ImageUploader({
       return;
     }
     if (!canUpload && !url) {
-      toast.error(`Límite de ${plan.limits.maxImages} imágenes alcanzado. Upgrade a Pro.`);
+      toast.error(
+        maxImages === -1
+          ? 'Error inesperado. Recarga la página.'
+          : `Límite de ${maxImages} imágenes alcanzado. Upgrade a Pro para imágenes ilimitadas.`
+      );
       return;
     }
 
@@ -148,7 +153,7 @@ export function ImageUploader({
           </p>
           {!canUpload && !url && (
             <p className="text-xs text-amber-400">
-              Límite alcanzado ({plan.limits.maxImages}). Upgrade a Pro para más.
+              Límite alcanzado ({maxImages}). Upgrade a Pro para imágenes ilimitadas.
             </p>
           )}
         </div>

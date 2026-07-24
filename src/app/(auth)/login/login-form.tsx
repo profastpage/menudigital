@@ -7,26 +7,27 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { Loader2, Mail, Lock } from 'lucide-react';
+import { Loader2, Mail, Lock, Eye, EyeOff } from 'lucide-react';
 
 export function LoginForm({ redirect: redirectTo }: { redirect: string }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const router = useRouter();
-  const supabase = createClient();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     try {
+      const supabase = createClient();
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
       if (error) throw error;
-      toast.success('Sesión iniciada');
+      toast.success('¡Sesión iniciada! Redirigiendo…');
       router.push(redirectTo);
       router.refresh();
     } catch (err) {
@@ -40,6 +41,7 @@ export function LoginForm({ redirect: redirectTo }: { redirect: string }) {
   async function handleGoogle() {
     setGoogleLoading(true);
     try {
+      const supabase = createClient();
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
@@ -54,14 +56,18 @@ export function LoginForm({ redirect: redirectTo }: { redirect: string }) {
     }
   }
 
+  const inputCls =
+    'pl-10 h-12 bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-[#d4af37] focus:ring-[#d4af37]/20 transition';
+
   return (
     <div className="space-y-4">
+      {/* Google */}
       <Button
         type="button"
         variant="outline"
         onClick={handleGoogle}
         disabled={googleLoading || loading}
-        className="w-full h-12 bg-white/5 border-white/10 text-white hover:bg-white/10 hover:text-white"
+        className="w-full h-12 bg-white/5 border-white/10 text-white hover:bg-white/10 hover:text-white transition"
       >
         {googleLoading ? (
           <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -71,20 +77,21 @@ export function LoginForm({ redirect: redirectTo }: { redirect: string }) {
         Continuar con Google
       </Button>
 
+      {/* Divider */}
       <div className="relative py-2">
         <div className="absolute inset-0 flex items-center">
           <div className="w-full border-t border-white/10" />
         </div>
         <div className="relative flex justify-center">
-          <span className="px-3 bg-[#07070b] text-xs text-white/40 uppercase tracking-wider">
-            o con email
+          <span className="px-3 bg-[#07070b] text-[10px] text-white/40 uppercase tracking-wider">
+            o con tu email
           </span>
         </div>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="email" className="text-white/80">
+          <Label htmlFor="email" className="text-white/80 text-sm">
             Email
           </Label>
           <div className="relative">
@@ -96,40 +103,71 @@ export function LoginForm({ redirect: redirectTo }: { redirect: string }) {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="pl-10 h-12 bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-[#d4af37]"
+              autoComplete="email"
+              className={inputCls}
             />
           </div>
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="password" className="text-white/80">
-            Contraseña
-          </Label>
+          <div className="flex items-center justify-between">
+            <Label htmlFor="password" className="text-white/80 text-sm">
+              Contraseña
+            </Label>
+            <a
+              href="#"
+              onClick={(e) => {
+                e.preventDefault();
+                toast.info(
+                  'Para resetear tu contraseña, usa "Olvidé mi contraseña" en el email de Supabase.'
+                );
+              }}
+              className="text-xs text-[#d4af37] hover:underline"
+            >
+              ¿Olvidaste tu contraseña?
+            </a>
+          </div>
           <div className="relative">
             <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
             <Input
               id="password"
-              type="password"
+              type={showPassword ? 'text' : 'password'}
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="pl-10 h-12 bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-[#d4af37]"
+              autoComplete="current-password"
+              className={inputCls + ' pr-10'}
             />
+            <button
+              type="button"
+              onClick={() => setShowPassword((v) => !v)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70 transition"
+              tabIndex={-1}
+              aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+            >
+              {showPassword ? (
+                <EyeOff className="w-4 h-4" />
+              ) : (
+                <Eye className="w-4 h-4" />
+              )}
+            </button>
           </div>
         </div>
 
         <Button
           type="submit"
           disabled={loading || googleLoading}
-          className="w-full h-12 bg-gradient-to-r from-[#d4af37] to-[#f4d35e] text-[#1a1a2e] hover:opacity-90 font-semibold"
+          className="w-full h-12 bg-gradient-to-r from-[#d4af37] to-[#f4d35e] text-[#1a1a2e] hover:opacity-90 font-semibold shadow-lg shadow-[#d4af37]/20 transition"
         >
-          {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+          {loading ? (
+            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+          ) : null}
           Iniciar sesión
         </Button>
       </form>
 
-      <p className="text-center text-sm text-white/60">
+      <p className="text-center text-sm text-white/60 pt-2">
         ¿No tienes cuenta?{' '}
         <a
           href="/register"

@@ -141,7 +141,10 @@ export function BillingClient({ profile, usage, queryParams }: Props) {
             <div className="text-3xl font-bold text-[#d4af37]">
               {usage.imagesCount}
               <span className="text-lg text-white/40">
-                /{currentPlan.limits.maxImages}
+                /
+                {currentPlan.limits.maxImages === -1
+                  ? '∞'
+                  : currentPlan.limits.maxImages}
               </span>
             </div>
             <div className="text-sm text-white/60 mt-1">Imágenes</div>
