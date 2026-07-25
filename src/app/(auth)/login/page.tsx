@@ -137,8 +137,26 @@ export default async function LoginPage({
       {/* Form derecha */}
       <div className="flex-1 flex items-center justify-center p-6 sm:p-8 relative">
         <div className="w-full max-w-md">
+          {/* Botón volver al inicio — siempre visible, top-left */}
+          <a
+            href="/"
+            className="absolute top-6 left-6 inline-flex items-center gap-1.5 text-sm text-white/60 hover:text-[#d4af37] transition-colors group"
+            aria-label="Volver al inicio"
+          >
+            <svg
+              className="w-4 h-4 transition-transform group-hover:-translate-x-0.5"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            Volver al inicio
+          </a>
+
           {/* Mobile logo */}
-          <div className="lg:hidden flex items-center gap-3 mb-8">
+          <div className="lg:hidden flex items-center gap-3 mb-8 mt-12">
             <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#d4af37] to-[#f4d35e] flex items-center justify-center text-xl font-bold text-[#1a1a2e]">
               M
             </div>

@@ -87,23 +87,49 @@ export async function PUT(
     branding_text,
     is_published,
     categories,
+    // Campos de tema (todos opcionales, solo se actualizan si vienen)
+    theme_color_secondary,
+    theme_font,
+    theme_layout,
+    theme_image_size,
+    theme_card_style,
+    theme_cover_url,
+    theme_show_search,
+    theme_show_category_icons,
+    theme_rounded_corners,
+    theme_dark_mode,
   } = body;
+
+  // Construir objeto de update solo con campos presentes
+  const updateData: Record<string, unknown> = {
+    name: name?.trim(),
+    slogan: slogan || null,
+    description: description || null,
+    whatsapp: whatsapp?.trim(),
+    logo_url: logo_url || null,
+    color: color || '#ff6b35',
+    currency: currency || 'S/',
+    branding_text: branding_text !== undefined ? branding_text : 'Creado con MenuPro',
+    is_published: typeof is_published === 'boolean' ? is_published : false,
+    updated_at: new Date().toISOString(),
+  };
+
+  // Solo actualizar campos de tema si vienen explícitamente en el body
+  if (theme_color_secondary !== undefined) updateData.theme_color_secondary = theme_color_secondary;
+  if (theme_font !== undefined) updateData.theme_font = theme_font;
+  if (theme_layout !== undefined) updateData.theme_layout = theme_layout;
+  if (theme_image_size !== undefined) updateData.theme_image_size = theme_image_size;
+  if (theme_card_style !== undefined) updateData.theme_card_style = theme_card_style;
+  if (theme_cover_url !== undefined) updateData.theme_cover_url = theme_cover_url;
+  if (theme_show_search !== undefined) updateData.theme_show_search = theme_show_search;
+  if (theme_show_category_icons !== undefined) updateData.theme_show_category_icons = theme_show_category_icons;
+  if (theme_rounded_corners !== undefined) updateData.theme_rounded_corners = theme_rounded_corners;
+  if (theme_dark_mode !== undefined) updateData.theme_dark_mode = theme_dark_mode;
 
   // Actualizar menu
   const { error: menuErr } = await supabase
     .from('menus')
-    .update({
-      name: name?.trim(),
-      slogan: slogan || null,
-      description: description || null,
-      whatsapp: whatsapp?.trim(),
-      logo_url: logo_url || null,
-      color: color || '#ff6b35',
-      currency: currency || 'S/',
-      branding_text: branding_text !== undefined ? branding_text : 'Creado con MenuPro',
-      is_published: typeof is_published === 'boolean' ? is_published : false,
-      updated_at: new Date().toISOString(),
-    })
+    .update(updateData)
     .eq('id', id);
 
   if (menuErr) {

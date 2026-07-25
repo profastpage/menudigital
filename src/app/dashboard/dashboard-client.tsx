@@ -40,6 +40,9 @@ import {
   Copy,
   Crown,
   Shield,
+  Home,
+  Menu as MenuIcon,
+  X,
 } from 'lucide-react';
 import type { Plan } from '@/lib/plans';
 import type { MenuData } from '@/lib/menu-utils';
@@ -61,6 +64,7 @@ interface Props {
 export function DashboardClient({ user, plan, menus, isSuperAdmin = false }: Props) {
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState('');
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const router = useRouter();
   const origin = typeof window !== 'undefined' ? window.location.origin : '';
   const importFileRef = useRef<HTMLInputElement>(null);
@@ -184,58 +188,40 @@ export function DashboardClient({ user, plan, menus, isSuperAdmin = false }: Pro
 
   return (
     <div className="min-h-screen bg-[#07070b] text-white flex">
-      {/* Sidebar */}
+      {/* ───────── Sidebar desktop (lg+) ───────── */}
       <aside className="hidden lg:flex flex-col w-60 border-r border-white/10 bg-[#0a0a14] p-4 flex-shrink-0">
         <div className="flex items-center gap-3 mb-8 px-2">
-          <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-[#d4af37] to-[#f4d35e] flex items-center justify-center text-lg font-bold text-[#1a1a2e]">
+          <a href="/" className="w-9 h-9 rounded-lg bg-gradient-to-br from-[#d4af37] to-[#f4d35e] flex items-center justify-center text-lg font-bold text-[#1a1a2e] hover:opacity-90 transition">
             M
-          </div>
-          <div className="font-bold">MenuPro</div>
+          </a>
+          <a href="/" className="font-bold hover:text-[#d4af37] transition">MenuPro</a>
         </div>
 
         <nav className="space-y-1 flex-1">
-          <a
-            href="/dashboard"
-            className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-sm font-medium"
-          >
+          <a href="/dashboard" className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-sm font-medium">
             <LayoutDashboard className="w-4 h-4" />
             Mis menús
           </a>
-          <a
-            href="/dashboard/generador"
-            className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-white/60 hover:text-white hover:bg-white/5 text-sm transition-colors"
-          >
+          <a href="/dashboard/generador" className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-white/60 hover:text-white hover:bg-white/5 text-sm transition-colors">
             <Sparkles className="w-4 h-4" />
             Generador rápido
           </a>
-          <a
-            href="/dashboard/analytics"
-            className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-white/60 hover:text-white hover:bg-white/5 text-sm transition-colors"
-          >
+          <a href="/dashboard/analytics" className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-white/60 hover:text-white hover:bg-white/5 text-sm transition-colors">
             <BarChart3 className="w-4 h-4" />
             Analíticas
             <Crown className="w-3 h-3 text-[#d4af37] ml-auto" />
           </a>
-          <a
-            href="/dashboard/domains"
-            className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-white/60 hover:text-white hover:bg-white/5 text-sm transition-colors"
-          >
+          <a href="/dashboard/domains" className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-white/60 hover:text-white hover:bg-white/5 text-sm transition-colors">
             <Globe className="w-4 h-4" />
             Dominios
             <Crown className="w-3 h-3 text-[#d4af37] ml-auto" />
           </a>
-          <a
-            href="/dashboard/billing"
-            className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-white/60 hover:text-white hover:bg-white/5 text-sm transition-colors"
-          >
+          <a href="/dashboard/billing" className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-white/60 hover:text-white hover:bg-white/5 text-sm transition-colors">
             <CreditCard className="w-4 h-4" />
             Planes
           </a>
           {isSuperAdmin && (
-            <a
-              href="/superadmin"
-              className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-amber-400/80 hover:text-amber-400 hover:bg-amber-400/5 text-sm transition-colors border border-amber-400/20 mt-2"
-            >
+            <a href="/superadmin" className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-amber-400/80 hover:text-amber-400 hover:bg-amber-400/5 text-sm transition-colors border border-amber-400/20 mt-2">
               <Shield className="w-4 h-4" />
               Super Admin
             </a>
@@ -268,20 +254,87 @@ export function DashboardClient({ user, plan, menus, isSuperAdmin = false }: Pro
         </div>
       </aside>
 
-      {/* Main content */}
-      <div className="flex-1 flex flex-col min-w-0">
-        {/* Mobile header */}
-        <header className="lg:hidden border-b border-white/10 bg-[#0a0a14] backdrop-blur sticky top-0 z-40">
-          <div className="px-6 py-4 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#d4af37] to-[#f4d35e] flex items-center justify-center text-sm font-bold text-[#1a1a2e]">
-                M
+      {/* ───────── Drawer mobile (overlay) ───────── */}
+      {drawerOpen && (
+        <div className="lg:hidden fixed inset-0 z-50 flex">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setDrawerOpen(false)} />
+          <aside className="relative w-72 max-w-[80vw] bg-[#0a0a14] border-r border-white/10 p-4 flex flex-col">
+            <div className="flex items-center justify-between mb-6">
+              <a href="/" className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-[#d4af37] to-[#f4d35e] flex items-center justify-center text-lg font-bold text-[#1a1a2e]">M</div>
+                <span className="font-bold">MenuPro</span>
+              </a>
+              <button onClick={() => setDrawerOpen(false)} className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <nav className="space-y-1 flex-1">
+              <a href="/dashboard" onClick={() => setDrawerOpen(false)} className="flex items-center gap-3 px-3 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-sm font-medium">
+                <LayoutDashboard className="w-4 h-4" /> Mis menús
+              </a>
+              <a href="/dashboard/generador" onClick={() => setDrawerOpen(false)} className="flex items-center gap-3 px-3 py-3 rounded-xl text-white/60 hover:text-white hover:bg-white/5 text-sm">
+                <Sparkles className="w-4 h-4" /> Generador rápido
+              </a>
+              <a href="/dashboard/analytics" onClick={() => setDrawerOpen(false)} className="flex items-center gap-3 px-3 py-3 rounded-xl text-white/60 hover:text-white hover:bg-white/5 text-sm">
+                <BarChart3 className="w-4 h-4" /> Analíticas
+              </a>
+              <a href="/dashboard/domains" onClick={() => setDrawerOpen(false)} className="flex items-center gap-3 px-3 py-3 rounded-xl text-white/60 hover:text-white hover:bg-white/5 text-sm">
+                <Globe className="w-4 h-4" /> Dominios
+              </a>
+              <a href="/dashboard/billing" onClick={() => setDrawerOpen(false)} className="flex items-center gap-3 px-3 py-3 rounded-xl text-white/60 hover:text-white hover:bg-white/5 text-sm">
+                <CreditCard className="w-4 h-4" /> Planes
+              </a>
+              {isSuperAdmin && (
+                <a href="/superadmin" onClick={() => setDrawerOpen(false)} className="flex items-center gap-3 px-3 py-3 rounded-xl text-amber-400 hover:bg-amber-400/5 text-sm border border-amber-400/20 mt-2">
+                  <Shield className="w-4 h-4" /> Super Admin
+                </a>
+              )}
+              <a href="/" onClick={() => setDrawerOpen(false)} className="flex items-center gap-3 px-3 py-3 rounded-xl text-white/50 hover:text-white hover:bg-white/5 text-sm mt-2">
+                <Home className="w-4 h-4" /> Volver al inicio
+              </a>
+            </nav>
+            <div className="border-t border-white/10 pt-4 space-y-3">
+              <div className="px-3 space-y-1">
+                <div className="text-sm text-white/80 truncate">{user.email}</div>
+                <span
+                  className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold ${
+                    plan.id === 'pro'
+                      ? 'bg-[#d4af37]/20 text-[#d4af37] border border-[#d4af37]/40'
+                      : 'bg-white/5 text-white/60'
+                  }`}
+                >
+                  {plan.name}
+                </span>
               </div>
-              <span className="font-bold">MenuPro</span>
+              <Button variant="ghost" size="sm" onClick={handleLogout} className="w-full justify-start text-white/60 hover:text-white hover:bg-white/5">
+                <LogOut className="w-4 h-4 mr-2" /> Cerrar sesión
+              </Button>
+            </div>
+          </aside>
+        </div>
+      )}
+
+      {/* Main content */}
+      <div className="flex-1 flex flex-col min-w-0 pb-24 lg:pb-0">
+        {/* Mobile header (sticky, con botón hamburguesa) */}
+        <header className="lg:hidden border-b border-white/10 bg-[#0a0a14] backdrop-blur sticky top-0 z-40">
+          <div className="px-4 py-3 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setDrawerOpen(true)}
+                aria-label="Abrir menú"
+                className="w-9 h-9 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center transition"
+              >
+                <MenuIcon className="w-5 h-5" />
+              </button>
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#d4af37] to-[#f4d35e] flex items-center justify-center text-xs font-bold text-[#1a1a2e]">M</div>
+                <span className="font-bold text-sm">MenuPro</span>
+              </div>
             </div>
             <div className="flex items-center gap-2">
               <span
-                className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
+                className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
                   plan.id === 'pro'
                     ? 'bg-[#d4af37]/20 text-[#d4af37]'
                     : 'bg-white/5 text-white/60'
@@ -289,29 +342,18 @@ export function DashboardClient({ user, plan, menus, isSuperAdmin = false }: Pro
               >
                 {plan.name}
               </span>
-              <Button variant="ghost" size="icon" onClick={handleLogout} className="text-white/60">
+              <Button variant="ghost" size="icon" onClick={handleLogout} className="text-white/60 h-9 w-9">
                 <LogOut className="w-4 h-4" />
               </Button>
             </div>
           </div>
-          {/* Mobile nav */}
-          <div className="flex gap-1 px-4 pb-3 overflow-x-auto">
-            <a href="/dashboard" className="px-3 py-1.5 rounded-lg bg-white/10 text-white text-xs font-medium whitespace-nowrap">Menús</a>
-            <a href="/dashboard/generador" className="px-3 py-1.5 rounded-lg text-white/50 text-xs whitespace-nowrap">Generador</a>
-            <a href="/dashboard/analytics" className="px-3 py-1.5 rounded-lg text-white/50 text-xs whitespace-nowrap">Analíticas</a>
-            <a href="/dashboard/domains" className="px-3 py-1.5 rounded-lg text-white/50 text-xs whitespace-nowrap">Dominios</a>
-            <a href="/dashboard/billing" className="px-3 py-1.5 rounded-lg text-white/50 text-xs whitespace-nowrap">Planes</a>
-            {isSuperAdmin && (
-              <a href="/superadmin" className="px-3 py-1.5 rounded-lg text-amber-400 text-xs whitespace-nowrap">Admin</a>
-            )}
-          </div>
         </header>
 
-        <main className="flex-1 px-6 py-8 max-w-6xl w-full mx-auto">
-          <div className="flex items-center justify-between mb-8">
-            <div>
-              <h1 className="text-3xl font-bold mb-1">Mis menús</h1>
-              <p className="text-white/60">
+        <main className="flex-1 px-4 sm:px-6 py-6 sm:py-8 max-w-6xl w-full mx-auto">
+          <div className="flex items-center justify-between mb-6 gap-3">
+            <div className="min-w-0">
+              <h1 className="text-2xl sm:text-3xl font-bold mb-1 truncate">Mis menús</h1>
+              <p className="text-white/60 text-sm sm:text-base">
                 {menus.length} {menus.length === 1 ? 'menú creado' : 'menús creados'} · Plan {plan.name}
               </p>
             </div>
@@ -319,10 +361,11 @@ export function DashboardClient({ user, plan, menus, isSuperAdmin = false }: Pro
               <DialogTrigger asChild>
                 <Button
                   disabled={!canCreate}
-                  className="bg-gradient-to-r from-[#d4af37] to-[#f4d35e] text-[#1a1a2e] hover:opacity-90 font-semibold"
+                  className="bg-gradient-to-r from-[#d4af37] to-[#f4d35e] text-[#1a1a2e] hover:opacity-90 font-semibold flex-shrink-0"
                 >
                   <Plus className="w-4 h-4" />
-                  Nuevo menú
+                  <span className="hidden sm:inline">Nuevo menú</span>
+                  <span className="sm:hidden">Nuevo</span>
                 </Button>
               </DialogTrigger>
               <DialogContent className="bg-[#15152a] border-white/10 text-white">
@@ -396,17 +439,17 @@ export function DashboardClient({ user, plan, menus, isSuperAdmin = false }: Pro
           )}
 
           {menus.length === 0 ? (
-            <div className="text-center py-20">
+            <div className="text-center py-16 sm:py-20">
               <div className="w-16 h-16 rounded-full bg-white/5 border border-white/10 flex items-center justify-center mx-auto mb-4">
                 <Plus className="w-8 h-8 text-white/40" />
               </div>
               <h3 className="text-xl font-semibold mb-2">Aún no tienes menús</h3>
-              <p className="text-white/60 mb-6">
+              <p className="text-white/60 mb-6 px-4">
                 Crea tu primer menú digital en menos de 5 minutos
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
               {menus.map((menu) => (
                 <div
                   key={menu.id}
@@ -559,7 +602,7 @@ export function DashboardClient({ user, plan, menus, isSuperAdmin = false }: Pro
 
           {/* Quick tips */}
           {menus.length > 0 && menus.length <= 2 && (
-            <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="bg-white/[0.03] border border-white/10 rounded-xl p-4 text-sm">
                 <div className="font-semibold mb-1 flex items-center gap-2">
                   <Upload className="w-4 h-4 text-[#d4af37]" />
@@ -590,6 +633,32 @@ export function DashboardClient({ user, plan, menus, isSuperAdmin = false }: Pro
             </div>
           )}
         </main>
+
+        {/* ───────── Bottom nav mobile (fija) ───────── */}
+        <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#0a0a14]/95 backdrop-blur border-t border-white/10 safe-bottom">
+          <div className="grid grid-cols-5 gap-1 px-2 py-1.5">
+            <a href="/dashboard" className="flex flex-col items-center gap-0.5 py-1.5 rounded-lg text-white text-[10px] font-medium bg-white/5">
+              <LayoutDashboard className="w-5 h-5" />
+              Menús
+            </a>
+            <a href="/dashboard/generador" className="flex flex-col items-center gap-0.5 py-1.5 rounded-lg text-white/50 text-[10px]">
+              <Sparkles className="w-5 h-5" />
+              Generar
+            </a>
+            <a href="/dashboard/analytics" className="flex flex-col items-center gap-0.5 py-1.5 rounded-lg text-white/50 text-[10px]">
+              <BarChart3 className="w-5 h-5" />
+              Stats
+            </a>
+            <a href="/dashboard/billing" className="flex flex-col items-center gap-0.5 py-1.5 rounded-lg text-white/50 text-[10px]">
+              <CreditCard className="w-5 h-5" />
+              Plan
+            </a>
+            <a href="/" className="flex flex-col items-center gap-0.5 py-1.5 rounded-lg text-white/50 text-[10px]">
+              <Home className="w-5 h-5" />
+              Inicio
+            </a>
+          </div>
+        </nav>
       </div>
     </div>
   );

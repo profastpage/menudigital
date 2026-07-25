@@ -137,9 +137,39 @@ CREATE TABLE IF NOT EXISTS menus (
   branding_text TEXT DEFAULT 'Creado con MenuPro',
   is_published BOOLEAN NOT NULL DEFAULT false,
   views_count INTEGER NOT NULL DEFAULT 0,
+  -- Columnas de tema personalizables (plan Pro)
+  theme_color_secondary TEXT DEFAULT '#1a1a2e',
+  theme_font TEXT DEFAULT 'Inter',
+  theme_layout TEXT NOT NULL DEFAULT 'single'
+    CHECK (theme_layout IN ('single', 'double', 'grid')),
+  theme_image_size TEXT NOT NULL DEFAULT 'medium'
+    CHECK (theme_image_size IN ('none', 'small', 'medium', 'large', 'hero')),
+  theme_card_style TEXT NOT NULL DEFAULT 'expanded'
+    CHECK (theme_card_style IN ('compact', 'expanded', 'minimal')),
+  theme_cover_url TEXT,
+  theme_show_search BOOLEAN NOT NULL DEFAULT true,
+  theme_show_category_icons BOOLEAN NOT NULL DEFAULT true,
+  theme_rounded_corners BOOLEAN NOT NULL DEFAULT true,
+  theme_dark_mode BOOLEAN NOT NULL DEFAULT true,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- Backfill de columnas de tema para menus existentes (idempotente)
+ALTER TABLE menus
+  ADD COLUMN IF NOT EXISTS theme_color_secondary TEXT DEFAULT '#1a1a2e',
+  ADD COLUMN IF NOT EXISTS theme_font TEXT DEFAULT 'Inter',
+  ADD COLUMN IF NOT EXISTS theme_layout TEXT NOT NULL DEFAULT 'single'
+    CHECK (theme_layout IN ('single', 'double', 'grid')),
+  ADD COLUMN IF NOT EXISTS theme_image_size TEXT NOT NULL DEFAULT 'medium'
+    CHECK (theme_image_size IN ('none', 'small', 'medium', 'large', 'hero')),
+  ADD COLUMN IF NOT EXISTS theme_card_style TEXT NOT NULL DEFAULT 'expanded'
+    CHECK (theme_card_style IN ('compact', 'expanded', 'minimal')),
+  ADD COLUMN IF NOT EXISTS theme_cover_url TEXT,
+  ADD COLUMN IF NOT EXISTS theme_show_search BOOLEAN NOT NULL DEFAULT true,
+  ADD COLUMN IF NOT EXISTS theme_show_category_icons BOOLEAN NOT NULL DEFAULT true,
+  ADD COLUMN IF NOT EXISTS theme_rounded_corners BOOLEAN NOT NULL DEFAULT true,
+  ADD COLUMN IF NOT EXISTS theme_dark_mode BOOLEAN NOT NULL DEFAULT true;
 
 ALTER TABLE menus ENABLE ROW LEVEL SECURITY;
 

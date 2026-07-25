@@ -15,6 +15,17 @@ export interface MenuData {
   views_count: number;
   created_at: string;
   updated_at: string;
+  // Tema personalizables (plan Pro desbloquea todo)
+  theme_color_secondary?: string;
+  theme_font?: string;
+  theme_layout?: 'single' | 'double' | 'grid';
+  theme_image_size?: 'none' | 'small' | 'medium' | 'large' | 'hero';
+  theme_card_style?: 'compact' | 'expanded' | 'minimal';
+  theme_cover_url?: string | null;
+  theme_show_search?: boolean;
+  theme_show_category_icons?: boolean;
+  theme_rounded_corners?: boolean;
+  theme_dark_mode?: boolean;
   categories?: CategoryData[];
 }
 

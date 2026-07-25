@@ -19,6 +19,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import {
   ArrowLeft,
@@ -33,6 +39,7 @@ import {
   Image as ImageIcon,
   CheckCircle2,
   Download,
+  Palette,
 } from 'lucide-react';
 import { COLORS, CURRENCIES, type Plan } from '@/lib/plans';
 import type { MenuData, ProfileData } from '@/lib/menu-utils';
@@ -72,6 +79,20 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount }: Props)
     currency: initialMenu.currency || 'S/',
     is_published: initialMenu.is_published || false,
   });
+  // Estado de tema (plan Pro desbloquea todo; Free solo color)
+  const [theme, setTheme] = useState({
+    color_secondary: (initialMenu as any).theme_color_secondary || '#1a1a2e',
+    font: (initialMenu as any).theme_font || 'Inter',
+    layout: (initialMenu as any).theme_layout || 'single',
+    image_size: (initialMenu as any).theme_image_size || 'medium',
+    card_style: (initialMenu as any).theme_card_style || 'expanded',
+    cover_url: (initialMenu as any).theme_cover_url || '',
+    show_search: (initialMenu as any).theme_show_search !== false,
+    show_category_icons: (initialMenu as any).theme_show_category_icons !== false,
+    rounded_corners: (initialMenu as any).theme_rounded_corners !== false,
+    dark_mode: (initialMenu as any).theme_dark_mode !== false,
+  });
+  const [showAppearancePanel, setShowAppearancePanel] = useState(false);
   const [categories, setCategories] = useState<LocalCategory[]>(
     initialMenu.categories?.map((c) => ({
       id: c.id,
@@ -97,7 +118,7 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount }: Props)
   // Marcar como dirty cuando cambia algo
   useEffect(() => {
     dirtyRef.current = true;
-  }, [menu, categories]);
+  }, [menu, categories, theme]);
 
   // Auto-guardado cada 3s si hay cambios
   const save = useCallback(async (silent = true) => {
@@ -109,6 +130,17 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount }: Props)
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...menu,
+          // Campos de tema (todos opcionales, se persisten si están presentes)
+          theme_color_secondary: theme.color_secondary,
+          theme_font: theme.font,
+          theme_layout: theme.layout,
+          theme_image_size: theme.image_size,
+          theme_card_style: theme.card_style,
+          theme_cover_url: theme.cover_url || null,
+          theme_show_search: theme.show_search,
+          theme_show_category_icons: theme.show_category_icons,
+          theme_rounded_corners: theme.rounded_corners,
+          theme_dark_mode: theme.dark_mode,
           categories: categories.map((c) => ({
             name: c.name,
             dishes: c.dishes.map((d) => ({
@@ -133,7 +165,7 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount }: Props)
     } finally {
       setSaving(false);
     }
-  }, [menu, categories, initialMenu.id]);
+  }, [menu, categories, theme, initialMenu.id]);
 
   useEffect(() => {
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
@@ -162,6 +194,17 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount }: Props)
         views_count: 0,
         created_at: '',
         updated_at: '',
+        // Tema para preview en vivo
+        theme_color_secondary: theme.color_secondary,
+        theme_font: theme.font,
+        theme_layout: theme.layout as any,
+        theme_image_size: theme.image_size as any,
+        theme_card_style: theme.card_style as any,
+        theme_cover_url: theme.cover_url || null,
+        theme_show_search: theme.show_search,
+        theme_show_category_icons: theme.show_category_icons,
+        theme_rounded_corners: theme.rounded_corners,
+        theme_dark_mode: theme.dark_mode,
         categories: categories.map((c) => ({
           id: c.id,
           menu_id: initialMenu.id,
@@ -181,7 +224,7 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount }: Props)
       setPreviewHtml(buildMenuHTML(data));
     }, 400);
     return () => clearTimeout(timer);
-  }, [menu, categories, plan, initialMenu.id, initialMenu.slug, profile.id]);
+  }, [menu, categories, theme, plan, initialMenu.id, initialMenu.slug, profile.id]);
 
   async function handlePublish() {
     setPublishing(true);
@@ -549,9 +592,248 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount }: Props)
                     ))}
                   </div>
                 </div>
+
+                {/* Botón Apariencia (Pro) */}
+                <div className="space-y-2 sm:col-span-2">
+                  <Label className="flex items-center gap-2">
+                    Apariencia avanzada
+                    {plan.id === 'free' && (
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-[#d4af37]/20 text-[#d4af37] text-[10px] font-semibold">
+                        PRO
+                      </span>
+                    )}
+                  </Label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setShowAppearancePanel(true)}
+                    className="w-full bg-white/5 border-white/10 text-white hover:bg-white/10 justify-start"
+                  >
+                    <Palette className="w-4 h-4 mr-2" />
+                    Tema, layout, imágenes y más
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
+
+          {/* ───────── Panel de Apariencia (Dialog) ───────── */}
+          <Dialog open={showAppearancePanel} onOpenChange={setShowAppearancePanel}>
+            <DialogContent className="bg-[#15152a] border-white/10 text-white max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <Palette className="w-5 h-5 text-[#d4af37]" />
+                  Apariencia avanzada
+                  {plan.id === 'free' && (
+                    <span className="text-xs font-normal text-white/50">
+                      (Algunas opciones requieren Pro)
+                    </span>
+                  )}
+                </DialogTitle>
+              </DialogHeader>
+
+              <div className="space-y-5 py-4">
+                {/* Layout */}
+                <div className="space-y-2">
+                  <Label>Layout de platos</Label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { v: 'single', label: '1 columna', icon: '▮' },
+                      { v: 'double', label: '2 columnas', icon: '▮▮' },
+                      { v: 'grid', label: 'Grid 3 col', icon: '▮▮▮' },
+                    ].map((opt) => (
+                      <button
+                        key={opt.v}
+                        type="button"
+                        disabled={plan.id === 'free' && opt.v !== 'single'}
+                        onClick={() => setTheme({ ...theme, layout: opt.v as any })}
+                        className={`p-3 rounded-lg border text-sm transition ${
+                          theme.layout === opt.v
+                            ? 'border-[#d4af37] bg-[#d4af37]/10 text-[#d4af37]'
+                            : 'border-white/10 bg-white/5 text-white/70 hover:bg-white/10'
+                        } disabled:opacity-40 disabled:cursor-not-allowed`}
+                      >
+                        <div className="text-base mb-1">{opt.icon}</div>
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                  {plan.id === 'free' && (
+                    <p className="text-xs text-white/40">2 columnas y grid requieren plan Pro.</p>
+                  )}
+                </div>
+
+                {/* Tamaño de imagen */}
+                <div className="space-y-2">
+                  <Label>Tamaño de imagen del plato</Label>
+                  <div className="grid grid-cols-5 gap-2">
+                    {[
+                      { v: 'none', label: 'Sin img' },
+                      { v: 'small', label: 'Pequeña' },
+                      { v: 'medium', label: 'Media' },
+                      { v: 'large', label: 'Grande' },
+                      { v: 'hero', label: 'Hero' },
+                    ].map((opt) => (
+                      <button
+                        key={opt.v}
+                        type="button"
+                        disabled={plan.id === 'free' && opt.v !== 'medium'}
+                        onClick={() => setTheme({ ...theme, image_size: opt.v as any })}
+                        className={`p-2 rounded-lg border text-xs transition ${
+                          theme.image_size === opt.v
+                            ? 'border-[#d4af37] bg-[#d4af37]/10 text-[#d4af37]'
+                            : 'border-white/10 bg-white/5 text-white/70 hover:bg-white/10'
+                        } disabled:opacity-40 disabled:cursor-not-allowed`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Estilo de tarjeta */}
+                <div className="space-y-2">
+                  <Label>Estilo de tarjeta</Label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { v: 'compact', label: 'Compacta' },
+                      { v: 'expanded', label: 'Expandida' },
+                      { v: 'minimal', label: 'Minimal' },
+                    ].map((opt) => (
+                      <button
+                        key={opt.v}
+                        type="button"
+                        disabled={plan.id === 'free' && opt.v !== 'expanded'}
+                        onClick={() => setTheme({ ...theme, card_style: opt.v as any })}
+                        className={`p-2 rounded-lg border text-xs transition ${
+                          theme.card_style === opt.v
+                            ? 'border-[#d4af37] bg-[#d4af37]/10 text-[#d4af37]'
+                            : 'border-white/10 bg-white/5 text-white/70 hover:bg-white/10'
+                        } disabled:opacity-40 disabled:cursor-not-allowed`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Fuente */}
+                <div className="space-y-2">
+                  <Label>Fuente tipográfica</Label>
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                    {['Inter', 'Poppins', 'Montserrat', 'Playfair Display', 'Lora', 'Roboto', 'Open Sans', 'Nunito'].map((font) => (
+                      <button
+                        key={font}
+                        type="button"
+                        disabled={plan.id === 'free' && font !== 'Inter'}
+                        onClick={() => setTheme({ ...theme, font })}
+                        style={{ fontFamily: font }}
+                        className={`p-2 rounded-lg border text-sm transition ${
+                          theme.font === font
+                            ? 'border-[#d4af37] bg-[#d4af37]/10 text-[#d4af37]'
+                            : 'border-white/10 bg-white/5 text-white/70 hover:bg-white/10'
+                        } disabled:opacity-40 disabled:cursor-not-allowed`}
+                      >
+                        {font}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Color secundario */}
+                <div className="space-y-2">
+                  <Label>Color secundario (fondo)</Label>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="color"
+                      value={theme.color_secondary}
+                      onChange={(e) => setTheme({ ...theme, color_secondary: e.target.value })}
+                      disabled={plan.id === 'free'}
+                      className="w-12 h-10 rounded cursor-pointer disabled:opacity-40"
+                    />
+                    <Input
+                      value={theme.color_secondary}
+                      onChange={(e) => setTheme({ ...theme, color_secondary: e.target.value })}
+                      disabled={plan.id === 'free'}
+                      className="bg-white/5 border-white/10 text-white disabled:opacity-40"
+                    />
+                  </div>
+                </div>
+
+                {/* URL Cover */}
+                <div className="space-y-2">
+                  <Label>Imagen de portada (cover)</Label>
+                  <Input
+                    value={theme.cover_url}
+                    onChange={(e) => setTheme({ ...theme, cover_url: e.target.value })}
+                    placeholder="https://..."
+                    disabled={plan.id === 'free'}
+                    className="bg-white/5 border-white/10 text-white disabled:opacity-40"
+                  />
+                  {plan.id === 'free' && (
+                    <p className="text-xs text-white/40">Cover personalizado requiere Pro.</p>
+                  )}
+                </div>
+
+                {/* Toggles */}
+                <div className="grid grid-cols-2 gap-3">
+                  <ToggleRow
+                    label="Modo claro"
+                    desc="Cambia fondo oscuro a claro"
+                    value={!theme.dark_mode}
+                    disabled={plan.id === 'free'}
+                    onChange={(v) => setTheme({ ...theme, dark_mode: !v })}
+                  />
+                  <ToggleRow
+                    label="Buscar platos"
+                    desc="Barra de búsqueda en el menú"
+                    value={theme.show_search}
+                    disabled={plan.id === 'free'}
+                    onChange={(v) => setTheme({ ...theme, show_search: v })}
+                  />
+                  <ToggleRow
+                    label="Iconos de categoría"
+                    desc="Emojis automáticos por categoría"
+                    value={theme.show_category_icons}
+                    disabled={plan.id === 'free'}
+                    onChange={(v) => setTheme({ ...theme, show_category_icons: v })}
+                  />
+                  <ToggleRow
+                    label="Esquinas redondeadas"
+                    desc="Cards y botones con border-radius"
+                    value={theme.rounded_corners}
+                    disabled={plan.id === 'free'}
+                    onChange={(v) => setTheme({ ...theme, rounded_corners: v })}
+                  />
+                </div>
+
+                <div className="flex justify-end gap-2 pt-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => setShowAppearancePanel(false)}
+                    className="text-white/60 hover:text-white"
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={() => {
+                      // Forzar guardado con tema
+                      dirtyRef.current = true;
+                      save(false).then(() => {
+                        setShowAppearancePanel(false);
+                        toast.success('Apariencia guardada');
+                      });
+                    }}
+                    className="bg-gradient-to-r from-[#d4af37] to-[#f4d35e] text-[#1a1a2e]"
+                  >
+                    Guardar cambios
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
 
           {/* Categories card */}
           <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-6">
@@ -724,5 +1006,49 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount }: Props)
         </aside>
       </main>
     </div>
+  );
+}
+
+// ───────── Componente ToggleRow para el panel de Apariencia ─────────
+function ToggleRow({
+  label,
+  desc,
+  value,
+  onChange,
+  disabled,
+}: {
+  label: string;
+  desc: string;
+  value: boolean;
+  onChange: (v: boolean) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={() => onChange(!value)}
+      className={`text-left p-3 rounded-lg border transition ${
+        value
+          ? 'border-[#d4af37]/40 bg-[#d4af37]/5'
+          : 'border-white/10 bg-white/5'
+      } disabled:opacity-40 disabled:cursor-not-allowed`}
+    >
+      <div className="flex items-center justify-between mb-1">
+        <span className="text-sm font-medium">{label}</span>
+        <span
+          className={`w-8 h-4 rounded-full relative transition ${
+            value ? 'bg-[#d4af37]' : 'bg-white/15'
+          }`}
+        >
+          <span
+            className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all ${
+              value ? 'left-4' : 'left-0.5'
+            }`}
+          />
+        </span>
+      </div>
+      <div className="text-xs text-white/50">{desc}</div>
+    </button>
   );
 }
