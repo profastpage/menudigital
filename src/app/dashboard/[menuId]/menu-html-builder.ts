@@ -209,8 +209,10 @@ function buildCSS(opts: ThemeOpts): string {
   }
 
   // Section
-  const sectionMaxW = layout === 'single' ? '620px' : '1100px';
+  const sectionMaxW = layout === 'single' ? '640px' : '1100px';
   c += `.section{padding:24px 20px 8px;max-width:${sectionMaxW};margin:0 auto;width:100%;}`;
+  // En desktop: single layout usa 2 columnas para aprovechar mejor el espacio
+  c += '@media(min-width:880px){.section.single-layout{max-width:920px;}.section.single-layout .dish-grid{grid-template-columns:repeat(2,1fr);gap:18px;}}';
   c += '.section-title{font-size:21px;font-weight:700;margin-bottom:18px;display:flex;align-items:center;gap:12px;letter-spacing:-0.3px;}';
   c += '.section-title::before{content:"";width:4px;height:22px;background:linear-gradient(180deg,var(--accent),var(--gold));border-radius:2px;}';
 
@@ -277,15 +279,16 @@ function buildCSS(opts: ThemeOpts): string {
 
   // ─── Lightbox de plato (estilo PedidosYa/Rappi — mobile-first ultra pro) ───
   if (showGallery) {
-    // Overlay full-screen en mobile, sheet centrado en desktop
-    c += '.dish-lightbox{position:fixed;inset:0;background:rgba(0,0,0,0.92);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);z-index:300;display:none;align-items:flex-end;justify-content:center;padding:0;animation:dlbFadeIn 0.2s ease;overflow-y:auto;}';
+    // Overlay full-screen en mobile (modal llena TODA la pantalla, sin gap negro)
+    // En desktop: card centrada con padding
+    c += '.dish-lightbox{position:fixed;inset:0;background:rgba(0,0,0,0.94);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);z-index:300;display:none;align-items:stretch;justify-content:center;padding:0;animation:dlbFadeIn 0.2s ease;overflow-y:auto;}';
     c += '.dish-lightbox.visible{display:flex;}';
     c += '@keyframes dlbFadeIn{from{opacity:0;}to{opacity:1;}}';
     c += '@media(min-width:640px){.dish-lightbox{align-items:center;padding:24px;}}';
-    // Inner: full-screen bottom-sheet en mobile, card centrada en desktop
-    // overflow:hidden on inner, content area scrolls, CTA sticky at bottom
-    c += '.dish-lightbox-inner{background:' + (darkMode ? '#14141f' : '#ffffff') + ';width:100%;max-width:560px;max-height:100vh;overflow:hidden;position:relative;color:var(--text);border-radius:24px 24px 0 0;animation:dlbSlideUp 0.32s cubic-bezier(0.32,0.72,0,1);box-shadow:0 -10px 40px rgba(0,0,0,0.5);display:flex;flex-direction:column;}';
-    c += '@media(min-width:640px){.dish-lightbox-inner{border-radius:28px;max-height:92vh;animation:dlbZoomIn 0.3s cubic-bezier(0.32,0.72,0,1);box-shadow:0 30px 80px rgba(0,0,0,0.6);}}';
+    // Inner: FULL-SCREEN en mobile (min-height:100dvh — elimina el gap negro superior)
+    // En desktop: card centrada con border-radius y max-height
+    c += '.dish-lightbox-inner{background:' + (darkMode ? '#14141f' : '#ffffff') + ';width:100%;max-width:560px;min-height:100dvh;max-height:100dvh;overflow:hidden;position:relative;color:var(--text);border-radius:0;animation:dlbSlideUp 0.32s cubic-bezier(0.32,0.72,0,1);box-shadow:none;display:flex;flex-direction:column;}';
+    c += '@media(min-width:640px){.dish-lightbox-inner{border-radius:28px;min-height:auto;max-height:92vh;animation:dlbZoomIn 0.3s cubic-bezier(0.32,0.72,0,1);box-shadow:0 30px 80px rgba(0,0,0,0.6);}}';
     c += '@keyframes dlbSlideUp{from{transform:translateY(100%);}to{transform:translateY(0);}}';
     c += '@keyframes dlbZoomIn{from{transform:scale(0.95);opacity:0;}to{transform:scale(1);opacity:1;}}';
     // Handle bar en mobile (estilo bottom-sheet nativo iOS/Android)
@@ -295,9 +298,9 @@ function buildCSS(opts: ThemeOpts): string {
     c += '.dish-lightbox-close{position:absolute;top:14px;right:14px;width:38px;height:38px;border-radius:50%;background:rgba(0,0,0,0.55);color:#fff;border:none;cursor:pointer;font-size:22px;line-height:1;display:flex;align-items:center;justify-content:center;z-index:10;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);transition:all 0.2s;box-shadow:0 4px 12px rgba(0,0,0,0.3);}';
     c += '.dish-lightbox-close:hover{background:rgba(0,0,0,0.78);transform:scale(1.05);}';
     c += '.dish-lightbox-close:active{transform:scale(0.95);}';
-    // HERO IMAGE — wide hero on mobile (top of bottom-sheet), 16/9 on desktop
+    // HERO IMAGE — wider hero on mobile (full-screen modal), 16/9 on desktop
     // Background gradient fills any transparent area (e.g. PNG logos) — no more "black gap"
-    c += '.dish-lightbox-hero{position:relative;width:100%;aspect-ratio:4/3;max-height:42vh;overflow:hidden;background:linear-gradient(135deg,rgba(var(--accent-rgb),0.85) 0%,var(--accent) 50%,rgba(var(--accent-rgb),0.85) 100%);flex-shrink:0;}';
+    c += '.dish-lightbox-hero{position:relative;width:100%;aspect-ratio:4/3;max-height:48vh;overflow:hidden;background:linear-gradient(135deg,rgba(var(--accent-rgb),0.85) 0%,var(--accent) 50%,rgba(var(--accent-rgb),0.85) 100%);flex-shrink:0;}';
     c += '@media(min-width:640px){.dish-lightbox-hero{aspect-ratio:16/9;border-radius:28px 28px 0 0;max-height:50vh;}}';
     c += '.dish-lightbox-img{width:100%;height:100%;object-fit:cover;display:block;}';
     // Gradient overlay para legibilidad del close button
@@ -352,6 +355,7 @@ function buildCSS(opts: ThemeOpts): string {
   c += '.cart-item-info{flex:1;min-width:0;}';
   c += '.cart-item-name{font-weight:600;font-size:15px;margin-bottom:2px;color:var(--text);}';
   c += '.cart-item-extras{color:var(--accent);font-size:11.5px;font-weight:500;margin-bottom:2px;opacity:0.85;line-height:1.3;}';
+  c += '.cart-item-note{color:var(--text-soft);font-size:11.5px;font-style:italic;margin-bottom:2px;opacity:0.75;line-height:1.3;}';
   c += '.cart-item-price{color:var(--text-muted);font-size:12.5px;}';
   c += '.qty-control{display:flex;align-items:center;gap:10px;background:var(--glass);padding:4px;border-radius:24px;border:1px solid var(--border);}';
   c += '.qty-btn{width:28px;height:28px;border-radius:50%;background:var(--glass-strong);color:var(--text);border:none;cursor:pointer;font-size:16px;line-height:1;transition:all 0.2s;display:flex;align-items:center;justify-content:center;}';
@@ -391,6 +395,14 @@ function buildCSS(opts: ThemeOpts): string {
   // ─── Product options (extras/salsas/personalizaciones) ───
   if (showGallery) {
     c += '.dish-options{margin:0 0 22px;padding:0;}';
+    c += '.dish-options-title{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;color:var(--text);letter-spacing:-0.2px;margin:0 0 10px;}';
+    c += '.dish-options-title svg{color:var(--accent);}';
+    c += '.dish-options-empty{padding:16px;background:' + (darkMode ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.025)') + ';border:1px dashed ' + (darkMode ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)') + ';border-radius:14px;}';
+    c += '.dish-options-hint{font-size:12.5px;color:var(--text-soft);opacity:0.7;line-height:1.5;}';
+    c += '.dish-note-wrap{margin:0 0 20px;}';
+    c += '.dish-note-input{width:100%;background:' + (darkMode ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)') + ';border:1px solid var(--border);border-radius:12px;padding:12px 14px;font-size:13.5px;color:var(--text);font-family:inherit;resize:none;outline:none;transition:border-color 0.15s;line-height:1.5;}';
+    c += '.dish-note-input:focus{border-color:var(--accent);}';
+    c += '.dish-note-input::placeholder{color:var(--text-soft);opacity:0.55;}';
     c += '.dish-option-group{margin:0 0 18px;padding:14px;background:' + (darkMode ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.025)') + ';border:1px solid var(--border);border-radius:14px;}';
     c += '.dish-option-group-title{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}';
     c += '.dish-option-group-name{font-size:14px;font-weight:700;color:var(--text);letter-spacing:-0.2px;}';
@@ -508,7 +520,7 @@ function buildJS(opts: JSOpts): string {
   s += '  html+="</div></nav>";\n';
   // Sections con dishes-grid
   s += '  RESTAURANT.categories.forEach(function(cat,i){\n';
-  s += '    html+="<section class=\\"section\\" id=\\"cat-"+i+"\\">";\n';
+  s += '    html+="<section class=\\"section ' + (layout === 'single' ? 'single-layout' : 'two-layout') + '\\" id=\\"cat-"+i+"\\">";\n';
   s += '    html+="<h2 class=\\"section-title\\">"+escapeHtml(cat.name)+"</h2>";\n';
   s += '    html+="<div class=\\"dishes-grid\\">";\n';
   s += '    cat.dishes.forEach(function(dish,j){\n';
@@ -670,10 +682,17 @@ function buildJS(opts: JSOpts): string {
     s += '  setTimeout(function(){if(window.Swiper){new Swiper(swiperDiv,{pagination:{el:pag,clickable:true},navigation:{nextEl:next,prevEl:prev},loop:true,on:{slideChange:function(){count.textContent=(this.realIndex+1)+" / "+imgs.length;}}});}},50);\n';
     s += '  return hero;\n';
     s += '}\n';
-    // Construye las opciones (extras/salsas) del plato
+    // Construye las opciones (extras/salsas) del plato — muestra sección siempre (placeholder si no hay)
     s += 'var currentDishOptionsState={};\n';
     s += 'function buildDishOptions(dish){\n';
-    s += '  if(!dish.options||!Array.isArray(dish.options)||dish.options.length===0)return null;\n';
+    s += '  if(!dish.options||!Array.isArray(dish.options)||dish.options.length===0){\n';
+    s += '    // Placeholder: muestra que la sección existe aunque el plato no tenga opciones configuradas\n';
+    s += '    var empty=document.createElement("div");empty.className="dish-options dish-options-empty";\n';
+    s += '    var title=document.createElement("div");title.className="dish-options-title";title.innerHTML="<svg width=\\\"18\\\" height=\\\"18\\\" viewBox=\\\"0 0 24 24\\\" fill=\\\"none\\\" stroke=\\\"currentColor\\\" stroke-width=\\\"2\\\" stroke-linecap=\\\"round\\\" stroke-linejoin=\\\"round\\\"><path d=\\\"M12 5v14M5 12h14\\\"/></svg>Personaliza tu pedido";\n';
+    s += '    var hint=document.createElement("div");hint.className="dish-options-hint";hint.textContent="Este plato no tiene extras configurados aún. El restaurante puede agregar salsas, toppings y opciones opcionales desde el editor.";\n';
+    s += '    empty.appendChild(title);empty.appendChild(hint);\n';
+    s += '    return empty;\n';
+    s += '  }\n';
     s += '  var wrap=document.createElement("div");wrap.className="dish-options";\n';
     s += '  currentDishOptionsState={};\n';
     s += '  dish.options.forEach(function(grp){\n';
@@ -735,11 +754,17 @@ function buildJS(opts: JSOpts): string {
     s += '  var descLabel=document.createElement("div");descLabel.className="dish-lightbox-desc-label";descLabel.textContent="Descripción";content.appendChild(descLabel);\n';
     s += '  var desc=document.createElement("p");desc.className="dish-lightbox-desc";desc.textContent=dish.description||"Plato delicioso preparado con ingredientes frescos y de la mejor calidad. Pídelo ahora mismo por WhatsApp.";content.appendChild(desc);\n';
     s += '  var opts=buildDishOptions(dish);if(opts)content.appendChild(opts);\n';
+    s += '  // Add a small "note" textarea for special instructions (always visible, ultra-pro)\n';
+    s += '  var noteWrap=document.createElement("div");noteWrap.className="dish-note-wrap";\n';
+    s += '  var noteLabel=document.createElement("div");noteLabel.className="dish-options-title";noteLabel.innerHTML="<svg width=\\\"18\\\" height=\\\"18\\\" viewBox=\\\"0 0 24 24\\\" fill=\\\"none\\\" stroke=\\\"currentColor\\\" stroke-width=\\\"2\\\" stroke-linecap=\\\"round\\\" stroke-linejoin=\\\"round\\\"><path d=\\\"M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z\\\"/></svg>Notas del pedido";\n';
+    s += '  var noteInput=document.createElement("textarea");noteInput.className="dish-note-input";noteInput.placeholder="Ej: Sin cebolla, cocido término medio, salsa aparte...";noteInput.rows=2;noteInput.maxLength=200;\n';
+    s += '  noteWrap.appendChild(noteLabel);noteWrap.appendChild(noteInput);\n';
+    s += '  content.appendChild(noteWrap);\n';
     s += '  inner.appendChild(content);\n';
     s += '  var cta=document.createElement("div");cta.className="dish-lightbox-cta";\n';
     s += '  var addBtn=document.createElement("button");addBtn.className="dish-lightbox-add";\n';
     s += '  addBtn.innerHTML="<svg width=\\"20\\" height=\\"20\\" viewBox=\\"0 0 24 24\\" fill=\\"none\\" stroke=\\"currentColor\\" stroke-width=\\"2.5\\" stroke-linecap=\\"round\\" stroke-linejoin=\\"round\\"><path d=\\"M12 5v14M5 12h14\\"/></svg>Agregar al pedido";\n';
-    s += '  addBtn.addEventListener("click",function(){var opts=getSelectedOptionsSnapshot();addToCart(catIdx,dishIdx,null,opts);addBtn.classList.add("added");addBtn.innerHTML="<svg width=\\\"20\\\" height=\\\"20\\\" viewBox=\\\"0 0 24 24\\\" fill=\\\"none\\\" stroke=\\\"currentColor\\\" stroke-width=\\\"3\\\" stroke-linecap=\\\"round\\\" stroke-linejoin=\\\"round\\\"><polyline points=\\\"20 6 9 17 4 12\\\"/></svg> Agregado";setTimeout(closeDishLightbox,900);});\n';
+    s += '  addBtn.addEventListener("click",function(){var opts=getSelectedOptionsSnapshot();var noteEl=document.querySelector(".dish-note-input");var noteVal=noteEl?noteEl.value.trim():"";addToCart(catIdx,dishIdx,null,opts,noteVal);addBtn.classList.add("added");addBtn.innerHTML="<svg width=\\\"20\\\" height=\\\"20\\\" viewBox=\\\"0 0 24 24\\\" fill=\\\"none\\\" stroke=\\\"currentColor\\\" stroke-width=\\\"3\\\" stroke-linecap=\\\"round\\\" stroke-linejoin=\\\"round\\\"><polyline points=\\\"20 6 9 17 4 12\\\"/></svg> Agregado";setTimeout(closeDishLightbox,900);});\n';
     s += '  cta.appendChild(addBtn);\n';
     s += '  inner.appendChild(cta);\n';
     s += '  lightbox.appendChild(inner);\n';
@@ -767,16 +792,17 @@ function buildJS(opts: JSOpts): string {
   s += '  document.querySelectorAll(".nav-item").forEach(function(n,i){n.classList.toggle("active",i===activeIdx);});\n';
   s += '}\n';
   // Add to cart
-  s += 'function addToCart(catIdx,dishIdx,btn,options){\n';
+  s += 'function addToCart(catIdx,dishIdx,btn,options,note){\n';
   s += '  var dish=RESTAURANT.categories[catIdx].dishes[dishIdx];\n';
   s += '  options=options||[];\n';
+  s += '  note=note||"";\n';
   s += '  var extrasTotal=0;options.forEach(function(o){extrasTotal+=(o.price||0)*o.qty;});\n';
   s += '  var unitPrice=dish.price+extrasTotal;\n';
-  s += '  var signature=catIdx+"-"+dishIdx+"-"+JSON.stringify(options);\n';
+  s += '  var signature=catIdx+"-"+dishIdx+"-"+JSON.stringify(options)+(note?"|"+note:"");\n';
   s += '  var existing=null;\n';
   s += '  for(var i=0;i<cart.length;i++){if(cart[i].signature===signature){existing=cart[i];break;}}\n';
   s += '  if(existing){existing.qty++;}\n';
-  s += '  else{cart.push({catIdx:catIdx,dishIdx:dishIdx,signature:signature,name:dish.name,price:unitPrice,basePrice:dish.price,extrasPrice:extrasTotal,options:options,qty:1});}\n';
+  s += '  else{cart.push({catIdx:catIdx,dishIdx:dishIdx,signature:signature,name:dish.name,price:unitPrice,basePrice:dish.price,extrasPrice:extrasTotal,options:options,note:note,qty:1});}\n';
   s += '  if(btn){showAddedFlash(btn.closest(".dish"));}\n';
   s += '  updateCart(true);\n';
   s += '}\n';
@@ -848,6 +874,7 @@ function buildJS(opts: JSOpts): string {
   s += '    html+="<div class=\\"cart-item-info\\">";\n';
   s += '    html+="<div class=\\"cart-item-name\\">"+escapeHtml(item.name)+"</div>";\n';
   s += '    if(item.options&&item.options.length>0){html+="<div class=\\"cart-item-extras\\">"+item.options.map(function(o){return "+"+escapeHtml(o.name)+(o.qty>1?" x"+o.qty:"");}).join(", ")+"</div>";}\n';
+  s += '    if(item.note){html+="<div class=\\"cart-item-note\\">📝 "+escapeHtml(item.note)+"</div>";}\n';
   s += '    html+="<div class=\\"cart-item-price\\">"+formatPrice(item.price)+" c/u</div>";\n';
   s += '    html+="</div>";\n';
   s += '    html+="<div class=\\"qty-control\\">";\n';
@@ -885,6 +912,8 @@ function buildJS(opts: JSOpts): string {
   s += '  msg+="\\n*PEDIDO*\\n\\n";\n';
   s += '  cart.forEach(function(item){\n';
   s += '    msg+="• "+item.qty+"x "+item.name+" — "+formatPrice(item.price*item.qty)+"\\n";\n';
+  s += '    if(item.options&&item.options.length>0){msg+="   Extras: "+item.options.map(function(o){return o.name+(o.qty>1?" x"+o.qty:"");}).join(", ")+"\\n";}\n';
+  s += '    if(item.note){msg+="   📝 "+item.note+"\\n";}\n';
   s += '  });\n';
   s += '  var total=0;cart.forEach(function(c){total+=c.price*c.qty;});\n';
   s += '  msg+="\\n*TOTAL: "+formatPrice(total)+"*\\n\\n";\n';
