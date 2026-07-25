@@ -291,8 +291,9 @@ function buildCSS(opts: ThemeOpts): string {
     c += '@media(min-width:640px){.dish-lightbox-inner{border-radius:28px;min-height:auto;max-height:92vh;animation:dlbZoomIn 0.3s cubic-bezier(0.32,0.72,0,1);box-shadow:0 30px 80px rgba(0,0,0,0.6);}}';
     c += '@keyframes dlbSlideUp{from{transform:translateY(100%);}to{transform:translateY(0);}}';
     c += '@keyframes dlbZoomIn{from{transform:scale(0.95);opacity:0;}to{transform:scale(1);opacity:1;}}';
-    // Handle bar en mobile (estilo bottom-sheet nativo iOS/Android)
-    c += '.dish-lightbox-handle{display:block;width:40px;height:4px;background:' + (darkMode ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.12)') + ';border-radius:4px;margin:8px auto 0;flex-shrink:0;}';
+    // Handle bar oculto en mobile (modal full-screen, no necesita handle)
+    // Visible solo en desktop como element decorativo (pero ahí también lo ocultamos)
+    c += '.dish-lightbox-handle{display:none;width:40px;height:4px;background:' + (darkMode ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.12)') + ';border-radius:4px;margin:8px auto 0;flex-shrink:0;}';
     c += '@media(min-width:640px){.dish-lightbox-handle{display:none;}}';
     // Close button — flota sobre la imagen (estilo Rappi)
     c += '.dish-lightbox-close{position:absolute;top:14px;right:14px;width:38px;height:38px;border-radius:50%;background:rgba(0,0,0,0.55);color:#fff;border:none;cursor:pointer;font-size:22px;line-height:1;display:flex;align-items:center;justify-content:center;z-index:10;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);transition:all 0.2s;box-shadow:0 4px 12px rgba(0,0,0,0.3);}';
