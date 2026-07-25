@@ -16,6 +16,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
+  let resolvedRedirect = redirect || '/dashboard';
+
   if (code) {
     const supabase = await createClient();
     const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
@@ -28,44 +30,64 @@ export async function GET(request: NextRequest) {
     }
 
     // ── Detectar rol del usuario y redirigir automáticamente ──
-    // Si el usuario es super_admin → /superadmin
-    // Si el usuario está baneado → logout + error
-    // Si no hay redirect explícito → /dashboard
-    if (!redirect) {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-      if (user?.id) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('is_super_admin, is_active')
-          .eq('id', user.id)
-          .single();
+    if (user?.id) {
+      // Si no existe profile, backfill manual (por si el trigger falló)
+      const { data: existingProfile } = await supabase
+        .from('profiles')
+        .select('id, is_super_admin, is_active')
+        .eq('id', user.id)
+        .maybeSingle();
 
-        // Usuario baneado → cerrar sesión inmediatamente
-        if (profile && profile.is_active === false) {
-          await supabase.auth.signOut();
-          const loginUrl = new URL('/login', requestUrl.origin);
-          loginUrl.searchParams.set('error', 'account_banned');
-          loginUrl.searchParams.set(
-            'error_description',
-            'Tu cuenta ha sido desactivada. Contacta al administrador.'
-          );
-          return NextResponse.redirect(loginUrl);
-        }
+      if (!existingProfile) {
+        // Crear profile manualmente si falta
+        await supabase.from('profiles').upsert({
+          id: user.id,
+          email: user.email || '',
+          full_name:
+            user.user_metadata?.full_name ||
+            user.user_metadata?.name ||
+            null,
+          avatar_url:
+            user.user_metadata?.avatar_url ||
+            user.user_metadata?.picture ||
+            null,
+          plan: 'free',
+          is_active: true,
+        }, { onConflict: 'id' });
+      }
 
-        // Super admin → panel /superadmin
-        if (profile?.is_super_admin) {
-          const superadminUrl = new URL('/superadmin', requestUrl.origin);
-          return NextResponse.redirect(superadminUrl);
-        }
+      // Volver a leer profile (por si acabamos de crearlo)
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('is_super_admin, is_active')
+        .eq('id', user.id)
+        .single();
+
+      // Usuario baneado → cerrar sesión inmediatamente
+      if (profile && profile.is_active === false) {
+        await supabase.auth.signOut();
+        const loginUrl = new URL('/login', requestUrl.origin);
+        loginUrl.searchParams.set('error', 'account_banned');
+        loginUrl.searchParams.set(
+          'error_description',
+          'Tu cuenta ha sido desactivada. Contacta al administrador.'
+        );
+        return NextResponse.redirect(loginUrl);
+      }
+
+      // Super admin → forzar /superadmin SI el redirect es exactamente /dashboard
+      // (si el redirect es a subruta como /dashboard/[id], respetarlo)
+      if (profile?.is_super_admin && (resolvedRedirect === '/dashboard' || !resolvedRedirect)) {
+        resolvedRedirect = '/superadmin';
       }
     }
   }
 
-  // Redirigir al destino (default /dashboard)
-  const target = redirect || '/dashboard';
-  const targetUrl = new URL(target, requestUrl.origin);
+  // Redirigir al destino final
+  const targetUrl = new URL(resolvedRedirect, requestUrl.origin);
   return NextResponse.redirect(targetUrl);
 }

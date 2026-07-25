@@ -68,15 +68,15 @@ export async function updateSession(request: NextRequest) {
         return NextResponse.redirect(url);
       }
 
-      // Super admin intentando entrar a /dashboard → redirigir a /superadmin
-      // (a menos que venga con redirect específico o sea subruta como /dashboard/[menuId])
+      // Super admin en /dashboard (exacto, sin subruta) → redirigir a /superadmin
+      // Si está en subruta (ej: /dashboard/[menuId]) respetamos la navegación
       if (
         profile?.is_super_admin &&
-        request.nextUrl.pathname === '/dashboard' &&
-        !request.nextUrl.searchParams.get('redirect')
+        request.nextUrl.pathname === '/dashboard'
       ) {
         const url = request.nextUrl.clone();
         url.pathname = '/superadmin';
+        url.search = '';
         return NextResponse.redirect(url);
       }
 
