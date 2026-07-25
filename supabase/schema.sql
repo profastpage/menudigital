@@ -1,22 +1,32 @@
 -- ============================================================
--- MenuPro SaaS — Supabase Schema Completo
+-- MenuPro SaaS — Schema Supabase IDEMPOTENTE v2 (run-safe)
 -- 
--- COMO EJECUTAR:
--- 1. Abre tu proyecto en Supabase Dashboard
--- 2. Ve a SQL Editor (ícono de base de datos en la barra lateral)
--- 3. Haz clic en "New query"
--- 4. COPIA Y PEGA TODO EL CONTENIDO DE ESTE ARCHIVO (no el nombre del archivo)
--- 5. Haz clic en "Run" (o Ctrl+Enter)
--- 6. Espera a que termine — deberías ver "Success" al final
+-- CORRECCIÓN v2: los DROP POLICY ahora van DESPUÉS de CREATE TABLE
+-- para que no fallen si la tabla no existe todavía.
 -- 
--- NOTA: No escribas "supabase/schema.sql" en el editor.
--- Debes copiar el CONTENIDO SQL de este archivo, no su nombre.
+-- CÓMO EJECUTAR:
+-- 1. Supabase Dashboard → tu proyecto
+-- 2. SQL Editor (ícono de base de datos)
+-- 3. "+ New query"
+-- 4. Pega TODO este contenido
+-- 5. Click en "Run" (o Ctrl+Enter)
+-- 6. Verás "Success" al final
+-- 
+-- Seguro de ejecutar 1, 2, 10 veces — no rompe nada.
 -- ============================================================
 
--- 1) ENUM para planes
-CREATE TYPE user_plan AS ENUM ('free', 'pro');
+-- ============================================================
+-- 1) ENUM para planes (idempotente)
+-- ============================================================
+DO $$ BEGIN
+  CREATE TYPE user_plan AS ENUM ('free', 'pro');
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
 
+-- ============================================================
 -- 2) Tabla profiles (1:1 con auth.users)
+-- ============================================================
 CREATE TABLE IF NOT EXISTS profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   email TEXT NOT NULL,
@@ -33,7 +43,23 @@ CREATE TABLE IF NOT EXISTS profiles (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- Agregar columnas si la tabla ya existía sin ellas
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS is_super_admin BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS mp_preapproval_id TEXT;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS mp_status TEXT;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS current_period_end TIMESTAMPTZ;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS bg_removals_used INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS bg_removals_reset_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+
+-- Políticas profiles (DROP antes de CREATE, la tabla ya existe)
+DROP POLICY IF EXISTS "profiles_select_self" ON profiles;
+DROP POLICY IF EXISTS "profiles_update_self" ON profiles;
+DROP POLICY IF EXISTS "profiles_insert_self" ON profiles;
+DROP POLICY IF EXISTS "profiles_select_admin" ON profiles;
+DROP POLICY IF EXISTS "profiles_update_admin" ON profiles;
+DROP POLICY IF EXISTS "profiles_delete_admin" ON profiles;
 
 CREATE POLICY "profiles_select_self" ON profiles
   FOR SELECT USING (auth.uid() = id);
@@ -42,7 +68,6 @@ CREATE POLICY "profiles_update_self" ON profiles
 CREATE POLICY "profiles_insert_self" ON profiles
   FOR INSERT WITH CHECK (auth.uid() = id);
 
--- Super admin policies (bypass RLS para administradores)
 CREATE POLICY "profiles_select_admin" ON profiles
   FOR SELECT USING (
     EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND is_super_admin = true)
@@ -56,7 +81,10 @@ CREATE POLICY "profiles_delete_admin" ON profiles
     EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND is_super_admin = true)
   );
 
+-- ============================================================
 -- 3) Trigger: crear profile automáticamente al registrarse
+--    (incluye login con Google)
+-- ============================================================
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -64,9 +92,12 @@ BEGIN
   VALUES (
     NEW.id,
     NEW.email,
-    COALESCE(NEW.raw_user_meta_data->>'full_name', NULL),
-    COALESCE(NEW.raw_user_meta_data->>'avatar_url', NULL)
-  );
+    COALESCE(NEW.raw_user_meta_data->>'full_name',
+             NEW.raw_user_meta_data->>'name', NULL),
+    COALESCE(NEW.raw_user_meta_data->>'avatar_url',
+             NEW.raw_user_meta_data->>'picture', NULL)
+  )
+  ON CONFLICT (id) DO NOTHING;
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -76,7 +107,9 @@ CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
+-- ============================================================
 -- 4) Tabla menus
+-- ============================================================
 CREATE TABLE IF NOT EXISTS menus (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
@@ -101,6 +134,13 @@ CREATE INDEX IF NOT EXISTS idx_menus_user_id ON menus(user_id);
 CREATE INDEX IF NOT EXISTS idx_menus_slug ON menus(slug);
 CREATE UNIQUE INDEX IF NOT EXISTS menus_user_slug_unique ON menus(user_id, slug);
 
+DROP POLICY IF EXISTS "menus_select_own" ON menus;
+DROP POLICY IF EXISTS "menus_insert_own" ON menus;
+DROP POLICY IF EXISTS "menus_update_own" ON menus;
+DROP POLICY IF EXISTS "menus_delete_own" ON menus;
+DROP POLICY IF EXISTS "menus_select_admin" ON menus;
+DROP POLICY IF EXISTS "menus_delete_admin" ON menus;
+
 CREATE POLICY "menus_select_own" ON menus
   FOR SELECT USING (auth.uid() = user_id);
 CREATE POLICY "menus_insert_own" ON menus
@@ -110,7 +150,6 @@ CREATE POLICY "menus_update_own" ON menus
 CREATE POLICY "menus_delete_own" ON menus
   FOR DELETE USING (auth.uid() = user_id);
 
--- Admin: puede ver y eliminar menús de cualquier usuario
 CREATE POLICY "menus_select_admin" ON menus
   FOR SELECT USING (
     EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND is_super_admin = true)
@@ -120,7 +159,9 @@ CREATE POLICY "menus_delete_admin" ON menus
     EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND is_super_admin = true)
   );
 
+-- ============================================================
 -- 5) Tabla categories
+-- ============================================================
 CREATE TABLE IF NOT EXISTS categories (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   menu_id UUID NOT NULL REFERENCES menus(id) ON DELETE CASCADE,
@@ -132,6 +173,12 @@ CREATE TABLE IF NOT EXISTS categories (
 ALTER TABLE categories ENABLE ROW LEVEL SECURITY;
 
 CREATE INDEX IF NOT EXISTS idx_categories_menu_id ON categories(menu_id);
+
+DROP POLICY IF EXISTS "categories_select_own" ON categories;
+DROP POLICY IF EXISTS "categories_insert_own" ON categories;
+DROP POLICY IF EXISTS "categories_update_own" ON categories;
+DROP POLICY IF EXISTS "categories_delete_own" ON categories;
+DROP POLICY IF EXISTS "categories_select_admin" ON categories;
 
 CREATE POLICY "categories_select_own" ON categories
   FOR SELECT USING (
@@ -150,13 +197,14 @@ CREATE POLICY "categories_delete_own" ON categories
     EXISTS (SELECT 1 FROM menus WHERE menus.id = categories.menu_id AND menus.user_id = auth.uid())
   );
 
--- Admin categories
 CREATE POLICY "categories_select_admin" ON categories
   FOR SELECT USING (
     EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND is_super_admin = true)
   );
 
+-- ============================================================
 -- 6) Tabla dishes
+-- ============================================================
 CREATE TABLE IF NOT EXISTS dishes (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   category_id UUID NOT NULL REFERENCES categories(id) ON DELETE CASCADE,
@@ -171,6 +219,12 @@ CREATE TABLE IF NOT EXISTS dishes (
 ALTER TABLE dishes ENABLE ROW LEVEL SECURITY;
 
 CREATE INDEX IF NOT EXISTS idx_dishes_category_id ON dishes(category_id);
+
+DROP POLICY IF EXISTS "dishes_select_own" ON dishes;
+DROP POLICY IF EXISTS "dishes_insert_own" ON dishes;
+DROP POLICY IF EXISTS "dishes_update_own" ON dishes;
+DROP POLICY IF EXISTS "dishes_delete_own" ON dishes;
+DROP POLICY IF EXISTS "dishes_select_admin" ON dishes;
 
 CREATE POLICY "dishes_select_own" ON dishes
   FOR SELECT USING (
@@ -205,13 +259,14 @@ CREATE POLICY "dishes_delete_own" ON dishes
     )
   );
 
--- Admin dishes
 CREATE POLICY "dishes_select_admin" ON dishes
   FOR SELECT USING (
     EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND is_super_admin = true)
   );
 
+-- ============================================================
 -- 7) Tabla menu_views (analytics)
+-- ============================================================
 CREATE TABLE IF NOT EXISTS menu_views (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   menu_id UUID NOT NULL REFERENCES menus(id) ON DELETE CASCADE,
@@ -224,6 +279,10 @@ ALTER TABLE menu_views ENABLE ROW LEVEL SECURITY;
 
 CREATE INDEX IF NOT EXISTS idx_menu_views_menu_id ON menu_views(menu_id);
 
+DROP POLICY IF EXISTS "menu_views_select_own" ON menu_views;
+DROP POLICY IF EXISTS "menu_views_insert_any" ON menu_views;
+DROP POLICY IF EXISTS "menu_views_select_admin" ON menu_views;
+
 CREATE POLICY "menu_views_select_own" ON menu_views
   FOR SELECT USING (
     EXISTS (SELECT 1 FROM menus WHERE menus.id = menu_views.menu_id AND menus.user_id = auth.uid())
@@ -231,7 +290,6 @@ CREATE POLICY "menu_views_select_own" ON menu_views
 CREATE POLICY "menu_views_insert_any" ON menu_views
   FOR INSERT WITH CHECK (true);
 
--- Admin menu_views
 CREATE POLICY "menu_views_select_admin" ON menu_views
   FOR SELECT USING (
     EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND is_super_admin = true)
@@ -239,8 +297,6 @@ CREATE POLICY "menu_views_select_admin" ON menu_views
 
 -- ============================================================
 -- 8) Tabla custom_domains (solo Pro)
--- Permite a los usuarios Pro conectar su propio dominio
--- Ej: menu.mirestaurante.com → apunta al menú del usuario
 -- ============================================================
 CREATE TABLE IF NOT EXISTS custom_domains (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -251,7 +307,6 @@ CREATE TABLE IF NOT EXISTS custom_domains (
   verification_token TEXT NOT NULL,
   dns_checked_at TIMESTAMPTZ,
   ssl_status TEXT NOT NULL DEFAULT 'pending',
-  -- pending → provisioning → active → failed
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -262,6 +317,12 @@ CREATE INDEX IF NOT EXISTS idx_custom_domains_user_id ON custom_domains(user_id)
 CREATE INDEX IF NOT EXISTS idx_custom_domains_domain ON custom_domains(domain);
 CREATE UNIQUE INDEX IF NOT EXISTS custom_domains_domain_unique ON custom_domains(domain);
 
+DROP POLICY IF EXISTS "custom_domains_select_own" ON custom_domains;
+DROP POLICY IF EXISTS "custom_domains_insert_own" ON custom_domains;
+DROP POLICY IF EXISTS "custom_domains_update_own" ON custom_domains;
+DROP POLICY IF EXISTS "custom_domains_delete_own" ON custom_domains;
+DROP POLICY IF EXISTS "custom_domains_select_admin" ON custom_domains;
+
 CREATE POLICY "custom_domains_select_own" ON custom_domains
   FOR SELECT USING (auth.uid() = user_id);
 CREATE POLICY "custom_domains_insert_own" ON custom_domains
@@ -271,16 +332,23 @@ CREATE POLICY "custom_domains_update_own" ON custom_domains
 CREATE POLICY "custom_domains_delete_own" ON custom_domains
   FOR DELETE USING (auth.uid() = user_id);
 
--- Admin custom_domains
 CREATE POLICY "custom_domains_select_admin" ON custom_domains
   FOR SELECT USING (
     EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND is_super_admin = true)
   );
 
+-- ============================================================
 -- 9) Storage bucket para logos y platos
+-- ============================================================
 INSERT INTO storage.buckets (id, name, public)
 VALUES ('menus', 'menus', true)
 ON CONFLICT (id) DO NOTHING;
+
+-- Storage policies (DROP antes de CREATE — storage.objects siempre existe)
+DROP POLICY IF EXISTS "menus_storage_select_all" ON storage.objects;
+DROP POLICY IF EXISTS "menus_storage_insert_own" ON storage.objects;
+DROP POLICY IF EXISTS "menus_storage_update_own" ON storage.objects;
+DROP POLICY IF EXISTS "menus_storage_delete_own" ON storage.objects;
 
 CREATE POLICY "menus_storage_select_all" ON storage.objects
   FOR SELECT USING (bucket_id = 'menus');
@@ -300,7 +368,9 @@ CREATE POLICY "menus_storage_delete_own" ON storage.objects
     bucket_id = 'menus' AND auth.uid()::text = (storage.foldername(name))[1]
   );
 
+-- ============================================================
 -- 10) Triggers updated_at
+-- ============================================================
 CREATE OR REPLACE FUNCTION public.touch_updated_at()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -321,7 +391,9 @@ DROP TRIGGER IF EXISTS touch_custom_domains ON custom_domains;
 CREATE TRIGGER touch_custom_domains BEFORE UPDATE ON custom_domains
   FOR EACH ROW EXECUTE FUNCTION public.touch_updated_at();
 
--- 11) Función para incrementar contador de vistas
+-- ============================================================
+-- 11) Función: incrementar contador de vistas
+-- ============================================================
 CREATE OR REPLACE FUNCTION public.increment_menu_views(menu_uuid UUID)
 RETURNS void AS $$
 BEGIN
@@ -329,7 +401,9 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- 12) Función: incrementar contador de "Quitar fondo"
+-- ============================================================
+-- 12) Función: incrementar "Quitar fondo" (con reset 30 días)
+-- ============================================================
 CREATE OR REPLACE FUNCTION public.increment_bg_removals(user_uuid UUID)
 RETURNS INTEGER AS $$
 DECLARE
@@ -355,7 +429,9 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- 13) Función: obtener créditos disponibles de "Quitar fondo"
+-- ============================================================
+-- 13) Función: obtener cuota "Quitar fondo"
+-- ============================================================
 CREATE OR REPLACE FUNCTION public.get_bg_removals_quota(user_uuid UUID, monthly_limit INTEGER)
 RETURNS JSON AS $$
 DECLARE
@@ -383,17 +459,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- 14) Migración: agregar is_super_admin si la tabla ya existe sin esta columna
-DO $$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM information_schema.columns 
-    WHERE table_name = 'profiles' AND column_name = 'is_super_admin'
-  ) THEN
-    ALTER TABLE profiles ADD COLUMN is_super_admin BOOLEAN NOT NULL DEFAULT false;
-  END IF;
-END $$;
-
--- 15) Marcar al primer usuario como super admin
--- Descomenta y cambia el email por el tuyo después de registrarte:
+-- ============================================================
+-- 14) Marcar TU cuenta como super admin (descomenta y cambia el email):
 -- UPDATE profiles SET is_super_admin = true WHERE email = 'tu-email@gmail.com';
+-- ============================================================
