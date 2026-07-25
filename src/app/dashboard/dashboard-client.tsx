@@ -233,7 +233,7 @@ export function DashboardClient({ user, plan, menus, isSuperAdmin = false }: Pro
           </a>
           {isSuperAdmin && (
             <a
-              href="/dashboard/admin"
+              href="/superadmin"
               className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-amber-400/80 hover:text-amber-400 hover:bg-amber-400/5 text-sm transition-colors border border-amber-400/20 mt-2"
             >
               <Shield className="w-4 h-4" />
@@ -302,7 +302,7 @@ export function DashboardClient({ user, plan, menus, isSuperAdmin = false }: Pro
             <a href="/dashboard/domains" className="px-3 py-1.5 rounded-lg text-white/50 text-xs whitespace-nowrap">Dominios</a>
             <a href="/dashboard/billing" className="px-3 py-1.5 rounded-lg text-white/50 text-xs whitespace-nowrap">Planes</a>
             {isSuperAdmin && (
-              <a href="/dashboard/admin" className="px-3 py-1.5 rounded-lg text-amber-400 text-xs whitespace-nowrap">Admin</a>
+              <a href="/superadmin" className="px-3 py-1.5 rounded-lg text-amber-400 text-xs whitespace-nowrap">Admin</a>
             )}
           </div>
         </header>
