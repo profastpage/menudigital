@@ -520,7 +520,7 @@ function buildJS(opts: JSOpts): string {
   s += '  html+="</div></nav>";\n';
   // Sections con dishes-grid
   s += '  RESTAURANT.categories.forEach(function(cat,i){\n';
-  s += '    html+="<section class=\\"section ' + (layout === 'single' ? 'single-layout' : 'two-layout') + '\\" id=\\"cat-"+i+"\\">";\n';
+  s += '    html+="<section class=\\"section ' + (opts.layout === 'single' ? 'single-layout' : 'two-layout') + '\\" id=\\"cat-"+i+"\\">";\n';
   s += '    html+="<h2 class=\\"section-title\\">"+escapeHtml(cat.name)+"</h2>";\n';
   s += '    html+="<div class=\\"dishes-grid\\">";\n';
   s += '    cat.dishes.forEach(function(dish,j){\n';

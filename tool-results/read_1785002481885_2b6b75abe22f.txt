@@ -1,0 +1,898 @@
+     1→import { escapeHtml, hexToRgbStr, type MenuData } from '@/lib/menu-utils';
+     2→
+     3→/**
+     4→ * Construye el HTML completo autocontenido del menú público.
+     5→ * Usa concatenación de strings (no template literals anidados) para evitar
+     6→ * problemas de escape. Inyecta los datos via JSON.stringify().
+     7→ *
+     8→ * Soporta tema personalizables (plan Pro): layout, image_size, card_style,
+     9→ * font, secondary color, dark mode, cover image, search, etc.
+    10→ *
+    11→ * NOVEDADES:
+    12→ *  - Cover image como fondo detrás del header de perfil (efecto ultra pro)
+    13→ *  - Redes sociales con iconos SVG premium (Facebook, Instagram, WhatsApp,
+    14→ *    TikTok, Twitter/X, YouTube, Web)
+    15→ *  - Lightbox carrusel: al hacer clic en un plato se abre un overlay con
+    16→ *    imagen grande + info detallada. Si el plato no tiene imagen, se muestra
+    17→ *    un placeholder elegante.
+    18→ *  - Fix del bug "sans is not defined" (property CSS sin comillas)
+    19→ */
+    20→export function buildMenuHTML(data: MenuData): string {
+    21→  // Defaults seguros (plan Free = single col, medium img, expanded card, dark)
+    22→  const layout = data.theme_layout || 'single';
+    23→  const imageSize = data.theme_image_size || 'medium';
+    24→  const cardStyle = data.theme_card_style || 'expanded';
+    25→  const font = data.theme_font || 'Inter';
+    26→  const darkMode = data.theme_dark_mode !== false; // default true
+    27→  const showSearch = data.theme_show_search !== false;
+    28→  const showCatIcons = data.theme_show_category_icons !== false;
+    29→  const rounded = data.theme_rounded_corners !== false;
+    30→  const coverUrl = data.theme_cover_url || null;
+    31→  const secondary = data.theme_color_secondary || '#1a1a2e';
+    32→  const showGallery = data.theme_dish_gallery !== false; // default true
+    33→
+    34→  const css = buildCSS({ layout, imageSize, cardStyle, font, darkMode, showSearch, showCatIcons, rounded, coverUrl, secondary, showGallery });
+    35→  const js = buildJS({ layout, imageSize, cardStyle, showSearch, showGallery });
+    36→  const colorRgb = hexToRgbStr(data.color);
+    37→  const secondaryRgb = hexToRgbStr(secondary);
+    38→
+    39→  // Font CDN (solo si no es Inter/system)
+    40→  const fontImport = ['Inter', 'system-ui', '-apple-system'].includes(font)
+    41→    ? ''
+    42→    : `<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=${encodeURIComponent(font)}:wght@400;500;600;700;800&display=swap" rel="stylesheet">`;
+    43→
+    44→  // ⚠️ FIX CRITICAL: el valor de la property CSS debe ser un JS string completo
+    45→  // y CORRECTAMENTE ESCAPADO. Antes generábamos "Inter, "Inter", sans-serif"
+    46→  // lo que rompía el parser JS y mataba todo el script (ReferenceError: sans).
+    47→  // Usamos JSON.stringify para escapar comillas internas correctamente.
+    48→  const fontMainJs = JSON.stringify(font + ', "Inter", sans-serif');
+    49→
+    50→  let html = '';
+    51→  html += '<!DOCTYPE html>\n';
+    52→  html += '<html lang="es">\n';
+    53→  html += '<head>\n';
+    54→  html += '<meta charset="UTF-8">\n';
+    55→  html += '<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">\n';
+    56→  html += '<meta name="theme-color" content="' + data.color + '">\n';
+    57→  html += '<meta name="description" content="' + escapeHtml(data.description || data.name) + '">\n';
+    58→  html += '<title>' + escapeHtml(data.name) + '</title>\n';
+    59→  html += fontImport + '\n';
+    60→  // Swiper carousel CDN (para galería multi-imagen de platos)
+    61→  html += '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" referrerpolicy="no-referrer">\n';
+    62→  html += '<style>' + css + '</style>\n';
+    63→  html += '</head>\n';
+    64→  html += '<body>\n';
+    65→  html += '<div id="app"></div>\n';
+    66→  // Mobile bottom nav (Inicio/Buscar/Favoritos/Carrito) — solo visible en mobile via CSS
+    67→  html += '<nav class="mobile-bottom-nav" id="mobileBottomNav" aria-label="Navegación móvil">\n';
+    68→  html += '  <button class="mbn-item active" data-action="home" aria-label="Inicio">\n';
+    69→  html += '    <span class="mbn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></span>\n';
+    70→  html += '    <span>Inicio</span>\n';
+    71→  html += '  </button>\n';
+    72→  html += '  <button class="mbn-item" data-action="search" aria-label="Buscar">\n';
+    73→  html += '    <span class="mbn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></span>\n';
+    74→  html += '    <span>Buscar</span>\n';
+    75→  html += '  </button>\n';
+    76→  html += '  <button class="mbn-item" data-action="favorites" aria-label="Favoritos">\n';
+    77→  html += '    <span class="mbn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></span>\n';
+    78→  html += '    <span class="mbn-badge" id="mbnFavCount" style="display:none;">0</span>\n';
+    79→  html += '    <span>Favoritos</span>\n';
+    80→  html += '  </button>\n';
+    81→  html += '  <button class="mbn-item" data-action="cart" aria-label="Carrito">\n';
+    82→  html += '    <span class="mbn-cart-total" id="mbnCartTotal"></span>\n';
+    83→  html += '    <span class="mbn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg></span>\n';
+    84→  html += '    <span class="mbn-badge" id="mbnCartCount" style="display:none;">0</span>\n';
+    85→  html += '    <span>Pedido</span>\n';
+    86→  html += '  </button>\n';
+    87→  html += '</nav>\n';
+    88→  html += '<script>\n';
+    89→  html += 'var RESTAURANT = ' + JSON.stringify(data) + ';\n';
+    90→  html += 'var SHOW_BRANDING = ' + (!!data.branding_text) + ';\n';
+    91→  html += 'var BRANDING_TEXT = ' + JSON.stringify(data.branding_text || '') + ';\n';
+    92→  html += 'var THEME = ' + JSON.stringify({ layout, imageSize, cardStyle, showSearch, showGallery }) + ';\n';
+    93→  html += 'document.documentElement.style.setProperty("--accent", "' + data.color + '");\n';
+    94→  html += 'document.documentElement.style.setProperty("--accent-rgb", "' + colorRgb + '");\n';
+    95→  html += 'document.documentElement.style.setProperty("--secondary", "' + secondary + '");\n';
+    96→  html += 'document.documentElement.style.setProperty("--secondary-rgb", "' + secondaryRgb + '");\n';
+    97→  // ⚠️ FIX: property CSS value debe ser un string COMPLETO entre comillas
+    98→  html += 'document.documentElement.style.setProperty("--font-main", ' + fontMainJs + ');\n';
+    99→  html += js + '\n';
+   100→  html += '</scr' + 'ipt>\n';
+   101→  // Swiper JS bundle (carga async para no bloquear el render del menú)
+   102→  html += '<script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js" referrerpolicy="no-referrer" defer></scr' + 'ipt>\n';
+   103→  html += '</body>\n';
+   104→  html += '</html>';
+   105→  return html;
+   106→}
+   107→
+   108→interface ThemeOpts {
+   109→  layout: 'single' | 'double' | 'grid';
+   110→  imageSize: 'none' | 'small' | 'medium' | 'large' | 'hero';
+   111→  cardStyle: 'compact' | 'expanded' | 'minimal';
+   112→  font: string;
+   113→  darkMode: boolean;
+   114→  showSearch: boolean;
+   115→  showCatIcons: boolean;
+   116→  rounded: boolean;
+   117→  coverUrl: string | null;
+   118→  secondary: string;
+   119→  showGallery: boolean;
+   120→}
+   121→
+   122→function buildCSS(opts: ThemeOpts): string {
+   123→  const { layout, imageSize, cardStyle, font, darkMode, showSearch, showCatIcons, rounded, coverUrl, showGallery } = opts;
+   124→  const radius = rounded ? '16px' : '4px';
+   125→  const radiusSm = rounded ? '12px' : '2px';
+   126→  const radiusLg = rounded ? '24px' : '8px';
+   127→
+   128→  // Colores según dark/light — light mode usa beige/cream suave (no blanco puro)
+   129→  // para dar calidez tipo PedidosYa/Rappi light theme.
+   130→  // --accent-text es la versión oscurecida del accent para texto sobre fondo claro
+   131→  // (garantiza contraste incluso si el usuario elige un accent muy claro como amarillo).
+   132→  const bg0 = darkMode ? '#07070b' : '#fefcf7';
+   133→  const bg1 = darkMode ? '#0f0f1a' : '#ffffff';
+   134→  const text = darkMode ? '#f4f4fa' : '#1a1a2e';
+   135→  const textMuted = darkMode ? '#8a8a9a' : '#6a6a7a';
+   136→  const textSoft = darkMode ? '#b8b8c8' : '#3a3a4a';
+   137→  const glass = darkMode ? 'rgba(255,255,255,0.035)' : 'rgba(0,0,0,0.025)';
+   138→  const glassStrong = darkMode ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.05)';
+   139→  const border = darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)';
+   140→  const borderStrong = darkMode ? 'rgba(255,255,255,0.14)' : 'rgba(0,0,0,0.14)';
+   141→
+   142→  let c = '';
+   143→  // En light mode, --accent-text es el accent oscurecido 18% (legible sobre beige/cream).
+   144→  // En dark mode, --accent-text = --accent tal cual (suficiente contraste sobre oscuro).
+   145→  c += `:root{--accent:#ff6b35;--accent-rgb:255,107,53;--secondary:#1a1a2e;--gold:#d4af37;--bg-0:${bg0};--bg-1:${bg1};--glass:${glass};--glass-strong:${glassStrong};--border:${border};--border-strong:${borderStrong};--text:${text};--text-muted:${textMuted};--text-soft:${textSoft};--font-main:${font},"Inter",sans-serif;--radius:${radius};--radius-sm:${radiusSm};--radius-lg:${radiusLg};--accent-text:${darkMode ? 'var(--accent)' : 'color-mix(in srgb, var(--accent) 78%, #000)'};}`;
+   146→  c += '*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}';
+   147→  c += 'html{scroll-behavior:smooth;-webkit-text-size-adjust:100%;}';
+   148→  c += `body{font-family:var(--font-main);background:var(--bg-0);color:var(--text);min-height:100vh;padding-bottom:calc(140px + env(safe-area-inset-bottom, 0px));position:relative;overflow-x:hidden;overscroll-behavior-y:contain;-webkit-overflow-scrolling:touch;}`;
+   149→  if (darkMode) {
+   150→    c += 'body::before,body::after{content:"";position:fixed;width:500px;height:500px;border-radius:50%;filter:blur(140px);opacity:0.18;z-index:0;pointer-events:none;}';
+   151→    c += 'body::before{background:var(--accent);top:-200px;right:-150px;}';
+   152→    c += 'body::after{background:var(--gold);bottom:-200px;left:-150px;}';
+   153→  }
+   154→  c += '#app{position:relative;z-index:1;}';
+   155→
+   156→  // ─── HERO / COVER (con efecto blur detrás del header) ───
+   157→  if (coverUrl) {
+   158→    c += '.hero{position:relative;width:100%;height:340px;overflow:hidden;background:var(--bg-1);}';
+   159→    c += '.hero img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:saturate(1.1);}';
+   160→    c += '@media(min-width:600px){.hero{height:420px;}}';
+   161→    // Overlay gradient para legibilidad
+   162→    c += '.hero::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,0.25) 0%,rgba(0,0,0,0.55) 60%,var(--bg-0) 100%);}';
+   163→  }
+   164→
+   165→  // Header — cuando hay cover, se superpone encima con efecto glass
+   166→  if (coverUrl) {
+   167→    c += `.header{position:relative;z-index:2;margin-top:-140px;padding:0 24px 30px;text-align:center;}`;
+   168→    c += '@media(min-width:600px){.header{margin-top:-180px;}}';
+   169→  } else {
+   170→    c += `.header{padding:38px 24px 30px;text-align:center;position:relative;background:linear-gradient(180deg,rgba(255,255,255,0.03) 0%,transparent 100%);border-bottom:1px solid var(--border);}`;
+   171→    c += '.header::after{content:"";position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:140px;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);}';
+   172→  }
+   173→  c += '.logo-wrap{position:relative;display:inline-block;margin-bottom:16px;width:96px;height:96px;}';
+   174→  c += '.logo-wrap::before{content:"";position:absolute;inset:-6px;border-radius:50%;background:conic-gradient(from 0deg,var(--accent),var(--gold),var(--accent));filter:blur(10px);opacity:0.5;z-index:0;animation:rotate 8s linear infinite;}';
+   175→  c += '@keyframes rotate{to{transform:rotate(360deg);}}';
+   176→  c += `.logo{width:96px;height:96px;border-radius:50%;object-fit:cover;border:3px solid rgba(255,255,255,0.18);box-shadow:0 12px 36px rgba(0,0,0,0.55);background:var(--glass);position:absolute;inset:0;z-index:2;}`;
+   177→  c += '.logo-placeholder{width:96px;height:96px;border-radius:50%;background:linear-gradient(135deg,var(--accent),rgba(var(--accent-rgb),0.6));display:flex;align-items:center;justify-content:center;font-size:38px;font-weight:800;color:#fff;position:absolute;inset:0;z-index:1;border:3px solid rgba(255,255,255,0.18);box-shadow:0 12px 36px rgba(0,0,0,0.55);backdrop-filter:blur(8px);}';
+   178→  c += '.restaurant-name{font-size:28px;font-weight:800;margin-bottom:6px;letter-spacing:-0.5px;color:var(--text);text-shadow:' + (coverUrl ? '0 2px 12px rgba(0,0,0,0.6)' : 'none') + ';}';
+   179→  c += '.slogan{font-size:11px;color:var(--gold);letter-spacing:4px;text-transform:uppercase;font-weight:600;margin-bottom:8px;}';
+   180→  c += '.restaurant-desc{color:' + (coverUrl && darkMode ? 'rgba(255,255,255,0.85)' : 'var(--text-soft)') + ';font-size:14px;margin-bottom:18px;max-width:440px;margin-left:auto;margin-right:auto;line-height:1.5;}';
+   181→  c += '.open-badge{display:inline-flex;align-items:center;gap:7px;background:rgba(6,214,160,0.12);color:#06d6a0;padding:6px 14px;border-radius:20px;font-size:11.5px;font-weight:600;border:1px solid rgba(6,214,160,0.25);letter-spacing:0.5px;text-transform:uppercase;}';
+   182→  c += '.open-badge::before{content:"";width:6px;height:6px;border-radius:50%;background:#06d6a0;box-shadow:0 0 8px #06d6a0;animation:pulse 2s infinite;}';
+   183→  c += '@keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:0.4;transform:scale(1.3);}}';
+   184→
+   185→  // ─── Redes sociales ───
+   186→  c += '.socials{display:flex;justify-content:center;align-items:center;gap:10px;margin-top:16px;flex-wrap:wrap;}';
+   187→  c += '.social-link{width:38px;height:38px;border-radius:50%;background:var(--glass);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;color:var(--text-soft);transition:all 0.25s cubic-bezier(0.4,0,0.2,1);cursor:pointer;text-decoration:none;}';
+   188→  c += '.social-link:hover{background:linear-gradient(135deg,var(--accent),rgba(var(--accent-rgb),0.85));color:#fff;border-color:transparent;transform:translateY(-3px);box-shadow:0 8px 20px rgba(var(--accent-rgb),0.4);}';
+   189→  c += '.social-link svg{width:18px;height:18px;}';
+   190→
+   191→  // Search bar (opcional, Pro)
+   192→  if (showSearch) {
+   193→    c += '.search-wrap{padding:12px 20px 0;max-width:620px;margin:0 auto;position:relative;}';
+   194→    c += '.search-input{width:100%;padding:12px 16px 12px 44px;border-radius:var(--radius-sm);background:var(--glass);border:1px solid var(--border);color:var(--text);font-size:15px;font-family:var(--font-main);outline:none;transition:border 0.2s;}';
+   195→    c += '.search-input:focus{border-color:rgba(var(--accent-rgb),0.5);background:var(--glass-strong);}';
+   196→    c += '.search-input::placeholder{color:var(--text-muted);}';
+   197→    c += '.search-icon{position:absolute;left:36px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:var(--text-muted);pointer-events:none;}';
+   198→  }
+   199→
+   200→  // Nav
+   201→  c += '.nav{position:sticky;top:0;background:' + (darkMode ? 'rgba(7,7,11,0.78)' : 'rgba(250,250,250,0.85)') + ';backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);border-bottom:1px solid var(--border);z-index:100;padding:14px 0;overflow-x:auto;scrollbar-width:none;}';
+   202→  c += '.nav::-webkit-scrollbar{display:none;}';
+   203→  c += '.nav-inner{display:flex;gap:8px;padding:0 20px;min-width:max-content;}';
+   204→  c += '.nav-item{white-space:nowrap;padding:8px 18px;background:var(--glass);border:1px solid var(--border);border-radius:24px;color:var(--text-soft);font-size:13.5px;font-weight:500;cursor:pointer;transition:all 0.25s cubic-bezier(0.4,0,0.2,1);display:flex;align-items:center;gap:6px;}';
+   205→  c += '.nav-item:hover{background:var(--glass-strong);color:var(--text);transform:translateY(-1px);}';
+   206→  c += '.nav-item.active{background:linear-gradient(135deg,var(--accent),rgba(var(--accent-rgb),0.85));color:#fff;border-color:transparent;box-shadow:0 4px 16px rgba(var(--accent-rgb),0.4);}';
+   207→  if (showCatIcons) {
+   208→    c += '.nav-item-icon{font-size:16px;line-height:1;}';
+   209→  }
+   210→
+   211→  // Section
+   212→  const sectionMaxW = layout === 'single' ? '620px' : '1100px';
+   213→  c += `.section{padding:24px 20px 8px;max-width:${sectionMaxW};margin:0 auto;width:100%;}`;
+   214→  c += '.section-title{font-size:21px;font-weight:700;margin-bottom:18px;display:flex;align-items:center;gap:12px;letter-spacing:-0.3px;}';
+   215→  c += '.section-title::before{content:"";width:4px;height:22px;background:linear-gradient(180deg,var(--accent),var(--gold));border-radius:2px;}';
+   216→
+   217→  // ─── Layout: contenedor de platos ───
+   218→  // PedidosYa/Rappi style: cards con imagen grande arriba → grid responsivo
+   219→  if (layout === 'double') {
+   220→    c += '.dishes-grid{display:grid;grid-template-columns:1fr;gap:14px;}';
+   221→    c += '@media(min-width:640px){.dishes-grid{grid-template-columns:1fr 1fr;}}';
+   222→  } else if (layout === 'grid') {
+   223→    c += '.dishes-grid{display:grid;grid-template-columns:1fr;gap:14px;}';
+   224→    c += '@media(min-width:480px){.dishes-grid{grid-template-columns:1fr 1fr;}}';
+   225→    c += '@media(min-width:1024px){.dishes-grid{grid-template-columns:1fr 1fr 1fr;}}';
+   226→  } else {
+   227→    // single = 1 col mobile, 2 col tablet+ (mejor aprovechamiento, estilo PedidosYa)
+   228→    c += '.dishes-grid{display:grid;grid-template-columns:1fr;gap:14px;}';
+   229→    c += '@media(min-width:640px){.dishes-grid{grid-template-columns:1fr 1fr;}}';
+   230→  }
+   231→
+   232→  // ─── DISH CARD — PedidosYa/Rappi style universal ───
+   233→  // Siempre: imagen grande arriba (160px mobile, 180px desktop) + info abajo.
+   234→  // Si no hay imagen, placeholder con inicial del plato (gradient accent).
+   235→  // imageSize solo controla si se muestra la imagen o no (none = sin imagen).
+   236→  const showImg = imageSize !== 'none';
+   237→
+   238→  // Base dish — columna siempre (imagen arriba, info abajo)
+   239→  c += '.dish{background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;cursor:pointer;position:relative;transition:transform 0.3s cubic-bezier(0.4,0,0.2,1),box-shadow 0.3s,border-color 0.3s;opacity:0;transform:translateY(20px);display:flex;flex-direction:column;}';
+   240→  c += '.dish.revealed{opacity:1;transform:translateY(0);}';
+   241→  c += '.dish:hover{transform:translateY(-4px);box-shadow:0 14px 32px rgba(0,0,0,0.18);border-color:rgba(var(--accent-rgb),0.35);}';
+   242→  c += '.dish:active{transform:translateY(-1px) scale(0.997);}';
+   243→
+   244→  // HERO IMAGE WRAPPER (siempre 16/10 aspect, overflow hidden para zoom hover)
+   245→  if (showImg) {
+   246→    c += '.dish-img-wrap{position:relative;width:100%;aspect-ratio:16/10;overflow:hidden;background:linear-gradient(135deg,var(--glass),var(--glass-strong));flex-shrink:0;}';
+   247→    c += '.dish-img{width:100%;height:100%;object-fit:cover;display:block;transition:transform 0.55s cubic-bezier(0.2,0,0.2,1);}';
+   248→    c += '.dish:hover .dish-img{transform:scale(1.06);}';
+   249→    // Placeholder cuando no hay image_url — gradient con inicial del plato
+   250→    c += '.dish-img-placeholder{width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--accent),rgba(var(--accent-rgb),0.55));color:#fff;font-size:54px;font-weight:900;letter-spacing:-2px;text-shadow:0 4px 14px rgba(0,0,0,0.18);}';
+   251→    // Pequeño badge de categoría opcional encima de la imagen (esquina sup-izq)
+   252→    c += '.dish-cat-badge{position:absolute;top:10px;left:10px;background:rgba(0,0,0,0.62);color:#fff;font-size:10.5px;font-weight:700;padding:4px 9px;border-radius:14px;letter-spacing:0.4px;text-transform:uppercase;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);z-index:2;}';
+   253→  }
+   254→
+   255→  // INFO area (debajo de la imagen)
+   256→  c += '.dish-info{padding:14px 16px 16px;display:flex;flex-direction:column;flex:1;min-height:0;}';
+   257→  c += '.dish-name{font-size:16px;font-weight:700;color:var(--text);letter-spacing:-0.2px;line-height:1.3;margin:0 0 4px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}';
+   258→  c += '.dish-desc{font-size:13px;color:var(--text-muted);line-height:1.5;margin:0 0 10px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:39px;}';
+   259→  c += '.dish-bottom{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:auto;padding-top:6px;}';
+   260→  c += '.dish-price{font-size:19px;font-weight:800;color:var(--accent-text);letter-spacing:-0.5px;line-height:1;}';
+   261→  c += '.add-btn{background:linear-gradient(135deg,var(--accent),rgba(var(--accent-rgb),0.82));color:#fff;border:none;padding:8px 16px;border-radius:24px;font-size:13.5px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;box-shadow:0 4px 14px rgba(var(--accent-rgb),0.35);transition:all 0.22s;line-height:1;flex-shrink:0;}';
+   262→  c += '.add-btn:hover{transform:scale(1.06);box-shadow:0 6px 20px rgba(var(--accent-rgb),0.55);}';
+   263→  c += '.add-btn:active{transform:scale(0.96);}';
+   264→
+   265→  // Card style variants (afectan padding y borde, mantienen PedidosYa/Rappi layout)
+   266→  if (cardStyle === 'compact') {
+   267→    c += '.dish-info{padding:10px 12px 12px;}';
+   268→    c += '.dish-name{font-size:15px;}';
+   269→    c += '.dish-desc{font-size:12.5px;min-height:36px;}';
+   270→  } else if (cardStyle === 'minimal') {
+   271→    c += '.dish{background:transparent;border-color:transparent;}';
+   272→    c += '.dish:hover{box-shadow:0 8px 22px rgba(0,0,0,0.10);border-color:rgba(var(--accent-rgb),0.18);}';
+   273→  }
+   274→
+   275→  c += '.added-flash{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) scale(0);background:#06d6a0;color:#fff;padding:8px 18px;border-radius:24px;font-size:12px;font-weight:700;pointer-events:none;z-index:5;box-shadow:0 6px 18px rgba(6,214,160,0.5);animation:flashAdd 0.9s ease forwards;letter-spacing:0.3px;}';
+   276→  c += '@keyframes flashAdd{0%{transform:translate(-50%,-50%) scale(0);opacity:0;}25%{transform:translate(-50%,-50%) scale(1);opacity:1;}75%{transform:translate(-50%,-90%) scale(1);opacity:1;}100%{transform:translate(-50%,-130%) scale(0.8);opacity:0;}}';
+   277→
+   278→  // ─── Lightbox de plato (estilo PedidosYa/Rappi — mobile-first ultra pro) ───
+   279→  if (showGallery) {
+   280→    // Overlay full-screen en mobile, sheet centrado en desktop
+   281→    c += '.dish-lightbox{position:fixed;inset:0;background:rgba(0,0,0,0.92);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);z-index:300;display:none;align-items:flex-end;justify-content:center;padding:0;animation:dlbFadeIn 0.2s ease;overflow-y:auto;}';
+   282→    c += '.dish-lightbox.visible{display:flex;}';
+   283→    c += '@keyframes dlbFadeIn{from{opacity:0;}to{opacity:1;}}';
+   284→    c += '@media(min-width:640px){.dish-lightbox{align-items:center;padding:24px;}}';
+   285→    // Inner: full-screen bottom-sheet en mobile, card centrada en desktop
+   286→    // overflow:hidden on inner, content area scrolls, CTA sticky at bottom
+   287→    c += '.dish-lightbox-inner{background:' + (darkMode ? '#14141f' : '#ffffff') + ';width:100%;max-width:560px;max-height:100vh;overflow:hidden;position:relative;color:var(--text);border-radius:24px 24px 0 0;animation:dlbSlideUp 0.32s cubic-bezier(0.32,0.72,0,1);box-shadow:0 -10px 40px rgba(0,0,0,0.5);display:flex;flex-direction:column;}';
+   288→    c += '@media(min-width:640px){.dish-lightbox-inner{border-radius:28px;max-height:92vh;animation:dlbZoomIn 0.3s cubic-bezier(0.32,0.72,0,1);box-shadow:0 30px 80px rgba(0,0,0,0.6);}}';
+   289→    c += '@keyframes dlbSlideUp{from{transform:translateY(100%);}to{transform:translateY(0);}}';
+   290→    c += '@keyframes dlbZoomIn{from{transform:scale(0.95);opacity:0;}to{transform:scale(1);opacity:1;}}';
+   291→    // Handle bar en mobile (estilo bottom-sheet nativo iOS/Android)
+   292→    c += '.dish-lightbox-handle{display:block;width:40px;height:4px;background:' + (darkMode ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.12)') + ';border-radius:4px;margin:8px auto 0;flex-shrink:0;}';
+   293→    c += '@media(min-width:640px){.dish-lightbox-handle{display:none;}}';
+   294→    // Close button — flota sobre la imagen (estilo Rappi)
+   295→    c += '.dish-lightbox-close{position:absolute;top:14px;right:14px;width:38px;height:38px;border-radius:50%;background:rgba(0,0,0,0.55);color:#fff;border:none;cursor:pointer;font-size:22px;line-height:1;display:flex;align-items:center;justify-content:center;z-index:10;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);transition:all 0.2s;box-shadow:0 4px 12px rgba(0,0,0,0.3);}';
+   296→    c += '.dish-lightbox-close:hover{background:rgba(0,0,0,0.78);transform:scale(1.05);}';
+   297→    c += '.dish-lightbox-close:active{transform:scale(0.95);}';
+   298→    // HERO IMAGE — wide hero on mobile (top of bottom-sheet), 16/9 on desktop
+   299→    // Background gradient fills any transparent area (e.g. PNG logos) — no more "black gap"
+   300→    c += '.dish-lightbox-hero{position:relative;width:100%;aspect-ratio:4/3;max-height:42vh;overflow:hidden;background:linear-gradient(135deg,rgba(var(--accent-rgb),0.85) 0%,var(--accent) 50%,rgba(var(--accent-rgb),0.85) 100%);flex-shrink:0;}';
+   301→    c += '@media(min-width:640px){.dish-lightbox-hero{aspect-ratio:16/9;border-radius:28px 28px 0 0;max-height:50vh;}}';
+   302→    c += '.dish-lightbox-img{width:100%;height:100%;object-fit:cover;display:block;}';
+   303→    // Gradient overlay para legibilidad del close button
+   304→    c += '.dish-lightbox-hero::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,0.35) 0%,rgba(0,0,0,0) 30%,rgba(0,0,0,0) 70%,rgba(0,0,0,0.25) 100%);pointer-events:none;}';
+   305→    // Placeholder cuando no hay imagen — diseño premium
+   306→    c += '.dish-lightbox-img-placeholder{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:linear-gradient(135deg,var(--accent),rgba(var(--accent-rgb),0.6));color:#fff;}';
+   307→    c += '.dish-lightbox-img-placeholder .ph-letter{font-size:120px;font-weight:900;line-height:1;text-shadow:0 4px 16px rgba(0,0,0,0.25);}';
+   308→    c += '@media(min-width:640px){.dish-lightbox-img-placeholder .ph-letter{font-size:140px;}}';
+   309→    c += '.dish-lightbox-img-placeholder .ph-label{font-size:13px;opacity:0.9;font-weight:600;letter-spacing:0.5px;text-transform:uppercase;}';
+   310→    // Content area — padding generoso, mobile-first, scrolls if content too long
+   311→    c += '.dish-lightbox-content{padding:20px 20px 16px;flex:1 1 auto;overflow-y:auto;-webkit-overflow-scrolling:touch;}';
+   312→    c += '@media(min-width:640px){.dish-lightbox-content{padding:28px 32px 20px;}}';
+   313→    // Category badge (pequeño, encima del título)
+   314→    c += '.dish-lightbox-cat{display:inline-block;font-size:11px;font-weight:700;color:var(--accent);background:rgba(var(--accent-rgb),0.12);padding:4px 10px;border-radius:20px;letter-spacing:0.5px;text-transform:uppercase;margin-bottom:10px;}';
+   315→    // Title — grande, bold
+   316→    c += '.dish-lightbox-name{font-size:24px;font-weight:800;letter-spacing:-0.5px;color:var(--text);margin:0 0 6px;line-height:1.2;}';
+   317→    c += '@media(min-width:640px){.dish-lightbox-name{font-size:28px;}}';
+   318→    // Price row — destacado debajo del título (estilo Rappi)
+   319→    c += '.dish-lightbox-price-row{display:flex;align-items:baseline;gap:8px;margin:4px 0 18px;flex-wrap:wrap;}';
+   320→    c += '.dish-lightbox-price{font-size:26px;font-weight:800;color:var(--accent);letter-spacing:-0.5px;line-height:1;}';
+   321→    c += '@media(min-width:640px){.dish-lightbox-price{font-size:30px;}}';
+   322→    c += '.dish-lightbox-currency{font-size:14px;font-weight:600;color:var(--text-soft);opacity:0.7;}';
+   323→    // Description
+   324→    c += '.dish-lightbox-desc-label{font-size:11px;font-weight:700;color:var(--text-soft);opacity:0.6;letter-spacing:0.8px;text-transform:uppercase;margin:0 0 6px;}';
+   325→    c += '.dish-lightbox-desc{font-size:15px;color:var(--text-soft);line-height:1.6;margin:0 0 22px;}';
+   326→    c += '@media(min-width:640px){.dish-lightbox-desc{font-size:16px;line-height:1.65;}}';
+   327→    // Sticky CTA bar — siempre visible en la parte inferior del modal (no se mueve con scroll)
+   328→    c += '.dish-lightbox-cta{flex-shrink:0;padding:14px 20px calc(18px + env(safe-area-inset-bottom, 0px));background:' + (darkMode ? '#14141f' : '#ffffff') + ';border-top:1px solid var(--border);box-shadow:0 -4px 16px rgba(0,0,0,0.15);}';
+   329→    c += '.dish-lightbox-add{width:100%;background:linear-gradient(135deg,var(--accent),rgba(var(--accent-rgb),0.85));color:#fff;border:none;padding:16px 22px;border-radius:var(--radius);font-size:16px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;transition:all 0.2s;box-shadow:0 8px 24px rgba(var(--accent-rgb),0.45);-webkit-tap-highlight-color:transparent;}';
+   330→    c += '.dish-lightbox-add:hover{transform:translateY(-2px);box-shadow:0 12px 32px rgba(var(--accent-rgb),0.6);}';
+   331→    c += '.dish-lightbox-add:active{transform:translateY(0);}';
+   332→    c += '.dish-lightbox-add.added{background:linear-gradient(135deg,#22c55e,#16a34a);box-shadow:0 8px 24px rgba(34,197,94,0.4);}';
+   333→  }
+   334→
+   335→  // Cart
+   336→  c += '.cart{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(140px);width:calc(100% - 32px);max-width:480px;background:linear-gradient(135deg,var(--accent),rgba(var(--accent-rgb),0.9));color:#fff;border-radius:var(--radius);padding:16px 22px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 14px 40px rgba(var(--accent-rgb),0.45),0 4px 12px rgba(0,0,0,0.4);cursor:pointer;transition:transform 0.4s cubic-bezier(0.4,0,0.2,1);z-index:90;border:1px solid rgba(255,255,255,0.18);margin-bottom:env(safe-area-inset-bottom,0px);}';
+   337→  c += '.cart.visible{transform:translateX(-50%) translateY(0);}';
+   338→  c += '.cart-left{display:flex;align-items:center;gap:10px;font-weight:600;font-size:15px;}';
+   339→  c += '.cart-count{background:rgba(255,255,255,0.25);padding:3px 10px;border-radius:12px;font-size:13px;font-weight:700;min-width:28px;text-align:center;}';
+   340→  c += '.cart-count.pulse{animation:countPulse 0.4s ease;}';
+   341→  c += '@keyframes countPulse{0%,100%{transform:scale(1);}50%{transform:scale(1.4);background:rgba(255,255,255,0.4);}}';
+   342→  c += '.cart-total{font-size:18px;font-weight:800;letter-spacing:-0.3px;}';
+   343→  // Modal
+   344→  c += '.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);z-index:200;display:none;align-items:flex-end;justify-content:center;padding-bottom:env(safe-area-inset-bottom,0px);}';
+   345→  c += '.modal-overlay.visible{display:flex;}';
+   346→  c += `.modal{background:linear-gradient(180deg,${darkMode ? '#1c1c2e,#14141f' : '#fff,#f5f5f5'});width:100%;max-width:500px;border-radius:24px 24px 0 0;padding:28px 24px;max-height:85vh;overflow-y:auto;animation:slideUp 0.4s cubic-bezier(0.4,0,0.2,1);border:1px solid rgba(255,255,255,0.08);border-bottom:none;box-shadow:0 -16px 48px rgba(0,0,0,0.5);color:var(--text);}`;
+   347→  c += '.modal-title{font-size:22px;font-weight:700;margin-bottom:4px;text-align:center;letter-spacing:-0.3px;color:var(--text);}';
+   348→  c += '.modal-subtitle{text-align:center;font-size:12.5px;color:var(--text-muted);margin-bottom:22px;letter-spacing:0.3px;}';
+   349→  c += '.modal-divider{height:1px;background:linear-gradient(90deg,transparent,var(--border-strong),transparent);margin:0 -24px 20px;}';
+   350→  c += '.cart-item{display:flex;justify-content:space-between;align-items:center;padding:14px 0;border-bottom:1px solid var(--border);gap:10px;animation:itemIn 0.3s ease;}';
+   351→  c += '@keyframes itemIn{from{opacity:0;transform:translateX(-10px);}to{opacity:1;transform:translateX(0);}}';
+   352→  c += '.cart-item-info{flex:1;min-width:0;}';
+   353→  c += '.cart-item-name{font-weight:600;font-size:15px;margin-bottom:2px;color:var(--text);}';
+   354→  c += '.cart-item-extras{color:var(--accent);font-size:11.5px;font-weight:500;margin-bottom:2px;opacity:0.85;line-height:1.3;}';
+   355→  c += '.cart-item-price{color:var(--text-muted);font-size:12.5px;}';
+   356→  c += '.qty-control{display:flex;align-items:center;gap:10px;background:var(--glass);padding:4px;border-radius:24px;border:1px solid var(--border);}';
+   357→  c += '.qty-btn{width:28px;height:28px;border-radius:50%;background:var(--glass-strong);color:var(--text);border:none;cursor:pointer;font-size:16px;line-height:1;transition:all 0.2s;display:flex;align-items:center;justify-content:center;}';
+   358→  c += '.qty-btn:hover{background:var(--accent);color:#fff;transform:scale(1.1);}';
+   359→  c += '.qty{min-width:24px;text-align:center;font-weight:600;font-size:14px;color:var(--text);}';
+   360→  c += '.cart-item-total{font-weight:700;color:var(--accent);min-width:75px;text-align:right;font-size:15px;}';
+   361→  c += '.cart-empty{text-align:center;padding:50px 0;color:var(--text-muted);font-size:14px;}';
+   362→  c += '.cart-summary{margin-top:20px;padding-top:20px;border-top:2px solid var(--border);}';
+   363→  c += '.summary-row{display:flex;justify-content:space-between;margin-bottom:8px;font-size:14px;color:var(--text-soft);}';
+   364→  c += '.summary-total{font-size:18px;font-weight:700;margin-top:12px;color:var(--text);display:flex;justify-content:space-between;align-items:center;}';
+   365→  c += '.summary-total .amount{color:var(--accent);font-size:24px;font-weight:800;letter-spacing:-0.5px;}';
+   366→  c += '.wa-btn{width:100%;background:linear-gradient(135deg,#25d366,#1da851);color:#fff;border:none;padding:16px;border-radius:var(--radius);font-size:15px;font-weight:700;cursor:pointer;margin-top:22px;display:flex;align-items:center;justify-content:center;gap:10px;transition:all 0.2s;box-shadow:0 6px 20px rgba(37,211,102,0.35);letter-spacing:0.2px;}';
+   367→  c += '.wa-btn:hover{transform:translateY(-2px);box-shadow:0 10px 28px rgba(37,211,102,0.5);}';
+   368→  c += '.wa-btn:active{transform:translateY(0);}';
+   369→  c += '.wa-icon{width:18px;height:18px;fill:currentColor;}';
+   370→  c += '.close-btn{width:100%;background:var(--glass);color:var(--text-soft);border:1px solid var(--border);padding:13px;border-radius:var(--radius-sm);font-size:14px;cursor:pointer;margin-top:10px;transition:all 0.2s;font-weight:500;}';
+   371→  c += '.close-btn:hover{background:var(--glass-strong);color:var(--text);}';
+   372→  c += '.menu-footer{text-align:center;padding:30px 20px;color:var(--text-muted);font-size:11.5px;border-top:1px solid var(--border);margin-top:20px;padding-bottom:calc(30px + env(safe-area-inset-bottom, 0px));}';
+   373→  c += '.menu-footer a{color:var(--gold);text-decoration:none;font-weight:600;letter-spacing:1px;}';
+   374→  c += '.no-results{text-align:center;padding:40px 20px;color:var(--text-muted);font-size:14px;}';
+   375→
+   376→  // ─── Swiper carousel (galería multi-imagen en lightbox) ───
+   377→  if (showGallery) {
+   378→    c += '.dish-swiper{width:100%;height:100%;}';
+   379→    c += '.dish-swiper .swiper-slide{width:100%;height:100%;display:flex;align-items:center;justify-content:center;overflow:hidden;}';
+   380→    c += '.dish-swiper .swiper-slide img{width:100%;height:100%;object-fit:cover;display:block;}';
+   381→    c += '.dish-swiper .swiper-slide .dish-lightbox-img-placeholder{width:100%;height:100%;}';
+   382→    c += '.dish-swiper .swiper-pagination-bullet{background:#fff;opacity:0.5;}';
+   383→    c += '.dish-swiper .swiper-pagination-bullet-active{background:#fff;opacity:1;width:20px;border-radius:4px;transition:all 0.2s;}';
+   384→    c += '.dish-swiper .swiper-button-next,.dish-swiper .swiper-button-prev{background:rgba(0,0,0,0.45);color:#fff;width:38px;height:38px;border-radius:50%;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);box-shadow:0 4px 12px rgba(0,0,0,0.3);}';
+   385→    c += '.dish-swiper .swiper-button-next:after,.dish-swiper .swiper-button-prev:after{font-size:18px;font-weight:700;}';
+   386→    c += '.dish-img-count{position:absolute;bottom:12px;right:12px;background:rgba(0,0,0,0.55);color:#fff;font-size:11px;font-weight:600;padding:4px 10px;border-radius:12px;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);z-index:5;pointer-events:none;}';
+   387→    // Gradient overlay encima del hero (para legibilidad del close button)
+   388→    c += '.dish-lightbox-hero.has-gallery::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,0.35) 0%,rgba(0,0,0,0) 30%,rgba(0,0,0,0) 70%,rgba(0,0,0,0.25) 100%);pointer-events:none;z-index:5;}';
+   389→  }
+   390→
+   391→  // ─── Product options (extras/salsas/personalizaciones) ───
+   392→  if (showGallery) {
+   393→    c += '.dish-options{margin:0 0 22px;padding:0;}';
+   394→    c += '.dish-option-group{margin:0 0 18px;padding:14px;background:' + (darkMode ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.025)') + ';border:1px solid var(--border);border-radius:14px;}';
+   395→    c += '.dish-option-group-title{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}';
+   396→    c += '.dish-option-group-name{font-size:14px;font-weight:700;color:var(--text);letter-spacing:-0.2px;}';
+   397→    c += '.dish-option-group-hint{font-size:11px;color:var(--text-soft);opacity:0.7;font-weight:500;}';
+   398→    c += '.dish-option-group-hint.required{color:var(--accent);font-weight:600;}';
+   399→    c += '.dish-option-items{display:flex;flex-direction:column;gap:6px;}';
+   400→    c += '.dish-option-item{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:' + (darkMode ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)') + ';border:1px solid var(--border);border-radius:10px;transition:all 0.15s;cursor:pointer;}';
+   401→    c += '.dish-option-item:hover{border-color:var(--accent);background:rgba(var(--accent-rgb),0.06);}';
+   402→    c += '.dish-option-item.selected{border-color:var(--accent);background:rgba(var(--accent-rgb),0.12);}';
+   403→    c += '.dish-option-item-info{display:flex;align-items:center;gap:10px;flex:1;min-width:0;}';
+   404→    c += '.dish-option-name{font-size:13.5px;color:var(--text);font-weight:500;}';
+   405→    c += '.dish-option-price{font-size:12.5px;color:var(--accent);font-weight:700;margin-left:auto;margin-right:10px;}';
+   406→    c += '.dish-option-price.free{color:var(--text-soft);opacity:0.6;}';
+   407→    // Single choice radio circle
+   408→    c += '.dish-option-radio{width:20px;height:20px;border:2px solid var(--border-strong);border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all 0.15s;}';
+   409→    c += '.dish-option-radio.checked{border-color:var(--accent);}';
+   410→    c += '.dish-option-radio.checked::after{content:"";width:10px;height:10px;border-radius:50%;background:var(--accent);}';
+   411→    // Multiple choice +/- counter
+   412→    c += '.dish-option-counter{display:flex;align-items:center;gap:8px;background:' + (darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)') + ';border-radius:18px;padding:3px;flex-shrink:0;}';
+   413→    c += '.dish-option-counter button{width:26px;height:26px;border-radius:50%;background:var(--glass-strong);color:var(--text);border:none;cursor:pointer;font-size:16px;line-height:1;display:flex;align-items:center;justify-content:center;transition:all 0.15s;-webkit-tap-highlight-color:transparent;}';
+   414→    c += '.dish-option-counter button:hover{background:var(--accent);color:#fff;}';
+   415→    c += '.dish-option-counter button:disabled{opacity:0.4;cursor:not-allowed;background:var(--glass-strong);color:var(--text-soft);}';
+   416→    c += '.dish-option-counter .count{min-width:22px;text-align:center;font-size:13px;font-weight:700;color:var(--text);}';
+   417→  }
+   418→
+   419→  // ─── Mobile bottom navigation bar (Inicio/Buscar/Favoritos/Carrito) ───
+   420→  c += '.mobile-bottom-nav{position:fixed;bottom:0;left:0;right:0;background:' + (darkMode ? 'rgba(20,20,31,0.96)' : 'rgba(255,255,255,0.96)') + ';backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:1px solid var(--border);display:flex;justify-content:space-around;align-items:center;padding:8px 4px calc(8px + env(safe-area-inset-bottom, 0px));z-index:95;box-shadow:0 -8px 24px rgba(0,0,0,0.15);transform:translateY(110%);transition:transform 0.35s cubic-bezier(0.32,0.72,0,1);}';
+   421→  c += '.mobile-bottom-nav.visible{transform:translateY(0);}';
+   422→  c += '@media(min-width:640px){.mobile-bottom-nav{display:none;}}';
+   423→  c += '.mbn-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:6px 4px;background:transparent;border:none;color:var(--text-soft);cursor:pointer;font-size:10px;font-weight:600;letter-spacing:0.2px;position:relative;transition:all 0.2s;-webkit-tap-highlight-color:transparent;border-radius:10px;}';
+   424→  c += '.mbn-item.active{color:var(--accent);}';
+   425→  c += '.mbn-item:active{transform:scale(0.92);}';
+   426→  c += '.mbn-icon{width:22px;height:22px;display:flex;align-items:center;justify-content:center;}';
+   427→  c += '.mbn-icon svg{width:22px;height:22px;}';
+   428→  c += '.mbn-badge{position:absolute;top:2px;right:calc(50% - 18px);min-width:16px;height:16px;border-radius:8px;background:var(--accent);color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 4px;box-shadow:0 2px 6px rgba(var(--accent-rgb),0.5);}';
+   429→  c += '.mbn-cart-total{position:absolute;top:-2px;left:50%;transform:translateX(-50%);background:var(--accent);color:#fff;font-size:9.5px;font-weight:800;padding:2px 7px;border-radius:8px;white-space:nowrap;box-shadow:0 3px 8px rgba(var(--accent-rgb),0.5);}';
+   430→  c += '.mbn-cart-total:empty{display:none;}';
+   431→  // Add bottom padding so content isn't hidden behind bottom nav
+   432→  c += '@media(max-width:639px){.menu-footer{padding-bottom:calc(30px + 80px + env(safe-area-inset-bottom, 0px));}.app{padding-bottom:calc(80px + env(safe-area-inset-bottom, 0px)) !important;}}';
+   433→
+   434→  return c;
+   435→}
+   436→
+   437→interface JSOpts {
+   438→  layout: 'single' | 'double' | 'grid';
+   439→  imageSize: 'none' | 'small' | 'medium' | 'large' | 'hero';
+   440→  cardStyle: 'compact' | 'expanded' | 'minimal';
+   441→  showSearch: boolean;
+   442→  showGallery: boolean;
+   443→}
+   444→
+   445→function buildJS(opts: JSOpts): string {
+   446→  const { showSearch, showGallery } = opts;
+   447→  let s = '';
+   448→  s += 'var cart = [];\n';
+   449→  s += 'var searchQuery = "";\n';
+   450→  s += 'function escapeHtml(s){if(s==null)return "";return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/\'/g,"&#39;");}\n';
+   451→  s += 'function formatPrice(n){return (RESTAURANT.currency||"S/")+" "+Number(n).toFixed(2);}\n';
+   452→  s += 'function dishMatches(dish,q){if(!q)return true;var n=(dish.name||"").toLowerCase();var d=(dish.description||"").toLowerCase();return n.indexOf(q)>=0||d.indexOf(q)>=0;}\n';
+   453→
+   454→  // SVG icons inline para redes sociales (premium, sin dependencias)
+   455→  s += 'function svgIcon(name){var icons={' + "\n";
+   456→  s += 'facebook:"<svg viewBox=\\"0 0 24 24\\" fill=\\"currentColor\\"><path d=\\"M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z\\"/></svg>",' + "\n";
+   457→  s += 'instagram:"<svg viewBox=\\"0 0 24 24\\" fill=\\"currentColor\\"><path d=\\"M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z\\"/></svg>",' + "\n";
+   458→  s += 'whatsapp:"<svg viewBox=\\"0 0 24 24\\" fill=\\"currentColor\\"><path d=\\"M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.149-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51l-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z\\"/></svg>",' + "\n";
+   459→  s += 'tiktok:"<svg viewBox=\\"0 0 24 24\\" fill=\\"currentColor\\"><path d=\\"M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z\\"/></svg>",' + "\n";
+   460→  s += 'twitter:"<svg viewBox=\\"0 0 24 24\\" fill=\\"currentColor\\"><path d=\\"M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z\\"/></svg>",' + "\n";
+   461→  s += 'youtube:"<svg viewBox=\\"0 0 24 24\\" fill=\\"currentColor\\"><path d=\\"M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z\\"/></svg>",' + "\n";
+   462→  s += 'web:"<svg viewBox=\\"0 0 24 24\\" fill=\\"none\\" stroke=\\"currentColor\\" stroke-width=\\"2\\"><circle cx=\\"12\\" cy=\\"12\\" r=\\"10\\"/><path d=\\"M2 12h20\\"/><path d=\\"M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z\\"/></svg>"' + "\n";
+   463→  s += '};return icons[name]||"";}\n';
+   464→
+   465→  // Normalizar URL de red social
+   466→  s += 'function normalizeSocialUrl(value, type){if(!value)return "";var v=String(value).trim();if(!v)return "";if(v.indexOf("http")!==0){if(type==="instagram")return "https://instagram.com/"+v.replace(/^@/,"");if(type==="facebook")return "https://facebook.com/"+v;if(type==="tiktok")return "https://tiktok.com/@"+v.replace(/^@/,"");if(type==="twitter")return "https://x.com/"+v.replace(/^@/,"");if(type==="youtube")return "https://youtube.com/@"+v.replace(/^@/,"");if(type==="whatsapp")return "https://wa.me/"+v.replace(/\\D/g,"");}return v;}\n';
+   467→
+   468→  s += 'function renderApp(){\n';
+   469→  s += '  var app=document.getElementById("app");\n';
+   470→  s += '  var html="";\n';
+   471→  // Cover image — fondo HERO detrás del header
+   472→  s += '  if(RESTAURANT.theme_cover_url){html+="<div class=\\"hero\\"><img src=\\""+escapeHtml(RESTAURANT.theme_cover_url)+"\\" alt=\\"cover\\" onerror=\\"this.remove()\\"/></div>";}\n';
+   473→  // Header
+   474→  s += '  html+="<header class=\\"header\\">";\n';
+   475→  s += '  html+="<div class=\\"logo-wrap\\">";\n';
+   476→  s += '  html+="<div class=\\"logo-placeholder\\">"+escapeHtml(RESTAURANT.name.charAt(0).toUpperCase())+"</div>";\n';
+   477→  s += '  if(RESTAURANT.logo_url){html+="<img src=\\""+escapeHtml(RESTAURANT.logo_url)+"\\" class=\\"logo\\" alt=\\"logo\\" onerror=\\"this.remove()\\"/>";}\n';
+   478→  s += '  html+="</div>";\n';
+   479→  s += '  html+="<h1 class=\\"restaurant-name\\">"+escapeHtml(RESTAURANT.name)+"</h1>";\n';
+   480→  s += '  if(RESTAURANT.slogan){html+="<div class=\\"slogan\\">"+escapeHtml(RESTAURANT.slogan)+"</div>";}\n';
+   481→  s += '  if(RESTAURANT.description){html+="<p class=\\"restaurant-desc\\">"+escapeHtml(RESTAURANT.description)+"</p>";}\n';
+   482→  s += '  html+="<span class=\\"open-badge\\">Abierto ahora</span>";\n';
+   483→  // Redes sociales
+   484→  s += '  var socials=[];\n';
+   485→  s += '  if(RESTAURANT.social_facebook)socials.push({type:"facebook",value:RESTAURANT.social_facebook});\n';
+   486→  s += '  if(RESTAURANT.social_instagram)socials.push({type:"instagram",value:RESTAURANT.social_instagram});\n';
+   487→  s += '  if(RESTAURANT.social_whatsapp)socials.push({type:"whatsapp",value:RESTAURANT.social_whatsapp});else if(RESTAURANT.whatsapp)socials.push({type:"whatsapp",value:RESTAURANT.whatsapp});\n';
+   488→  s += '  if(RESTAURANT.social_tiktok)socials.push({type:"tiktok",value:RESTAURANT.social_tiktok});\n';
+   489→  s += '  if(RESTAURANT.social_twitter)socials.push({type:"twitter",value:RESTAURANT.social_twitter});\n';
+   490→  s += '  if(RESTAURANT.social_youtube)socials.push({type:"youtube",value:RESTAURANT.social_youtube});\n';
+   491→  s += '  if(RESTAURANT.social_web)socials.push({type:"web",value:RESTAURANT.social_web});\n';
+   492→  s += '  if(socials.length>0){\n';
+   493→  s += '    html+="<div class=\\"socials\\">";\n';
+   494→  s += '    socials.forEach(function(s){var url=normalizeSocialUrl(s.value,s.type);html+="<a class=\\"social-link\\" href=\\""+escapeHtml(url)+"\\" target=\\"_blank\\" rel=\\"noopener noreferrer\\" aria-label=\\""+escapeHtml(s.type)+"\\">"+svgIcon(s.type)+"</a>";});\n';
+   495→  s += '    html+="</div>";\n';
+   496→  s += '  }\n';
+   497→  s += '  html+="</header>";\n';
+   498→  // Search bar (opcional)
+   499→  if (showSearch) {
+   500→    s += '  html+="<div class=\\"search-wrap\\"><svg class=\\"search-icon\\" viewBox=\\"0 0 24 24\\" fill=\\"none\\" stroke=\\"currentColor\\" stroke-width=\\"2\\"><circle cx=\\"11\\" cy=\\"11\\" r=\\"8\\"/><path d=\\"m21 21-4.3-4.3\\"/></svg><input type=\\"text\\" class=\\"search-input\\" id=\\"searchInput\\" placeholder=\\"Buscar plato...\\"/></div>";\n';
+   501→  }
+   502→  // Nav
+   503→  s += '  html+="<nav class=\\"nav\\"><div class=\\"nav-inner\\" id=\\"navInner\\">";\n';
+   504→  s += '  RESTAURANT.categories.forEach(function(cat,i){\n';
+   505→  s += '    var icon=THEME.showSearch? getCategoryIcon(cat.name):"";\n';
+   506→  s += '    html+="<div class=\\"nav-item"+(i===0?" active":"")+"\\" data-idx=\\""+i+"\\">"+(icon?"<span class=\\"nav-item-icon\\">"+icon+"</span>":"")+escapeHtml(cat.name)+"</div>";\n';
+   507→  s += '  });\n';
+   508→  s += '  html+="</div></nav>";\n';
+   509→  // Sections con dishes-grid
+   510→  s += '  RESTAURANT.categories.forEach(function(cat,i){\n';
+   511→  s += '    html+="<section class=\\"section\\" id=\\"cat-"+i+"\\">";\n';
+   512→  s += '    html+="<h2 class=\\"section-title\\">"+escapeHtml(cat.name)+"</h2>";\n';
+   513→  s += '    html+="<div class=\\"dishes-grid\\">";\n';
+   514→  s += '    cat.dishes.forEach(function(dish,j){\n';
+   515→  s += '      html+="<div class=\\"dish\\" data-cat=\\""+i+"\\" data-dish=\\""+j+"\\" data-name=\\""+escapeHtml((dish.name||"").toLowerCase())+"\\" data-desc=\\""+escapeHtml((dish.description||"").toLowerCase())+"\\" style=\\"transition-delay:"+(j*40)+"ms\\">";\n';
+   516→  // HERO IMAGE — PedidosYa/Rappi style: imagen grande arriba SIEMPRE (si THEME.imageSize!=="none")
+   517→  s += '      if(THEME.imageSize!=="none"){\n';
+   518→  s += '        html+="<div class=\\"dish-img-wrap\\">";\n';
+   519→  s += '        html+="<span class=\\"dish-cat-badge\\">"+escapeHtml(cat.name||"Plato")+"</span>";\n';
+   520→  s += '        if(dish.image_url){html+="<img src=\\""+escapeHtml(dish.image_url)+"\\" class=\\"dish-img\\" alt=\\""+escapeHtml(dish.name||"Plato")+"\\" data-letter=\\""+escapeHtml((dish.name||"P").charAt(0).toUpperCase())+"\\" loading=\\"lazy\\"/>";}\n';
+   521→  s += '        else{html+="<div class=\\"dish-img-placeholder\\">"+escapeHtml((dish.name||"P").charAt(0).toUpperCase())+"</div>";}\n';
+   522→  s += '        html+="</div>";\n';
+   523→  s += '      }\n';
+   524→  // INFO area — nombre, descripción, precio + add btn
+   525→  s += '      html+="<div class=\\"dish-info\\">";\n';
+   526→  s += '      html+="<div class=\\"dish-name\\">"+escapeHtml(dish.name||"Plato")+"</div>";\n';
+   527→  s += '      if(dish.description){html+="<div class=\\"dish-desc\\">"+escapeHtml(dish.description)+"</div>";}\n';
+   528→  s += '      else{html+="<div class=\\"dish-desc\\">Delicioso plato preparado con ingredientes frescos.</div>";}\n';
+   529→  s += '      html+="<div class=\\"dish-bottom\\">";\n';
+   530→  s += '      html+="<div class=\\"dish-price\\">"+formatPrice(dish.price)+"</div>";\n';
+   531→  s += '      html+="<button class=\\"add-btn\\" data-cat=\\""+i+"\\" data-dish=\\""+j+"\\" title=\\"Agregar\\"><svg width=\\"14\\" height=\\"14\\" viewBox=\\"0 0 24 24\\" fill=\\"none\\" stroke=\\"currentColor\\" stroke-width=\\"3\\" stroke-linecap=\\"round\\" stroke-linejoin=\\"round\\"><path d=\\"M12 5v14M5 12h14\\"/></svg>Agregar</button>";\n';
+   532→  s += '      html+="</div></div></div>";\n';
+   533→  s += '    });\n';
+   534→  s += '    html+="</div></section>";\n';
+   535→  s += '  });\n';
+   536→  // Footer
+   537→  s += '  html+="<div class=\\"menu-footer\\"><span>"+escapeHtml(RESTAURANT.name)+"</span>";\n';
+   538→  s += '  if(SHOW_BRANDING){html+=" · <a href=\\"https://menupro.app\\" target=\\"_blank\\">"+escapeHtml(BRANDING_TEXT||"Creado con MenuPro")+"</a>";}\n';
+   539→  s += '  html+="</div>";\n';
+   540→  // Cart
+   541→  s += '  html+="<div class=\\"cart\\" id=\\"cartBar\\">";\n';
+   542→  s += '  html+="<div class=\\"cart-left\\"><span>Ver pedido</span><span class=\\"cart-count\\" id=\\"cartCount\\">0</span></div>";\n';
+   543→  s += '  html+="<div class=\\"cart-total\\" id=\\"cartTotal\\">"+formatPrice(0)+"</div>";\n';
+   544→  s += '  html+="</div>";\n';
+   545→  // Modal
+   546→  s += '  html+="<div class=\\"modal-overlay\\" id=\\"modal\\"><div class=\\"modal\\">";\n';
+   547→  s += '  html+="<h2 class=\\"modal-title\\">Tu Pedido</h2>";\n';
+   548→  s += '  html+="<p class=\\"modal-subtitle\\">Revisa tu orden antes de enviar por WhatsApp</p>";\n';
+   549→  s += '  html+="<div class=\\"modal-divider\\"></div>";\n';
+   550→  s += '  html+="<div id=\\"cartItems\\"></div>";\n';
+   551→  s += '  html+="<div class=\\"cart-summary\\" id=\\"cartSummary\\"></div>";\n';
+   552→  s += '  html+="<button class=\\"wa-btn\\" id=\\"waBtn\\"><svg class=\\"wa-icon\\" viewBox=\\"0 0 24 24\\"><path d=\\"M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.149-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51l-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z\\"/></svg>Enviar Pedido por WhatsApp</button>";\n';
+   553→  s += '  html+="<button class=\\"close-btn\\" id=\\"closeBtn\\">Seguir agregando</button>";\n';
+   554→  s += '  html+="</div></div>";\n';
+   555→  // Lightbox contenedor (vacío, se rellena al hacer clic)
+   556→  if (showGallery) {
+   557→    s += '  html+="<div class=\\"dish-lightbox\\" id=\\"dishLightbox\\"></div>";\n';
+   558→  }
+   559→  s += '  app.innerHTML=html;\n';
+   560→  s += '  attachEvents();\n';
+   561→  s += '  setupReveal();\n';
+   562→  s += '  setupMobileBottomNav();\n';
+   563→  s += '  loadFavorites();\n';
+   564→  s += '  updateFavBadge();\n';
+   565→  s += '  showMobileNavOnMobile();\n';
+   566→  s += '  if(typeof restoreDishFromURL==="function"){restoreDishFromURL();}\n';
+   567→
+   568→  // Helper getCategoryIcon
+   569→  s += 'function getCategoryIcon(name){var n=(name||"").toLowerCase();if(n.indexOf("entr")>=0||n.indexOf("aperit")>=0)return "🥗";if(n.indexOf("sopa")>=0||n.indexOf("caldo")>=0)return "🍜";if(n.indexOf("pasta")>=0)return "🍝";if(n.indexOf("parrilla")>=0||n.indexOf("grill")>=0||n.indexOf("carne")>=0)return "🥩";if(n.indexOf("pollo")>=0)return "🍗";if(n.indexOf("pesca")>=0||n.indexOf("maris")>=0)return "🐟";if(n.indexOf("postre")>=0)return "🍰";if(n.indexOf("bebida")>=0||n.indexOf("drink")>=0)return "🥤";if(n.indexOf("trago")>=0||n.indexOf("cocktail")>=0||n.indexOf("bar")>=0)return "🍸";if(n.indexOf("desay")>=0)return "🍳";if(n.indexOf("pizza")>=0)return "🍕";if(n.indexOf("burger")>=0||n.indexOf("hambur")>=0)return "🍔";if(n.indexOf("ensal")>=0)return "🥗";if(n.indexOf("sushi")>=0)return "🍣";if(n.indexOf("taco")>=0||n.indexOf("mexic")>=0)return "🌮";if(n.indexOf(" asia")>=0||n.indexOf("chino")>=0||n.indexOf("wok")>=0)return "🥡";if(n.indexOf("vegan")>=0||n.indexOf("veggie")>=0)return "🌱";if(n.indexOf("cafe")>=0||n.indexOf("coffee")>=0)return "☕";return "🍴";}\n';
+   570→
+   571→  // searchInput event listener (si showSearch)
+   572→  if (showSearch) {
+   573→    s += 'var searchInput=document.getElementById("searchInput");\n';
+   574→    s += 'if(searchInput){searchInput.addEventListener("input",function(e){searchQuery=e.target.value.toLowerCase();filterDishes();});}\n';
+   575→    s += 'function filterDishes(){var dishes=document.querySelectorAll(".dish");var anyVisible=false;dishes.forEach(function(d){var n=d.getAttribute("data-name")||"";var desc=d.getAttribute("data-desc")||"";var visible=n.indexOf(searchQuery)>=0||desc.indexOf(searchQuery)>=0;d.style.display=visible?"":"none";if(visible)anyVisible=true;});document.querySelectorAll(".no-results").forEach(function(n){n.remove();});if(!anyVisible&&searchQuery){var sections=document.querySelectorAll(".section");if(sections.length){var last=sections[sections.length-1];last.insertAdjacentHTML("afterend","<div class=\\"no-results\\">No se encontraron platos</div>");}}}\n';
+   576→  }
+   577→
+   578→  s += '  updateCart();\n';
+   579→  s += '}\n';
+   580→  // Reveal
+   581→  s += 'function setupReveal(){\n';
+   582→  s += '  var dishes=document.querySelectorAll(".dish");\n';
+   583→  s += '  if(!("IntersectionObserver" in window)){dishes.forEach(function(d){d.classList.add("revealed");});return;}\n';
+   584→  s += '  var io=new IntersectionObserver(function(entries){\n';
+   585→  s += '    entries.forEach(function(e){if(e.isIntersecting){e.target.classList.add("revealed");io.unobserve(e.target);}});\n';
+   586→  s += '  },{threshold:0.05,rootMargin:"0px 0px -30px 0px"});\n';
+   587→  s += '  dishes.forEach(function(d){io.observe(d);});\n';
+   588→  s += '}\n';
+   589→  // Events
+   590→  s += 'function attachEvents(){\n';
+   591→  s += '  document.querySelectorAll(".add-btn").forEach(function(btn){\n';
+   592→  s += '    btn.addEventListener("click",function(e){\n';
+   593→  s += '      e.stopPropagation();\n';
+   594→  s += '      var catIdx=parseInt(this.dataset.cat);\n';
+   595→  s += '      var dishIdx=parseInt(this.dataset.dish);\n';
+   596→  s += '      addToCart(catIdx,dishIdx,this);\n';
+   597→  s += '    });\n';
+   598→  s += '  });\n';
+   599→  // Dish click → abrir lightbox (si está activado) o agregar al carrito
+   600→  if (showGallery) {
+   601→    s += '  document.querySelectorAll(".dish").forEach(function(d){\n';
+   602→    s += '    d.addEventListener("click",function(e){\n';
+   603→    s += '      if(e.target.classList.contains("add-btn"))return;\n';
+   604→    s += '      var catIdx=parseInt(this.dataset.cat);\n';
+   605→    s += '      var dishIdx=parseInt(this.dataset.dish);\n';
+   606→    s += '      openDishLightbox(catIdx,dishIdx);\n';
+   607→    s += '    });\n';
+   608→    s += '  });\n';
+   609→  } else {
+   610→    s += '  document.querySelectorAll(".dish").forEach(function(d){\n';
+   611→    s += '    d.addEventListener("click",function(){\n';
+   612→    s += '      var catIdx=parseInt(this.dataset.cat);\n';
+   613→    s += '      var dishIdx=parseInt(this.dataset.dish);\n';
+   614→    s += '      addToCart(catIdx,dishIdx);\n';
+   615→    s += '    });\n';
+   616→    s += '  });\n';
+   617→  }
+   618→  s += '  document.querySelectorAll(".nav-item").forEach(function(item){\n';
+   619→  s += '    item.addEventListener("click",function(){\n';
+   620→  s += '      document.querySelectorAll(".nav-item").forEach(function(n){n.classList.remove("active");});\n';
+   621→  s += '      this.classList.add("active");\n';
+   622→  s += '      var idx=parseInt(this.dataset.idx);\n';
+   623→  s += '      var el=document.getElementById("cat-"+idx);\n';
+   624→  s += '      if(el){var top=el.getBoundingClientRect().top+window.pageYOffset-70;window.scrollTo({top:top,behavior:"smooth"});}\n';
+   625→  s += '    });\n';
+   626→  s += '  });\n';
+   627→  s += '  document.getElementById("cartBar").addEventListener("click",openModal);\n';
+   628→  s += '  document.getElementById("closeBtn").addEventListener("click",closeModal);\n';
+   629→  s += '  document.getElementById("waBtn").addEventListener("click",sendWhatsApp);\n';
+   630→  s += '  document.getElementById("modal").addEventListener("click",function(e){if(e.target===this)closeModal();});\n';
+   631→  s += '  window.addEventListener("scroll",updateActiveNav,{passive:true});\n';
+   632→  // Dish image error handler — uses event delegation (clean, no nested escapes)
+   633→  // Si la imagen del plato falla al cargar, se reemplaza por un placeholder con la letra inicial
+   634→  s += '  document.addEventListener("error",function(e){\n';
+   635→  s += '    var el=e.target;\n';
+   636→  s += '    if(el && el.classList && el.classList.contains("dish-img")){\n';
+   637→  s += '      var letter=el.getAttribute("data-letter")||"P";\n';
+   638→  s += '      var div=document.createElement("div");\n';
+   639→  s += '      div.className="dish-img-placeholder";\n';
+   640→  s += '      div.textContent=letter;\n';
+   641→  s += '      if(el.parentNode){el.parentNode.replaceChild(div,el);}\n';
+   642→  s += '    }\n';
+   643→  s += '  },true);\n';
+   644→  s += '}\n';
+   645→
+   646→  // ─── Lightbox de plato (estilo PedidosYa/Rappi — clean rewrite sin nested escapes) ───
+   647→  if (showGallery) {
+   648→    // Helper: genera placeholder (letra inicial + cat name) como elemento DOM
+   649→    s += 'function buildPlaceholderEl(letter,catName){var div=document.createElement("div");div.className="dish-lightbox-img-placeholder";div.innerHTML="<div class=\\"ph-letter\\">"+escapeHtml(letter)+"</div><div class=\\"ph-label\\">"+escapeHtml(catName)+"</div>";return div;}\n';
+   650→    s += 'function buildImgEl(src,name){var img=document.createElement("img");img.className="dish-lightbox-img";img.alt=escapeHtml(name||"Plato");img.src=src;return img;}\n';
+   651→    // Construye el hero: Swiper si gallery>1, img simple si solo 1
+   652→    s += 'function buildDishHero(dish,catName){\n';
+   653→    s += '  var hero=document.createElement("div");hero.className="dish-lightbox-hero";\n';
+   654→    s += '  var imgs=[];\n';
+   655→    s += '  if(dish.image_url)imgs.push(dish.image_url);\n';
+   656→    s += '  if(dish.gallery&&Array.isArray(dish.gallery)){dish.gallery.forEach(function(g){if(g&&imgs.indexOf(g)<0)imgs.push(g);});}\n';
+   657→    s += '  var letter=(dish.name||"P").charAt(0).toUpperCase();\n';
+   658→    s += '  if(imgs.length===0){hero.appendChild(buildPlaceholderEl(letter,catName));return hero;}\n';
+   659→    s += '  if(imgs.length===1){hero.appendChild(buildImgEl(imgs[0],dish.name));return hero;}\n';
+   660→    s += '  hero.classList.add("has-gallery");\n';
+   661→    s += '  var swiperDiv=document.createElement("div");swiperDiv.className="swiper dish-swiper";\n';
+   662→    s += '  var wrapper=document.createElement("div");wrapper.className="swiper-wrapper";\n';
+   663→    s += '  imgs.forEach(function(src){var slide=document.createElement("div");slide.className="swiper-slide";slide.appendChild(buildImgEl(src,dish.name));wrapper.appendChild(slide);});\n';
+   664→    s += '  swiperDiv.appendChild(wrapper);\n';
+   665→    s += '  var pag=document.createElement("div");pag.className="swiper-pagination";swiperDiv.appendChild(pag);\n';
+   666→    s += '  var next=document.createElement("div");next.className="swiper-button-next";swiperDiv.appendChild(next);\n';
+   667→    s += '  var prev=document.createElement("div");prev.className="swiper-button-prev";swiperDiv.appendChild(prev);\n';
+   668→    s += '  hero.appendChild(swiperDiv);\n';
+   669→    s += '  var count=document.createElement("div");count.className="dish-img-count";count.textContent="1 / "+imgs.length;hero.appendChild(count);\n';
+   670→    s += '  setTimeout(function(){if(window.Swiper){new Swiper(swiperDiv,{pagination:{el:pag,clickable:true},navigation:{nextEl:next,prevEl:prev},loop:true,on:{slideChange:function(){count.textContent=(this.realIndex+1)+" / "+imgs.length;}}});}},50);\n';
+   671→    s += '  return hero;\n';
+   672→    s += '}\n';
+   673→    // Construye las opciones (extras/salsas) del plato
+   674→    s += 'var currentDishOptionsState={};\n';
+   675→    s += 'function buildDishOptions(dish){\n';
+   676→    s += '  if(!dish.options||!Array.isArray(dish.options)||dish.options.length===0)return null;\n';
+   677→    s += '  var wrap=document.createElement("div");wrap.className="dish-options";\n';
+   678→    s += '  currentDishOptionsState={};\n';
+   679→    s += '  dish.options.forEach(function(grp){\n';
+   680→    s += '    var g=document.createElement("div");g.className="dish-option-group";\n';
+   681→    s += '    var title=document.createElement("div");title.className="dish-option-group-title";\n';
+   682→    s += '    var nameEl=document.createElement("div");nameEl.className="dish-option-group-name";nameEl.textContent=grp.name||"";\n';
+   683→    s += '    var hint=document.createElement("div");hint.className="dish-option-group-hint"+(grp.required?" required":"");\n';
+   684→    s += '    hint.textContent=grp.required?"Obligatorio":(grp.type==="single"?"Elige 1":"Elige hasta "+(grp.max||5));\n';
+   685→    s += '    title.appendChild(nameEl);title.appendChild(hint);g.appendChild(title);\n';
+   686→    s += '    var items=document.createElement("div");items.className="dish-option-items";\n';
+   687→    s += '    currentDishOptionsState[grp.id]={type:grp.type,items:{}};\n';
+   688→    s += '    grp.items.forEach(function(it){\n';
+   689→    s += '      var row=document.createElement("div");row.className="dish-option-item";\n';
+   690→    s += '      var info=document.createElement("div");info.className="dish-option-item-info";\n';
+   691→    s += '      var nm=document.createElement("div");nm.className="dish-option-name";nm.textContent=it.name;\n';
+   692→    s += '      var pr=document.createElement("div");pr.className="dish-option-price"+(it.price>0?"":" free");pr.textContent=it.price>0?"+"+formatPrice(it.price):"Gratis";\n';
+   693→    s += '      info.appendChild(nm);info.appendChild(pr);\n';
+   694→    s += '      if(grp.type==="single"){\n';
+   695→    s += '        var radio=document.createElement("div");radio.className="dish-option-radio";info.appendChild(radio);\n';
+   696→    s += '        row.addEventListener("click",function(){items.querySelectorAll(".dish-option-item").forEach(function(r){r.classList.remove("selected");r.querySelector(".dish-option-radio").classList.remove("checked");});row.classList.add("selected");radio.classList.add("checked");currentDishOptionsState[grp.id].items={};currentDishOptionsState[grp.id].items[it.id]={name:it.name,price:it.price,qty:1};updateDishTotal();});\n';
+   697→    s += '      } else {\n';
+   698→    s += '        var counter=document.createElement("div");counter.className="dish-option-counter";\n';
+   699→    s += '        var decBtn=document.createElement("button");decBtn.innerHTML="&minus;";decBtn.disabled=true;\n';
+   700→    s += '        var countSpan=document.createElement("span");countSpan.className="count";countSpan.textContent="0";\n';
+   701→    s += '        var incBtn=document.createElement("button");incBtn.innerHTML="&plus;";\n';
+   702→    s += '        counter.appendChild(decBtn);counter.appendChild(countSpan);counter.appendChild(incBtn);\n';
+   703→    s += '        decBtn.addEventListener("click",function(e){e.stopPropagation();var cur=currentDishOptionsState[grp.id].items[it.id]||{qty:0};if(cur.qty>0){cur.qty--;countSpan.textContent=cur.qty;if(cur.qty===0){delete currentDishOptionsState[grp.id].items[it.id];row.classList.remove("selected");decBtn.disabled=true;}else{currentDishOptionsState[grp.id].items[it.id]={name:it.name,price:it.price,qty:cur.qty};}updateDishTotal();}});\n';
+   704→    s += '        incBtn.addEventListener("click",function(e){e.stopPropagation();var cur=currentDishOptionsState[grp.id].items[it.id]||{qty:0};var max=grp.max||5;var count=0;for(var k in currentDishOptionsState[grp.id].items){count+=currentDishOptionsState[grp.id].items[k].qty;}if(count>=max){return;}cur.qty++;countSpan.textContent=cur.qty;decBtn.disabled=false;row.classList.add("selected");currentDishOptionsState[grp.id].items[it.id]={name:it.name,price:it.price,qty:cur.qty};updateDishTotal();});\n';
+   705→    s += '        row.appendChild(info);row.appendChild(counter);\n';
+   706→    s += '      }\n';
+   707→    s += '      if(grp.type==="single"){row.appendChild(info);}\n';
+   708→    s += '      items.appendChild(row);\n';
+   709→    s += '    });\n';
+   710→    s += '    g.appendChild(items);wrap.appendChild(g);\n';
+   711→    s += '  });\n';
+   712→    s += '  return wrap;\n';
+   713→    s += '}\n';
+   714→    // Calcula el total dinámico del plato (base + extras seleccionados)
+   715→    s += 'function getDishCurrentTotal(dish){var total=dish.price||0;for(var gid in currentDishOptionsState){for(var iid in currentDishOptionsState[gid].items){var it=currentDishOptionsState[gid].items[iid];total+=(it.price||0)*it.qty;}}return total;}\n';
+   716→    s += 'function updateDishTotal(){var priceEl=document.getElementById("dishLightboxPrice");if(!priceEl)return;var dish=window.__currentDish;var total=getDishCurrentTotal(dish);priceEl.textContent=formatPrice(total);}\n';
+   717→    // Abre el lightbox
+   718→    s += 'function openDishLightbox(catIdx,dishIdx){\n';
+   719→    s += '  var dish=RESTAURANT.categories[catIdx].dishes[dishIdx];\n';
+   720→    s += '  var catName=RESTAURANT.categories[catIdx].name||"Plato";\n';
+   721→    s += '  window.__currentDish=dish;\n';
+   722→    s += '  window.__currentCatIdx=catIdx;window.__currentDishIdx=dishIdx;\n';
+   723→    s += '  var lightbox=document.getElementById("dishLightbox");\n';
+   724→    s += '  lightbox.innerHTML="";\n';
+   725→    s += '  var inner=document.createElement("div");inner.className="dish-lightbox-inner";\n';
+   726→    s += '  var handle=document.createElement("div");handle.className="dish-lightbox-handle";inner.appendChild(handle);\n';
+   727→    s += '  var closeBtn=document.createElement("button");closeBtn.className="dish-lightbox-close";closeBtn.id="dishLightboxClose";closeBtn.setAttribute("aria-label","Cerrar");closeBtn.innerHTML="&times;";inner.appendChild(closeBtn);\n';
+   728→    s += '  inner.appendChild(buildDishHero(dish,catName));\n';
+   729→    s += '  var content=document.createElement("div");content.className="dish-lightbox-content";\n';
+   730→    s += '  var cat=document.createElement("span");cat.className="dish-lightbox-cat";cat.textContent=catName;content.appendChild(cat);\n';
+   731→    s += '  var name=document.createElement("h3");name.className="dish-lightbox-name";name.textContent=dish.name||"Plato";content.appendChild(name);\n';
+   732→    s += '  var priceRow=document.createElement("div");priceRow.className="dish-lightbox-price-row";\n';
+   733→    s += '  var price=document.createElement("span");price.className="dish-lightbox-price";price.id="dishLightboxPrice";price.textContent=formatPrice(dish.price);priceRow.appendChild(price);\n';
+   734→    s += '  content.appendChild(priceRow);\n';
+   735→    s += '  var descLabel=document.createElement("div");descLabel.className="dish-lightbox-desc-label";descLabel.textContent="Descripción";content.appendChild(descLabel);\n';
+   736→    s += '  var desc=document.createElement("p");desc.className="dish-lightbox-desc";desc.textContent=dish.description||"Plato delicioso preparado con ingredientes frescos y de la mejor calidad. Pídelo ahora mismo por WhatsApp.";content.appendChild(desc);\n';
+   737→    s += '  var opts=buildDishOptions(dish);if(opts)content.appendChild(opts);\n';
+   738→    s += '  inner.appendChild(content);\n';
+   739→    s += '  var cta=document.createElement("div");cta.className="dish-lightbox-cta";\n';
+   740→    s += '  var addBtn=document.createElement("button");addBtn.className="dish-lightbox-add";\n';
+   741→    s += '  addBtn.innerHTML="<svg width=\\"20\\" height=\\"20\\" viewBox=\\"0 0 24 24\\" fill=\\"none\\" stroke=\\"currentColor\\" stroke-width=\\"2.5\\" stroke-linecap=\\"round\\" stroke-linejoin=\\"round\\"><path d=\\"M12 5v14M5 12h14\\"/></svg>Agregar al pedido";\n';
+   742→    s += '  addBtn.addEventListener("click",function(){var opts=getSelectedOptionsSnapshot();addToCart(catIdx,dishIdx,null,opts);addBtn.classList.add("added");addBtn.innerHTML="<svg width=\\\"20\\\" height=\\\"20\\\" viewBox=\\\"0 0 24 24\\\" fill=\\\"none\\\" stroke=\\\"currentColor\\\" stroke-width=\\\"3\\\" stroke-linecap=\\\"round\\\" stroke-linejoin=\\\"round\\\"><polyline points=\\\"20 6 9 17 4 12\\\"/></svg> Agregado";setTimeout(closeDishLightbox,900);});\n';
+   743→    s += '  cta.appendChild(addBtn);\n';
+   744→    s += '  inner.appendChild(cta);\n';
+   745→    s += '  lightbox.appendChild(inner);\n';
+   746→    s += '  lightbox.classList.add("visible");\n';
+   747→    s += '  document.body.style.overflow="hidden";\n';
+   748→    s += '  closeBtn.addEventListener("click",closeDishLightbox);\n';
+   749→    s += '  lightbox.addEventListener("click",function(e){if(e.target===lightbox)closeDishLightbox();});\n';
+   750→    s += '  syncDishURL(catIdx,dishIdx);\n';
+   751→    s += '}\n';
+   752→    // Snapshot de opciones seleccionadas (deep clone del estado)
+   753→    s += 'function getSelectedOptionsSnapshot(){var out=[];for(var gid in currentDishOptionsState){var grp=currentDishOptionsState[gid];for(var iid in grp.items){var it=grp.items[iid];out.push({groupId:gid,itemId:iid,name:it.name,price:it.price,qty:it.qty});}}return out;}\n';
+   754→    // URL sync via History API
+   755→    s += 'function syncDishURL(catIdx,dishIdx){try{var slug=RESTAURANT.slug||"";var newURL=slug?("/r/"+slug+"/p/"+catIdx+"-"+dishIdx):("/p/"+catIdx+"-"+dishIdx);window.history.pushState({dishLightbox:true,catIdx:catIdx,dishIdx:dishIdx},"",newURL);}catch(e){}}\n';
+   756→    s += 'function restoreDishFromURL(){try{var m=window.location.pathname.match(/\\/p\\/(\\d+)-(\\d+)$/);if(m){var ci=parseInt(m[1]);var di=parseInt(m[2]);if(RESTAURANT.categories[ci]&&RESTAURANT.categories[ci].dishes[di]){openDishLightbox(ci,di);}}}catch(e){}}\n';
+   757→    s += 'window.addEventListener("popstate",function(e){if(!e.state||!e.state.dishLightbox){var lb=document.getElementById("dishLightbox");if(lb&&lb.classList.contains("visible")){closeDishLightbox(true);}}});\n';
+   758→    s += 'function closeDishLightbox(skipHistory){var lightbox=document.getElementById("dishLightbox");if(lightbox){lightbox.classList.remove("visible");lightbox.innerHTML="";document.body.style.overflow="";}if(!skipHistory&&window.location.pathname.match(/\\/p\\/\\d+-\\d+$/)){window.history.back();}}\n';
+   759→  }
+   760→
+   761→  // Update active nav
+   762→  s += 'function updateActiveNav(){\n';
+   763→  s += '  var scrollPos=window.pageYOffset+100;\n';
+   764→  s += '  var sections=document.querySelectorAll(".section");\n';
+   765→  s += '  var activeIdx=0;\n';
+   766→  s += '  for(var i=0;i<sections.length;i++){if(sections[i].offsetTop<=scrollPos)activeIdx=i;}\n';
+   767→  s += '  document.querySelectorAll(".nav-item").forEach(function(n,i){n.classList.toggle("active",i===activeIdx);});\n';
+   768→  s += '}\n';
+   769→  // Add to cart
+   770→  s += 'function addToCart(catIdx,dishIdx,btn,options){\n';
+   771→  s += '  var dish=RESTAURANT.categories[catIdx].dishes[dishIdx];\n';
+   772→  s += '  options=options||[];\n';
+   773→  s += '  var extrasTotal=0;options.forEach(function(o){extrasTotal+=(o.price||0)*o.qty;});\n';
+   774→  s += '  var unitPrice=dish.price+extrasTotal;\n';
+   775→  s += '  var signature=catIdx+"-"+dishIdx+"-"+JSON.stringify(options);\n';
+   776→  s += '  var existing=null;\n';
+   777→  s += '  for(var i=0;i<cart.length;i++){if(cart[i].signature===signature){existing=cart[i];break;}}\n';
+   778→  s += '  if(existing){existing.qty++;}\n';
+   779→  s += '  else{cart.push({catIdx:catIdx,dishIdx:dishIdx,signature:signature,name:dish.name,price:unitPrice,basePrice:dish.price,extrasPrice:extrasTotal,options:options,qty:1});}\n';
+   780→  s += '  if(btn){showAddedFlash(btn.closest(".dish"));}\n';
+   781→  s += '  updateCart(true);\n';
+   782→  s += '}\n';
+   783→  // Show flash
+   784→  s += 'function showAddedFlash(dishEl){\n';
+   785→  s += '  if(!dishEl)return;\n';
+   786→  s += '  var flash=document.createElement("div");\n';
+   787→  s += '  flash.className="added-flash";\n';
+   788→  s += '  flash.textContent="AGREGADO";\n';
+   789→  s += '  dishEl.appendChild(flash);\n';
+   790→  s += '  setTimeout(function(){if(flash.parentNode)flash.parentNode.removeChild(flash);},900);\n';
+   791→  s += '}\n';
+   792→  // Update cart
+   793→  s += 'function updateCart(pulse){\n';
+   794→  s += '  var count=0,total=0;\n';
+   795→  s += '  cart.forEach(function(c){count+=c.qty;total+=c.price*c.qty;});\n';
+   796→  s += '  var countEl=document.getElementById("cartCount");\n';
+   797→  s += '  countEl.textContent=count;\n';
+   798→  s += '  document.getElementById("cartTotal").textContent=formatPrice(total);\n';
+   799→  s += '  var cartBar=document.getElementById("cartBar");\n';
+   800→  s += '  if(count>0){cartBar.classList.add("visible");}else{cartBar.classList.remove("visible");}\n';
+   801→  s += '  if(pulse){countEl.classList.remove("pulse");void countEl.offsetWidth;countEl.classList.add("pulse");}\n';
+   802→  s += '  updateMobileBottomNav(count,total);\n';
+   803→  s += '  renderCartItems();\n';
+   804→  s += '}\n';
+   805→  // Update mobile bottom nav cart badge + total
+   806→  s += 'function updateMobileBottomNav(count,total){\n';
+   807→  s += '  var badge=document.getElementById("mbnCartCount");\n';
+   808→  s += '  var totalEl=document.getElementById("mbnCartTotal");\n';
+   809→  s += '  var nav=document.getElementById("mobileBottomNav");\n';
+   810→  s += '  if(!badge||!totalEl||!nav)return;\n';
+   811→  s += '  if(count>0){badge.style.display="flex";badge.textContent=count;nav.classList.add("visible");}else{badge.style.display="none";nav.classList.remove("visible");}\n';
+   812→  s += '  totalEl.textContent=count>0?formatPrice(total):"";\n';
+   813→  s += '}\n';
+   814→  // Show mobile bottom nav after small scroll on mobile
+   815→  s += 'function showMobileNavOnMobile(){if(window.innerWidth<640){var nav=document.getElementById("mobileBottomNav");if(nav)nav.classList.add("visible");}}\n';
+   816→  // Mobile bottom nav actions
+   817→  s += 'function setupMobileBottomNav(){\n';
+   818→  s += '  document.querySelectorAll(".mbn-item").forEach(function(btn){\n';
+   819→  s += '    btn.addEventListener("click",function(){\n';
+   820→  s += '      var action=this.dataset.action;\n';
+   821→  s += '      document.querySelectorAll(".mbn-item").forEach(function(b){b.classList.remove("active");});this.classList.add("active");\n';
+   822→  s += '      if(action==="home"){window.scrollTo({top:0,behavior:"smooth"});}\n';
+   823→  s += '      else if(action==="search"){var si=document.getElementById("searchInput");if(si){si.focus();si.scrollIntoView({behavior:"smooth",block:"center"});}}\n';
+   824→  s += '      else if(action==="cart"){openModal();}\n';
+   825→  s += '      else if(action==="favorites"){toggleFavoritesModal();}\n';
+   826→  s += '    });\n';
+   827→  s += '  });\n';
+   828→  s += '}\n';
+   829→  // Favorites (saved in localStorage)
+   830→  s += 'var favorites=[];\n';
+   831→  s += 'function loadFavorites(){try{favorites=JSON.parse(localStorage.getItem("mp_favs")||"[]");}catch(e){favorites=[];}}\n';
+   832→  s += 'function saveFavorites(){try{localStorage.setItem("mp_favs",JSON.stringify(favorites));}catch(e){}}\n';
+   833→  s += 'function toggleFav(catIdx,dishIdx){var k=catIdx+"-"+dishIdx;var i=favorites.indexOf(k);if(i>=0){favorites.splice(i,1);}else{favorites.push(k);}saveFavorites();updateFavBadge();}\n';
+   834→  s += 'function updateFavBadge(){var b=document.getElementById("mbnFavCount");if(!b)return;if(favorites.length>0){b.style.display="flex";b.textContent=favorites.length;}else{b.style.display="none";}}\n';
+   835→  s += 'function toggleFavoritesModal(){alert("Favoritos: "+favorites.length+" plato(s) guardado(s). Próximamente vista de favoritos dedicada.");}\n';
+   836→  // Render cart items
+   837→  s += 'function renderCartItems(){\n';
+   838→  s += '  var container=document.getElementById("cartItems");\n';
+   839→  s += '  var summary=document.getElementById("cartSummary");\n';
+   840→  s += '  if(cart.length===0){\n';
+   841→  s += '    container.innerHTML="<div class=\\"cart-empty\\">Tu carrito esta vacio</div>";\n';
+   842→  s += '    summary.innerHTML="";\n';
+   843→  s += '    return;\n';
+   844→  s += '  }\n';
+   845→  s += '  var html="";\n';
+   846→  s += '  cart.forEach(function(item,i){\n';
+   847→  s += '    html+="<div class=\\"cart-item\\">";\n';
+   848→  s += '    html+="<div class=\\"cart-item-info\\">";\n';
+   849→  s += '    html+="<div class=\\"cart-item-name\\">"+escapeHtml(item.name)+"</div>";\n';
+   850→  s += '    if(item.options&&item.options.length>0){html+="<div class=\\"cart-item-extras\\">"+item.options.map(function(o){return "+"+escapeHtml(o.name)+(o.qty>1?" x"+o.qty:"");}).join(", ")+"</div>";}\n';
+   851→  s += '    html+="<div class=\\"cart-item-price\\">"+formatPrice(item.price)+" c/u</div>";\n';
+   852→  s += '    html+="</div>";\n';
+   853→  s += '    html+="<div class=\\"qty-control\\">";\n';
+   854→  s += '    html+="<button class=\\"qty-btn\\" data-action=\\"dec\\" data-idx=\\""+i+"\\">−</button>";\n';
+   855→  s += '    html+="<span class=\\"qty\\">"+item.qty+"</span>";\n';
+   856→  s += '    html+="<button class=\\"qty-btn\\" data-action=\\"inc\\" data-idx=\\""+i+"\\">+</button>";\n';
+   857→  s += '    html+="</div>";\n';
+   858→  s += '    html+="<div class=\\"cart-item-total\\">"+formatPrice(item.price*item.qty)+"</div>";\n';
+   859→  s += '    html+="</div>";\n';
+   860→  s += '  });\n';
+   861→  s += '  container.innerHTML=html;\n';
+   862→  s += '  var total=0;cart.forEach(function(c){total+=c.price*c.qty;});\n';
+   863→  s += '  summary.innerHTML="<div class=\\"summary-row\\"><span>Subtotal</span><span>"+formatPrice(total)+"</span></div>";\n';
+   864→  s += '  summary.innerHTML+="<div class=\\"summary-total\\"><span>Total</span><span class=\\"amount\\">"+formatPrice(total)+"</span></div>";\n';
+   865→  s += '  container.querySelectorAll(".qty-btn").forEach(function(btn){\n';
+   866→  s += '    btn.addEventListener("click",function(){\n';
+   867→  s += '      var idx=parseInt(this.dataset.idx);\n';
+   868→  s += '      if(this.dataset.action==="inc"){cart[idx].qty++;}\n';
+   869→  s += '      else{cart[idx].qty--;if(cart[idx].qty<=0)cart.splice(idx,1);}\n';
+   870→  s += '      updateCart();\n';
+   871→  s += '    });\n';
+   872→  s += '  });\n';
+   873→  s += '}\n';
+   874→  // Modal
+   875→  s += 'function openModal(){\n';
+   876→  s += '  if(cart.length===0)return;\n';
+   877→  s += '  document.getElementById("modal").classList.add("visible");\n';
+   878→  s += '}\n';
+   879→  s += 'function closeModal(){document.getElementById("modal").classList.remove("visible");}\n';
+   880→  // WhatsApp
+   881→  s += 'function sendWhatsApp(){\n';
+   882→  s += '  if(cart.length===0)return;\n';
+   883→  s += '  var msg="*"+RESTAURANT.name+"*\\n";\n';
+   884→  s += '  if(RESTAURANT.slogan){msg+="_"+RESTAURANT.slogan+"_\\n";}\n';
+   885→  s += '  msg+="\\n*PEDIDO*\\n\\n";\n';
+   886→  s += '  cart.forEach(function(item){\n';
+   887→  s += '    msg+="• "+item.qty+"x "+item.name+" — "+formatPrice(item.price*item.qty)+"\\n";\n';
+   888→  s += '  });\n';
+   889→  s += '  var total=0;cart.forEach(function(c){total+=c.price*c.qty;});\n';
+   890→  s += '  msg+="\\n*TOTAL: "+formatPrice(total)+"*\\n\\n";\n';
+   891→  s += '  msg+="Hola, quisiera confirmar este pedido por favor.";\n';
+   892→  s += '  var url="https://wa.me/"+RESTAURANT.whatsapp+"?text="+encodeURIComponent(msg);\n';
+   893→  s += '  window.open(url,"_blank");\n';
+   894→  s += '}\n';
+   895→  s += 'renderApp();\n';
+   896→  return s;
+   897→}
+   898→
