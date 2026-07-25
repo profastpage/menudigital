@@ -252,26 +252,25 @@ function buildCSS(opts: ThemeOpts): string {
   // ─── Lightbox de plato (estilo PedidosYa/Rappi — mobile-first ultra pro) ───
   if (showGallery) {
     // Overlay full-screen en mobile, sheet centrado en desktop
-    c += '.dish-lightbox{position:fixed;inset:0;background:rgba(0,0,0,0.92);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);z-index:300;display:none;align-items:flex-end;justify-content:center;padding:0;animation:dlbFadeIn 0.2s ease;}';
+    c += '.dish-lightbox{position:fixed;inset:0;background:rgba(0,0,0,0.92);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);z-index:300;display:none;align-items:flex-end;justify-content:center;padding:0;animation:dlbFadeIn 0.2s ease;overflow-y:auto;}';
     c += '.dish-lightbox.visible{display:flex;}';
     c += '@keyframes dlbFadeIn{from{opacity:0;}to{opacity:1;}}';
     c += '@media(min-width:640px){.dish-lightbox{align-items:center;padding:24px;}}';
-    // Inner: full-screen en mobile (bottom-sheet con border-radius top),
-    // card con border-radius grande en desktop
-    c += '.dish-lightbox-inner{background:' + (darkMode ? '#14141f' : '#ffffff') + ';width:100%;max-width:520px;max-height:100vh;overflow-y:auto;position:relative;color:var(--text);border-radius:24px 24px 0 0;animation:dlbSlideUp 0.32s cubic-bezier(0.32,0.72,0,1);box-shadow:0 -10px 40px rgba(0,0,0,0.5);}';
+    // Inner: full-screen bottom-sheet en mobile, card centrada en desktop
+    c += '.dish-lightbox-inner{background:' + (darkMode ? '#14141f' : '#ffffff') + ';width:100%;max-width:560px;max-height:100vh;overflow-y:auto;position:relative;color:var(--text);border-radius:24px 24px 0 0;animation:dlbSlideUp 0.32s cubic-bezier(0.32,0.72,0,1);box-shadow:0 -10px 40px rgba(0,0,0,0.5);display:flex;flex-direction:column;}';
     c += '@media(min-width:640px){.dish-lightbox-inner{border-radius:28px;max-height:92vh;animation:dlbZoomIn 0.3s cubic-bezier(0.32,0.72,0,1);box-shadow:0 30px 80px rgba(0,0,0,0.6);}}';
     c += '@keyframes dlbSlideUp{from{transform:translateY(100%);}to{transform:translateY(0);}}';
     c += '@keyframes dlbZoomIn{from{transform:scale(0.95);opacity:0;}to{transform:scale(1);opacity:1;}}';
     // Handle bar en mobile (estilo bottom-sheet nativo iOS/Android)
-    c += '.dish-lightbox-handle{display:block;width:40px;height:4px;background:rgba(255,255,255,0.18);border-radius:4px;margin:8px auto 0;}';
+    c += '.dish-lightbox-handle{display:block;width:40px;height:4px;background:' + (darkMode ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.12)') + ';border-radius:4px;margin:8px auto 0;flex-shrink:0;}';
     c += '@media(min-width:640px){.dish-lightbox-handle{display:none;}}';
     // Close button — flota sobre la imagen (estilo Rappi)
     c += '.dish-lightbox-close{position:absolute;top:14px;right:14px;width:38px;height:38px;border-radius:50%;background:rgba(0,0,0,0.55);color:#fff;border:none;cursor:pointer;font-size:22px;line-height:1;display:flex;align-items:center;justify-content:center;z-index:10;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);transition:all 0.2s;box-shadow:0 4px 12px rgba(0,0,0,0.3);}';
     c += '.dish-lightbox-close:hover{background:rgba(0,0,0,0.78);transform:scale(1.05);}';
     c += '.dish-lightbox-close:active{transform:scale(0.95);}';
-    // HERO IMAGE — large, square-ish, dominant (estilo PedidosYa/Rappi)
-    c += '.dish-lightbox-hero{position:relative;width:100%;aspect-ratio:1/1;max-height:60vh;overflow:hidden;background:linear-gradient(135deg,var(--glass),var(--glass-strong));}';
-    c += '@media(min-width:640px){.dish-lightbox-hero{aspect-ratio:4/3;border-radius:28px 28px 0 0;max-height:480px;}}';
+    // HERO IMAGE — wide hero on mobile (top of bottom-sheet), 16/9 on desktop
+    c += '.dish-lightbox-hero{position:relative;width:100%;aspect-ratio:4/3;max-height:42vh;overflow:hidden;background:linear-gradient(135deg,var(--glass),var(--glass-strong));flex-shrink:0;}';
+    c += '@media(min-width:640px){.dish-lightbox-hero{aspect-ratio:16/9;border-radius:28px 28px 0 0;max-height:50vh;}}';
     c += '.dish-lightbox-img{width:100%;height:100%;object-fit:cover;display:block;}';
     // Gradient overlay para legibilidad del close button
     c += '.dish-lightbox-hero::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,0.35) 0%,rgba(0,0,0,0) 30%,rgba(0,0,0,0) 70%,rgba(0,0,0,0.25) 100%);pointer-events:none;}';
@@ -281,7 +280,7 @@ function buildCSS(opts: ThemeOpts): string {
     c += '@media(min-width:640px){.dish-lightbox-img-placeholder .ph-letter{font-size:140px;}}';
     c += '.dish-lightbox-img-placeholder .ph-label{font-size:13px;opacity:0.9;font-weight:600;letter-spacing:0.5px;text-transform:uppercase;}';
     // Content area — padding generoso, mobile-first
-    c += '.dish-lightbox-content{padding:20px 20px 24px;}';
+    c += '.dish-lightbox-content{padding:20px 20px 24px;flex:1 1 auto;}';
     c += '@media(min-width:640px){.dish-lightbox-content{padding:28px 32px 32px;}}';
     // Category badge (pequeño, encima del título)
     c += '.dish-lightbox-cat{display:inline-block;font-size:11px;font-weight:700;color:var(--accent);background:rgba(var(--accent-rgb),0.12);padding:4px 10px;border-radius:20px;letter-spacing:0.5px;text-transform:uppercase;margin-bottom:10px;}';
@@ -430,7 +429,7 @@ function buildJS(opts: JSOpts): string {
   s += '      if(THEME.imageSize!=="none"){\n';
   s += '        html+="<div class=\\"dish-img-wrap\\">";\n';
   s += '        html+="<span class=\\"dish-cat-badge\\">"+escapeHtml(cat.name||"Plato")+"</span>";\n';
-  s += '        if(dish.image_url){html+="<img src=\\""+escapeHtml(dish.image_url)+"\\" class=\\"dish-img\\" alt=\\""+escapeHtml(dish.name||"Plato")+"\\" onerror=\\"this.outerHTML=\\\'<div class=\\\\\\"dish-img-placeholder\\\\\\">"+escapeHtml((dish.name||"P").charAt(0).toUpperCase())+"</div>\\\'\\" loading=\\"lazy\\"/>";}\n';
+  s += '        if(dish.image_url){html+="<img src=\\""+escapeHtml(dish.image_url)+"\\" class=\\"dish-img\\" alt=\\""+escapeHtml(dish.name||"Plato")+"\\" data-letter=\\""+escapeHtml((dish.name||"P").charAt(0).toUpperCase())+"\\" loading=\\"lazy\\"/>";}\n';
   s += '        else{html+="<div class=\\"dish-img-placeholder\\">"+escapeHtml((dish.name||"P").charAt(0).toUpperCase())+"</div>";}\n';
   s += '        html+="</div>";\n';
   s += '      }\n';
@@ -537,47 +536,72 @@ function buildJS(opts: JSOpts): string {
   s += '  document.getElementById("waBtn").addEventListener("click",sendWhatsApp);\n';
   s += '  document.getElementById("modal").addEventListener("click",function(e){if(e.target===this)closeModal();});\n';
   s += '  window.addEventListener("scroll",updateActiveNav,{passive:true});\n';
+  // Dish image error handler — uses event delegation (clean, no nested escapes)
+  // Si la imagen del plato falla al cargar, se reemplaza por un placeholder con la letra inicial
+  s += '  document.addEventListener("error",function(e){\n';
+  s += '    var el=e.target;\n';
+  s += '    if(el && el.classList && el.classList.contains("dish-img")){\n';
+  s += '      var letter=el.getAttribute("data-letter")||"P";\n';
+  s += '      var div=document.createElement("div");\n';
+  s += '      div.className="dish-img-placeholder";\n';
+  s += '      div.textContent=letter;\n';
+  s += '      if(el.parentNode){el.parentNode.replaceChild(div,el);}\n';
+  s += '    }\n';
+  s += '  },true);\n';
   s += '}\n';
 
-  // ─── Lightbox de plato (estilo PedidosYa/Rappi) ───
+  // ─── Lightbox de plato (estilo PedidosYa/Rappi — clean rewrite sin nested escapes) ───
   if (showGallery) {
+    // Helper: genera placeholder HTML como string seguro (sin onerror anidado)
+    s += 'function buildDishHeroHTML(dish,catName){\n';
+    s += '  if(dish.image_url){\n';
+    s += '    var ph="<div class=\\"dish-lightbox-img-placeholder\\"><div class=\\"ph-letter\\">"+escapeHtml((dish.name||"P").charAt(0).toUpperCase())+"</div><div class=\\"ph-label\\">"+escapeHtml(catName)+"</div></div>";\n';
+    s += '    var img=document.createElement("img");\n';
+    s += '    img.className="dish-lightbox-img";\n';
+    s += '    img.alt=escapeHtml(dish.name||"Plato");\n';
+    s += '    img.src=dish.image_url;\n';
+    s += '    img.onerror=function(){var h=document.createElement("div");h.innerHTML=ph;img.replaceWith(h.firstChild);};\n';
+    s += '    return img;\n';
+    s += '  }\n';
+    s += '  var div=document.createElement("div");\n';
+    s += '  div.className="dish-lightbox-img-placeholder";\n';
+    s += '  div.innerHTML="<div class=\\"ph-letter\\">"+escapeHtml((dish.name||"P").charAt(0).toUpperCase())+"</div><div class=\\"ph-label\\">"+escapeHtml(catName)+"</div>";\n';
+    s += '  return div;\n';
+    s += '}\n';
     s += 'function openDishLightbox(catIdx,dishIdx){\n';
     s += '  var dish=RESTAURANT.categories[catIdx].dishes[dishIdx];\n';
     s += '  var catName=RESTAURANT.categories[catIdx].name||"Plato";\n';
     s += '  var lightbox=document.getElementById("dishLightbox");\n';
-    s += '  var html="";\n';
-    s += '  html+="<div class=\\"dish-lightbox-inner\\">";\n';
-    s += '  html+="<div class=\\"dish-lightbox-handle\\"></div>";\n';
-    s += '  html+="<button class=\\"dish-lightbox-close\\" id=\\"dishLightboxClose\\" aria-label=\\"Cerrar\\">&times;</button>";\n';
-    // HERO IMAGE (grande, cuadrado en mobile, 4:3 en desktop)
-    s += '  html+="<div class=\\"dish-lightbox-hero\\">";\n';
-    s += '  if(dish.image_url){html+="<img src=\\""+escapeHtml(dish.image_url)+"\\" class=\\"dish-lightbox-img\\" alt=\\""+escapeHtml(dish.name)+"\\" onerror=\\"this.outerHTML=\\\'<div class=\\\\\\"dish-lightbox-img-placeholder\\\\\\"><div class=\\\\\\"ph-letter\\\\\\">"+escapeHtml(dish.name.charAt(0).toUpperCase())+"</div><div class=\\\\\\"ph-label\\\\\\">"+escapeHtml(catName)+"</div></div>\\\'\\"/>";}\n';
-    s += '  else{html+="<div class=\\"dish-lightbox-img-placeholder\\"><div class=\\"ph-letter\\">"+escapeHtml(dish.name.charAt(0).toUpperCase())+"</div><div class=\\"ph-label\\">"+escapeHtml(catName)+"</div></div>";}\n';
-    s += '  html+="</div>";\n';
-    // CONTENT (debajo del hero, estilo PedidosYa)
-    s += '  html+="<div class=\\"dish-lightbox-content\\">";\n';
-    s += '  html+="<span class=\\"dish-lightbox-cat\\">"+escapeHtml(catName)+"</span>";\n';
-    s += '  html+="<h3 class=\\"dish-lightbox-name\\">"+escapeHtml(dish.name)+"</h3>";\n';
-    // Price row debajo del título
-    s += '  var priceStr=formatPrice(dish.price);\n';
-    s += '  html+="<div class=\\"dish-lightbox-price-row\\"><span class=\\"dish-lightbox-price\\">"+escapeHtml(priceStr)+"</span></div>";\n';
-    // Description
-    s += '  html+="<div class=\\"dish-lightbox-desc-label\\">Descripción</div>";\n';
-    s += '  if(dish.description){html+="<p class=\\"dish-lightbox-desc\\">"+escapeHtml(dish.description)+"</p>";}\n';
-    s += '  else{html+="<p class=\\"dish-lightbox-desc\\">Plato delicioso preparado con ingredientes frescos y de la mejor calidad. Pídelo ahora mismo por WhatsApp.</p>";}\n';
-    // Sticky CTA bar
-    s += '  html+="<div class=\\"dish-lightbox-cta\\">";\n';
-    s += '  html+="<button class=\\"dish-lightbox-add\\" data-cat=\\""+catIdx+"\\" data-dish=\\""+dishIdx+"\\"><svg width=\\"20\\" height=\\"20\\" viewBox=\\"0 0 24 24\\" fill=\\"none\\" stroke=\\"currentColor\\" stroke-width=\\"2.5\\" stroke-linecap=\\"round\\" stroke-linejoin=\\"round\\"><path d=\\"M12 5v14M5 12h14\\"/></svg>Agregar al pedido</button>";\n';
-    s += '  html+="</div></div></div>";\n';
-    s += '  lightbox.innerHTML=html;\n';
+    s += '  lightbox.innerHTML="";\n';
+    s += '  var inner=document.createElement("div");\n';
+    s += '  inner.className="dish-lightbox-inner";\n';
+    s += '  var handle=document.createElement("div");handle.className="dish-lightbox-handle";inner.appendChild(handle);\n';
+    s += '  var closeBtn=document.createElement("button");closeBtn.className="dish-lightbox-close";closeBtn.id="dishLightboxClose";closeBtn.setAttribute("aria-label","Cerrar");closeBtn.innerHTML="&times;";inner.appendChild(closeBtn);\n';
+    s += '  var hero=document.createElement("div");hero.className="dish-lightbox-hero";\n';
+    s += '  hero.appendChild(buildDishHeroHTML(dish,catName));\n';
+    s += '  inner.appendChild(hero);\n';
+    s += '  var content=document.createElement("div");content.className="dish-lightbox-content";\n';
+    s += '  var cat=document.createElement("span");cat.className="dish-lightbox-cat";cat.textContent=catName;content.appendChild(cat);\n';
+    s += '  var name=document.createElement("h3");name.className="dish-lightbox-name";name.textContent=dish.name||"Plato";content.appendChild(name);\n';
+    s += '  var priceRow=document.createElement("div");priceRow.className="dish-lightbox-price-row";\n';
+    s += '  var price=document.createElement("span");price.className="dish-lightbox-price";price.textContent=formatPrice(dish.price);priceRow.appendChild(price);\n';
+    s += '  content.appendChild(priceRow);\n';
+    s += '  var descLabel=document.createElement("div");descLabel.className="dish-lightbox-desc-label";descLabel.textContent="Descripción";content.appendChild(descLabel);\n';
+    s += '  var desc=document.createElement("p");desc.className="dish-lightbox-desc";desc.textContent=dish.description||"Plato delicioso preparado con ingredientes frescos y de la mejor calidad. Pídelo ahora mismo por WhatsApp.";content.appendChild(desc);\n';
+    s += '  var cta=document.createElement("div");cta.className="dish-lightbox-cta";\n';
+    s += '  var addBtn=document.createElement("button");addBtn.className="dish-lightbox-add";addBtn.setAttribute("data-cat",catIdx);addBtn.setAttribute("data-dish",dishIdx);\n';
+    s += '  addBtn.innerHTML="<svg width=\\"20\\" height=\\"20\\" viewBox=\\"0 0 24 24\\" fill=\\"none\\" stroke=\\"currentColor\\" stroke-width=\\"2.5\\" stroke-linecap=\\"round\\" stroke-linejoin=\\"round\\"><path d=\\"M12 5v14M5 12h14\\"/></svg>Agregar al pedido";\n';
+    s += '  addBtn.addEventListener("click",function(){addToCart(catIdx,dishIdx);addBtn.classList.add("added");addBtn.innerHTML="<svg width=\\\"20\\\" height=\\\"20\\\" viewBox=\\\"0 0 24 24\\\" fill=\\\"none\\\" stroke=\\\"currentColor\\\" stroke-width=\\\"3\\\" stroke-linecap=\\\"round\\\" stroke-linejoin=\\\"round\\\"><polyline points=\\\"20 6 9 17 4 12\\\"/></svg> Agregado";setTimeout(closeDishLightbox,900);});\n';
+    s += '  cta.appendChild(addBtn);\n';
+    s += '  content.appendChild(cta);\n';
+    s += '  inner.appendChild(content);\n';
+    s += '  lightbox.appendChild(inner);\n';
     s += '  lightbox.classList.add("visible");\n';
     s += '  document.body.style.overflow="hidden";\n';
-    s += '  document.getElementById("dishLightboxClose").addEventListener("click",closeDishLightbox);\n';
+    s += '  closeBtn.addEventListener("click",closeDishLightbox);\n';
     s += '  lightbox.addEventListener("click",function(e){if(e.target===lightbox)closeDishLightbox();});\n';
-    s += '  var addBtn=lightbox.querySelector(".dish-lightbox-add");\n';
-    s += '  if(addBtn){addBtn.addEventListener("click",function(){addToCart(catIdx,dishIdx);addBtn.classList.add("added");addBtn.innerHTML="<svg width=\\\"20\\\" height=\\\"20\\\" viewBox=\\\"0 0 24 24\\\" fill=\\\"none\\\" stroke=\\\"currentColor\\\" stroke-width=\\\"3\\\" stroke-linecap=\\\"round\\\" stroke-linejoin=\\\"round\\\"><polyline points=\\\"20 6 9 17 4 12\\\"/></svg> Agregado";setTimeout(closeDishLightbox,900);});}\n';
     s += '}\n';
-    s += 'function closeDishLightbox(){var lightbox=document.getElementById("dishLightbox");lightbox.classList.remove("visible");lightbox.innerHTML="";document.body.style.overflow="";}\n';
+    s += 'function closeDishLightbox(){var lightbox=document.getElementById("dishLightbox");if(lightbox){lightbox.classList.remove("visible");lightbox.innerHTML="";document.body.style.overflow="";}}\n';
   }
 
   // Update active nav
