@@ -202,6 +202,13 @@ export function DashboardClient({ user, plan, menus, isSuperAdmin = false }: Pro
             Mis menús
           </a>
           <a
+            href="/dashboard/generador"
+            className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-white/60 hover:text-white hover:bg-white/5 text-sm transition-colors"
+          >
+            <Sparkles className="w-4 h-4" />
+            Generador rápido
+          </a>
+          <a
             href="/dashboard/analytics"
             className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-white/60 hover:text-white hover:bg-white/5 text-sm transition-colors"
           >
@@ -290,6 +297,7 @@ export function DashboardClient({ user, plan, menus, isSuperAdmin = false }: Pro
           {/* Mobile nav */}
           <div className="flex gap-1 px-4 pb-3 overflow-x-auto">
             <a href="/dashboard" className="px-3 py-1.5 rounded-lg bg-white/10 text-white text-xs font-medium whitespace-nowrap">Menús</a>
+            <a href="/dashboard/generador" className="px-3 py-1.5 rounded-lg text-white/50 text-xs whitespace-nowrap">Generador</a>
             <a href="/dashboard/analytics" className="px-3 py-1.5 rounded-lg text-white/50 text-xs whitespace-nowrap">Analíticas</a>
             <a href="/dashboard/domains" className="px-3 py-1.5 rounded-lg text-white/50 text-xs whitespace-nowrap">Dominios</a>
             <a href="/dashboard/billing" className="px-3 py-1.5 rounded-lg text-white/50 text-xs whitespace-nowrap">Planes</a>

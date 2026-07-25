@@ -5,7 +5,7 @@ import { LoginForm } from './login-form';
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ redirect?: string }>;
+  searchParams: Promise<{ redirect?: string; error?: string; error_description?: string }>;
 }) {
   const supabase = await createClient();
   const {
