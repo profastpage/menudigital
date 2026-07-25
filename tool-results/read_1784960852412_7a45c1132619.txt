@@ -1,0 +1,666 @@
+     1→'use client';
+     2→
+     3→import { useState, useRef } from 'react';
+     4→import { useRouter } from 'next/navigation';
+     5→import { Button } from '@/components/ui/button';
+     6→import { Input } from '@/components/ui/input';
+     7→import {
+     8→  Dialog,
+     9→  DialogContent,
+    10→  DialogHeader,
+    11→  DialogTitle,
+    12→  DialogTrigger,
+    13→} from '@/components/ui/dialog';
+    14→import {
+    15→  DropdownMenu,
+    16→  DropdownMenuContent,
+    17→  DropdownMenuItem,
+    18→  DropdownMenuSeparator,
+    19→  DropdownMenuTrigger,
+    20→} from '@/components/ui/dropdown-menu';
+    21→import { Label } from '@/components/ui/label';
+    22→import { toast } from 'sonner';
+    23→import {
+    24→  Plus,
+    25→  ExternalLink,
+    26→  Pencil,
+    27→  QrCode,
+    28→  Trash2,
+    29→  Eye,
+    30→  LogOut,
+    31→  Sparkles,
+    32→  Loader2,
+    33→  Globe,
+    34→  BarChart3,
+    35→  CreditCard,
+    36→  Download,
+    37→  Upload,
+    38→  MoreVertical,
+    39→  LayoutDashboard,
+    40→  Copy,
+    41→  Crown,
+    42→  Shield,
+    43→  Home,
+    44→  Menu as MenuIcon,
+    45→  X,
+    46→} from 'lucide-react';
+    47→import type { Plan } from '@/lib/plans';
+    48→import type { MenuData } from '@/lib/menu-utils';
+    49→import {
+    50→  detectFileType,
+    51→  importFromJSON,
+    52→  importFromCSV,
+    53→  importFromExcelXML,
+    54→  type ImportCategory,
+    55→} from '@/lib/import-export';
+    56→
+    57→interface Props {
+    58→  user: { email: string; name: string };
+    59→  plan: Plan;
+    60→  menus: MenuData[];
+    61→  isSuperAdmin?: boolean;
+    62→}
+    63→
+    64→export function DashboardClient({ user, plan, menus, isSuperAdmin = false }: Props) {
+    65→  const [creating, setCreating] = useState(false);
+    66→  const [newName, setNewName] = useState('');
+    67→  const [drawerOpen, setDrawerOpen] = useState(false);
+    68→  const router = useRouter();
+    69→  const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    70→  const importFileRef = useRef<HTMLInputElement>(null);
+    71→  const [importing, setImporting] = useState(false);
+    72→  const [importTarget, setImportTarget] = useState<string | null>(null);
+    73→
+    74→  async function handleCreate() {
+    75→    if (!newName.trim()) {
+    76→      toast.error('Ingresa un nombre');
+    77→      return;
+    78→    }
+    79→    setCreating(true);
+    80→    try {
+    81→      const res = await fetch('/api/menus', {
+    82→        method: 'POST',
+    83→        headers: { 'Content-Type': 'application/json' },
+    84→        body: JSON.stringify({ name: newName }),
+    85→      });
+    86→      const data = await res.json();
+    87→      if (!res.ok) throw new Error(data.error || 'Error');
+    88→      toast.success('Menú creado');
+    89→      router.push(`/dashboard/${data.menu.id}`);
+    90→    } catch (err) {
+    91→      toast.error(err instanceof Error ? err.message : 'Error');
+    92→    } finally {
+    93→      setCreating(false);
+    94→    }
+    95→  }
+    96→
+    97→  async function handleDelete(id: string, name: string) {
+    98→    if (!confirm(`¿Eliminar el menú "${name}"? Esta acción no se puede deshacer.`)) return;
+    99→    try {
+   100→      const res = await fetch(`/api/menus/${id}`, { method: 'DELETE' });
+   101→      if (!res.ok) throw new Error('Error');
+   102→      toast.success('Menú eliminado');
+   103→      router.refresh();
+   104→    } catch (err) {
+   105→      toast.error(err instanceof Error ? err.message : 'Error');
+   106→    }
+   107→  }
+   108→
+   109→  async function handleLogout() {
+   110→    await fetch('/api/auth/logout', { method: 'POST' });
+   111→    router.push('/login');
+   112→    router.refresh();
+   113→  }
+   114→
+   115→  async function handleExport(menuId: string, menuName: string, format: string) {
+   116→    try {
+   117→      const res = await fetch(`/api/menus/${menuId}/export?format=${format}`);
+   118→      if (!res.ok) throw new Error('Error exportando');
+   119→      const blob = await res.blob();
+   120→      const ext = format === 'excel' ? 'xls' : format === 'word' ? 'doc' : format;
+   121→      const url = URL.createObjectURL(blob);
+   122→      const a = document.createElement('a');
+   123→      a.href = url;
+   124→      const safeName = menuName.replace(/[^a-zA-Z0-9áéíóúñÁÉÍÓÚÑ ]/g, '').replace(/\s+/g, '-');
+   125→      a.download = `${safeName}.${ext}`;
+   126→      document.body.appendChild(a);
+   127→      a.click();
+   128→      document.body.removeChild(a);
+   129→      URL.revokeObjectURL(url);
+   130→      toast.success(`Exportado como .${ext}`);
+   131→    } catch {
+   132→      toast.error('Error al exportar');
+   133→    }
+   134→  }
+   135→
+   136→  async function handleImport(menuId: string) {
+   137→    setImportTarget(menuId);
+   138→    importFileRef.current?.click();
+   139→  }
+   140→
+   141→  async function processImport(e: React.ChangeEvent<HTMLInputElement>) {
+   142→    const file = e.target.files?.[0];
+   143→    if (!file || !importTarget) return;
+   144→
+   145→    setImporting(true);
+   146→    try {
+   147→      const text = await file.text();
+   148→      const fileType = detectFileType(file.name, text);
+   149→
+   150→      if (fileType === 'unknown') {
+   151→        toast.error('Formato no reconocido. Usa JSON, CSV o Excel.');
+   152→        setImporting(false);
+   153→        return;
+   154→      }
+   155→
+   156→      const formData = new FormData();
+   157→      formData.append('file', file);
+   158→
+   159→      const res = await fetch(`/api/menus/${importTarget}/import`, {
+   160→        method: 'POST',
+   161→        body: formData,
+   162→      });
+   163→
+   164→      const data = await res.json();
+   165→      if (!res.ok) throw new Error(data.error || 'Error importando');
+   166→
+   167→      toast.success(data.message || `Importados: ${data.imported?.categories} categorías, ${data.imported?.dishes} platos`);
+   168→      router.refresh();
+   169→    } catch (err) {
+   170→      toast.error(err instanceof Error ? err.message : 'Error al importar');
+   171→    } finally {
+   172→      setImporting(false);
+   173→      setImportTarget(null);
+   174→      if (importFileRef.current) importFileRef.current.value = '';
+   175→    }
+   176→  }
+   177→
+   178→  async function copyLink(slug: string) {
+   179→    try {
+   180→      await navigator.clipboard.writeText(`${origin}/r/${slug}`);
+   181→      toast.success('Enlace copiado');
+   182→    } catch {
+   183→      toast.error('No se pudo copiar');
+   184→    }
+   185→  }
+   186→
+   187→  const canCreate = plan.limits.maxMenus === -1 || menus.length < plan.limits.maxMenus;
+   188→
+   189→  return (
+   190→    <div className="min-h-screen bg-[#07070b] text-white flex">
+   191→      {/* ───────── Sidebar desktop (lg+) ───────── */}
+   192→      <aside className="hidden lg:flex flex-col w-60 border-r border-white/10 bg-[#0a0a14] p-4 flex-shrink-0">
+   193→        <div className="flex items-center gap-3 mb-8 px-2">
+   194→          <a href="/" className="w-9 h-9 rounded-lg bg-gradient-to-br from-[#d4af37] to-[#f4d35e] flex items-center justify-center text-lg font-bold text-[#1a1a2e] hover:opacity-90 transition">
+   195→            M
+   196→          </a>
+   197→          <a href="/" className="font-bold hover:text-[#d4af37] transition">MenuPro</a>
+   198→        </div>
+   199→
+   200→        <nav className="space-y-1 flex-1">
+   201→          <a href="/dashboard" className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-sm font-medium">
+   202→            <LayoutDashboard className="w-4 h-4" />
+   203→            Mis menús
+   204→          </a>
+   205→          <a href="/dashboard/generador" className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-white/60 hover:text-white hover:bg-white/5 text-sm transition-colors">
+   206→            <Sparkles className="w-4 h-4" />
+   207→            Generador rápido
+   208→          </a>
+   209→          <a href="/dashboard/analytics" className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-white/60 hover:text-white hover:bg-white/5 text-sm transition-colors">
+   210→            <BarChart3 className="w-4 h-4" />
+   211→            Analíticas
+   212→            <Crown className="w-3 h-3 text-[#d4af37] ml-auto" />
+   213→          </a>
+   214→          <a href="/dashboard/domains" className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-white/60 hover:text-white hover:bg-white/5 text-sm transition-colors">
+   215→            <Globe className="w-4 h-4" />
+   216→            Dominios
+   217→            <Crown className="w-3 h-3 text-[#d4af37] ml-auto" />
+   218→          </a>
+   219→          <a href="/dashboard/billing" className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-white/60 hover:text-white hover:bg-white/5 text-sm transition-colors">
+   220→            <CreditCard className="w-4 h-4" />
+   221→            Planes
+   222→          </a>
+   223→          {isSuperAdmin && (
+   224→            <a href="/superadmin" className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-amber-400/80 hover:text-amber-400 hover:bg-amber-400/5 text-sm transition-colors border border-amber-400/20 mt-2">
+   225→              <Shield className="w-4 h-4" />
+   226→              Super Admin
+   227→            </a>
+   228→          )}
+   229→        </nav>
+   230→
+   231→        {/* User section */}
+   232→        <div className="border-t border-white/10 pt-4 space-y-3">
+   233→          <div className="px-3 space-y-1">
+   234→            <div className="text-sm text-white/80 truncate">{user.email}</div>
+   235→            <span
+   236→              className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold ${
+   237→                plan.id === 'pro'
+   238→                  ? 'bg-[#d4af37]/20 text-[#d4af37] border border-[#d4af37]/40'
+   239→                  : 'bg-white/5 text-white/60'
+   240→              }`}
+   241→            >
+   242→              {plan.name}
+   243→            </span>
+   244→          </div>
+   245→          <Button
+   246→            variant="ghost"
+   247→            size="sm"
+   248→            onClick={handleLogout}
+   249→            className="w-full justify-start text-white/60 hover:text-white hover:bg-white/5"
+   250→          >
+   251→            <LogOut className="w-4 h-4 mr-2" />
+   252→            Cerrar sesión
+   253→          </Button>
+   254→        </div>
+   255→      </aside>
+   256→
+   257→      {/* ───────── Drawer mobile (overlay) ───────── */}
+   258→      {drawerOpen && (
+   259→        <div className="lg:hidden fixed inset-0 z-50 flex">
+   260→          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setDrawerOpen(false)} />
+   261→          <aside className="relative w-72 max-w-[80vw] bg-[#0a0a14] border-r border-white/10 p-4 flex flex-col">
+   262→            <div className="flex items-center justify-between mb-6">
+   263→              <a href="/" className="flex items-center gap-3">
+   264→                <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-[#d4af37] to-[#f4d35e] flex items-center justify-center text-lg font-bold text-[#1a1a2e]">M</div>
+   265→                <span className="font-bold">MenuPro</span>
+   266→              </a>
+   267→              <button onClick={() => setDrawerOpen(false)} className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center">
+   268→                <X className="w-4 h-4" />
+   269→              </button>
+   270→            </div>
+   271→            <nav className="space-y-1 flex-1">
+   272→              <a href="/dashboard" onClick={() => setDrawerOpen(false)} className="flex items-center gap-3 px-3 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-sm font-medium">
+   273→                <LayoutDashboard className="w-4 h-4" /> Mis menús
+   274→              </a>
+   275→              <a href="/dashboard/generador" onClick={() => setDrawerOpen(false)} className="flex items-center gap-3 px-3 py-3 rounded-xl text-white/60 hover:text-white hover:bg-white/5 text-sm">
+   276→                <Sparkles className="w-4 h-4" /> Generador rápido
+   277→              </a>
+   278→              <a href="/dashboard/analytics" onClick={() => setDrawerOpen(false)} className="flex items-center gap-3 px-3 py-3 rounded-xl text-white/60 hover:text-white hover:bg-white/5 text-sm">
+   279→                <BarChart3 className="w-4 h-4" /> Analíticas
+   280→              </a>
+   281→              <a href="/dashboard/domains" onClick={() => setDrawerOpen(false)} className="flex items-center gap-3 px-3 py-3 rounded-xl text-white/60 hover:text-white hover:bg-white/5 text-sm">
+   282→                <Globe className="w-4 h-4" /> Dominios
+   283→              </a>
+   284→              <a href="/dashboard/billing" onClick={() => setDrawerOpen(false)} className="flex items-center gap-3 px-3 py-3 rounded-xl text-white/60 hover:text-white hover:bg-white/5 text-sm">
+   285→                <CreditCard className="w-4 h-4" /> Planes
+   286→              </a>
+   287→              {isSuperAdmin && (
+   288→                <a href="/superadmin" onClick={() => setDrawerOpen(false)} className="flex items-center gap-3 px-3 py-3 rounded-xl text-amber-400 hover:bg-amber-400/5 text-sm border border-amber-400/20 mt-2">
+   289→                  <Shield className="w-4 h-4" /> Super Admin
+   290→                </a>
+   291→              )}
+   292→              <a href="/" onClick={() => setDrawerOpen(false)} className="flex items-center gap-3 px-3 py-3 rounded-xl text-white/50 hover:text-white hover:bg-white/5 text-sm mt-2">
+   293→                <Home className="w-4 h-4" /> Volver al inicio
+   294→              </a>
+   295→            </nav>
+   296→            <div className="border-t border-white/10 pt-4 space-y-3">
+   297→              <div className="px-3 space-y-1">
+   298→                <div className="text-sm text-white/80 truncate">{user.email}</div>
+   299→                <span
+   300→                  className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold ${
+   301→                    plan.id === 'pro'
+   302→                      ? 'bg-[#d4af37]/20 text-[#d4af37] border border-[#d4af37]/40'
+   303→                      : 'bg-white/5 text-white/60'
+   304→                  }`}
+   305→                >
+   306→                  {plan.name}
+   307→                </span>
+   308→              </div>
+   309→              <Button variant="ghost" size="sm" onClick={handleLogout} className="w-full justify-start text-white/60 hover:text-white hover:bg-white/5">
+   310→                <LogOut className="w-4 h-4 mr-2" /> Cerrar sesión
+   311→              </Button>
+   312→            </div>
+   313→          </aside>
+   314→        </div>
+   315→      )}
+   316→
+   317→      {/* Main content */}
+   318→      <div className="flex-1 flex flex-col min-w-0 pb-24 lg:pb-0">
+   319→        {/* Mobile header (sticky, con botón hamburguesa) */}
+   320→        <header className="lg:hidden border-b border-white/10 bg-[#0a0a14] backdrop-blur sticky top-0 z-40">
+   321→          <div className="px-4 py-3 flex items-center justify-between">
+   322→            <div className="flex items-center gap-3">
+   323→              <button
+   324→                onClick={() => setDrawerOpen(true)}
+   325→                aria-label="Abrir menú"
+   326→                className="w-9 h-9 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center transition"
+   327→              >
+   328→                <MenuIcon className="w-5 h-5" />
+   329→              </button>
+   330→              <div className="flex items-center gap-2">
+   331→                <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#d4af37] to-[#f4d35e] flex items-center justify-center text-xs font-bold text-[#1a1a2e]">M</div>
+   332→                <span className="font-bold text-sm">MenuPro</span>
+   333→              </div>
+   334→            </div>
+   335→            <div className="flex items-center gap-2">
+   336→              <span
+   337→                className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+   338→                  plan.id === 'pro'
+   339→                    ? 'bg-[#d4af37]/20 text-[#d4af37]'
+   340→                    : 'bg-white/5 text-white/60'
+   341→                }`}
+   342→              >
+   343→                {plan.name}
+   344→              </span>
+   345→              <Button variant="ghost" size="icon" onClick={handleLogout} className="text-white/60 h-9 w-9">
+   346→                <LogOut className="w-4 h-4" />
+   347→              </Button>
+   348→            </div>
+   349→          </div>
+   350→        </header>
+   351→
+   352→        <main className="flex-1 px-4 sm:px-6 py-6 sm:py-8 max-w-6xl w-full mx-auto">
+   353→          <div className="flex items-center justify-between mb-6 gap-3">
+   354→            <div className="min-w-0">
+   355→              <h1 className="text-2xl sm:text-3xl font-bold mb-1 truncate">Mis menús</h1>
+   356→              <p className="text-white/60 text-sm sm:text-base">
+   357→                {menus.length} {menus.length === 1 ? 'menú creado' : 'menús creados'} · Plan {plan.name}
+   358→              </p>
+   359→            </div>
+   360→            <Dialog>
+   361→              <DialogTrigger asChild>
+   362→                <Button
+   363→                  disabled={!canCreate}
+   364→                  className="bg-gradient-to-r from-[#d4af37] to-[#f4d35e] text-[#1a1a2e] hover:opacity-90 font-semibold flex-shrink-0"
+   365→                >
+   366→                  <Plus className="w-4 h-4" />
+   367→                  <span className="hidden sm:inline">Nuevo menú</span>
+   368→                  <span className="sm:hidden">Nuevo</span>
+   369→                </Button>
+   370→              </DialogTrigger>
+   371→              <DialogContent className="bg-[#15152a] border-white/10 text-white">
+   372→                <DialogHeader>
+   373→                  <DialogTitle>Crear nuevo menú</DialogTitle>
+   374→                </DialogHeader>
+   375→                <div className="space-y-4 py-4">
+   376→                  <div className="space-y-2">
+   377→                    <Label>Nombre del restaurante</Label>
+   378→                    <Input
+   379→                      value={newName}
+   380→                      onChange={(e) => setNewName(e.target.value)}
+   381→                      placeholder="Ej: La Parrilla del Chef"
+   382→                      onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
+   383→                      className="bg-white/5 border-white/10 text-white"
+   384→                    />
+   385→                  </div>
+   386→                  <Button
+   387→                    onClick={handleCreate}
+   388→                    disabled={creating}
+   389→                    className="w-full bg-gradient-to-r from-[#d4af37] to-[#f4d35e] text-[#1a1a2e]"
+   390→                  >
+   391→                    {creating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+   392→                    Crear menú
+   393→                  </Button>
+   394→                </div>
+   395→              </DialogContent>
+   396→            </Dialog>
+   397→          </div>
+   398→
+   399→          {/* Import file input (hidden) */}
+   400→          <input
+   401→            ref={importFileRef}
+   402→            type="file"
+   403→            accept=".json,.csv,.xls,.xlsx"
+   404→            className="hidden"
+   405→            onChange={processImport}
+   406→          />
+   407→
+   408→          {/* Loading import */}
+   409→          {importing && (
+   410→            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center">
+   411→              <div className="bg-[#15152a] border border-white/10 rounded-2xl p-8 flex flex-col items-center gap-4">
+   412→                <Loader2 className="w-8 h-8 animate-spin text-[#d4af37]" />
+   413→                <div className="text-center">
+   414→                  <div className="font-semibold">Importando menú...</div>
+   415→                  <div className="text-sm text-white/50">Procesando archivo</div>
+   416→                </div>
+   417→              </div>
+   418→            </div>
+   419→          )}
+   420→
+   421→          {!canCreate && (
+   422→            <div className="mb-6 p-5 rounded-2xl bg-[#d4af37]/10 border border-[#d4af37]/30 flex items-center justify-between">
+   423→              <div className="flex items-center gap-3">
+   424→                <Sparkles className="w-5 h-5 text-[#d4af37]" />
+   425→                <div>
+   426→                  <div className="font-semibold">Has alcanzado el límite del plan Free</div>
+   427→                  <div className="text-sm text-white/60">
+   428→                    Upgrade a Pro para crear menús ilimitados por S/35/mes
+   429→                  </div>
+   430→                </div>
+   431→              </div>
+   432→              <Button
+   433→                asChild
+   434→                className="bg-gradient-to-r from-[#d4af37] to-[#f4d35e] text-[#1a1a2e]"
+   435→              >
+   436→                <a href="/dashboard/billing">Ver planes</a>
+   437→              </Button>
+   438→            </div>
+   439→          )}
+   440→
+   441→          {menus.length === 0 ? (
+   442→            <div className="text-center py-16 sm:py-20">
+   443→              <div className="w-16 h-16 rounded-full bg-white/5 border border-white/10 flex items-center justify-center mx-auto mb-4">
+   444→                <Plus className="w-8 h-8 text-white/40" />
+   445→              </div>
+   446→              <h3 className="text-xl font-semibold mb-2">Aún no tienes menús</h3>
+   447→              <p className="text-white/60 mb-6 px-4">
+   448→                Crea tu primer menú digital en menos de 5 minutos
+   449→              </p>
+   450→            </div>
+   451→          ) : (
+   452→            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+   453→              {menus.map((menu) => (
+   454→                <div
+   455→                  key={menu.id}
+   456→                  className="group bg-white/[0.03] border border-white/10 rounded-2xl overflow-hidden hover:border-[#d4af37]/40 transition-all"
+   457→                >
+   458→                  {/* Preview header */}
+   459→                  <div
+   460→                    className="h-32 relative overflow-hidden"
+   461→                    style={{
+   462→                      background: `linear-gradient(135deg, ${menu.color}, ${menu.color}99)`,
+   463→                    }}
+   464→                  >
+   465→                    <div className="absolute inset-0 bg-black/30" />
+   466→                    <div className="absolute bottom-3 left-4 right-4 flex items-center justify-between">
+   467→                      <div>
+   468→                        <div className="font-bold text-lg line-clamp-1">{menu.name}</div>
+   469→                        {menu.slogan && (
+   470→                          <div className="text-xs opacity-80 line-clamp-1">{menu.slogan}</div>
+   471→                        )}
+   472→                      </div>
+   473→                      <span
+   474→                        className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
+   475→                          menu.is_published
+   476→                            ? 'bg-black/30 text-white'
+   477→                            : 'bg-black/40 text-white/60'
+   478→                        }`}
+   479→                      >
+   480→                        {menu.is_published ? 'Publicado' : 'Borrador'}
+   481→                      </span>
+   482→                    </div>
+   483→                  </div>
+   484→
+   485→                  {/* Body */}
+   486→                  <div className="p-4">
+   487→                    <div className="flex items-center gap-3 text-xs text-white/50 mb-3">
+   488→                      <span className="flex items-center gap-1">
+   489→                        <Eye className="w-3 h-3" />
+   490→                        {menu.views_count} visitas
+   491→                      </span>
+   492→                      <span>·</span>
+   493→                      <button
+   494→                        onClick={() => copyLink(menu.slug)}
+   495→                        className="truncate hover:text-[#d4af37] transition-colors"
+   496→                        title="Copiar enlace"
+   497→                      >
+   498→                        {origin}/r/{menu.slug}
+   499→                      </button>
+   500→                    </div>
+   501→
+   502→                    <div className="flex items-center gap-2">
+   503→                      <Button
+   504→                        size="sm"
+   505→                        asChild
+   506→                        className="flex-1 bg-white/5 border border-white/10 text-white hover:bg-white/10"
+   507→                      >
+   508→                        <a href={`/dashboard/${menu.id}`}>
+   509→                          <Pencil className="w-3.5 h-3.5" />
+   510→                          Editar
+   511→                        </a>
+   512→                      </Button>
+   513→
+   514→                      {/* More options dropdown */}
+   515→                      <DropdownMenu>
+   516→                        <DropdownMenuTrigger asChild>
+   517→                          <Button
+   518→                            size="sm"
+   519→                            variant="ghost"
+   520→                            className="text-white/70 hover:text-white hover:bg-white/5"
+   521→                          >
+   522→                            <MoreVertical className="w-4 h-4" />
+   523→                          </Button>
+   524→                        </DropdownMenuTrigger>
+   525→                        <DropdownMenuContent className="bg-[#15152a] border-white/10">
+   526→                          {menu.is_published && (
+   527→                            <DropdownMenuItem asChild className="text-white focus:bg-white/5 focus:text-white">
+   528→                              <a href={`/r/${menu.slug}`} target="_blank" rel="noreferrer">
+   529→                                <ExternalLink className="w-4 h-4 mr-2" />
+   530→                                Ver público
+   531→                              </a>
+   532→                            </DropdownMenuItem>
+   533→                          )}
+   534→                          <DropdownMenuItem
+   535→                            onClick={() => copyLink(menu.slug)}
+   536→                            className="text-white focus:bg-white/5 focus:text-white"
+   537→                          >
+   538→                            <Copy className="w-4 h-4 mr-2" />
+   539→                            Copiar enlace
+   540→                          </DropdownMenuItem>
+   541→                          {plan.limits.hasQR && menu.is_published && (
+   542→                            <DropdownMenuItem asChild className="text-white focus:bg-white/5 focus:text-white">
+   543→                              <a href={`/dashboard/${menu.id}/qr`}>
+   544→                                <QrCode className="w-4 h-4 mr-2" />
+   545→                                Código QR
+   546→                              </a>
+   547→                            </DropdownMenuItem>
+   548→                          )}
+   549→                          <DropdownMenuSeparator className="bg-white/10" />
+   550→                          <DropdownMenuItem
+   551→                            onClick={() => handleImport(menu.id)}
+   552→                            className="text-white focus:bg-white/5 focus:text-white"
+   553→                          >
+   554→                            <Upload className="w-4 h-4 mr-2" />
+   555→                            Importar platos
+   556→                          </DropdownMenuItem>
+   557→                          <DropdownMenuSeparator className="bg-white/10" />
+   558→                          <DropdownMenuItem
+   559→                            onClick={() => handleExport(menu.id, menu.name, 'json')}
+   560→                            className="text-white focus:bg-white/5 focus:text-white"
+   561→                          >
+   562→                            <Download className="w-4 h-4 mr-2" />
+   563→                            Exportar JSON
+   564→                          </DropdownMenuItem>
+   565→                          <DropdownMenuItem
+   566→                            onClick={() => handleExport(menu.id, menu.name, 'csv')}
+   567→                            className="text-white focus:bg-white/5 focus:text-white"
+   568→                          >
+   569→                            <Download className="w-4 h-4 mr-2" />
+   570→                            Exportar CSV
+   571→                          </DropdownMenuItem>
+   572→                          <DropdownMenuItem
+   573→                            onClick={() => handleExport(menu.id, menu.name, 'excel')}
+   574→                            className="text-white focus:bg-white/5 focus:text-white"
+   575→                          >
+   576→                            <Download className="w-4 h-4 mr-2" />
+   577→                            Exportar Excel
+   578→                          </DropdownMenuItem>
+   579→                          <DropdownMenuItem
+   580→                            onClick={() => handleExport(menu.id, menu.name, 'word')}
+   581→                            className="text-white focus:bg-white/5 focus:text-white"
+   582→                          >
+   583→                            <Download className="w-4 h-4 mr-2" />
+   584→                            Exportar Word
+   585→                          </DropdownMenuItem>
+   586→                          <DropdownMenuSeparator className="bg-white/10" />
+   587→                          <DropdownMenuItem
+   588→                            onClick={() => handleDelete(menu.id, menu.name)}
+   589→                            className="text-red-400 focus:bg-red-500/10 focus:text-red-400"
+   590→                          >
+   591→                            <Trash2 className="w-4 h-4 mr-2" />
+   592→                            Eliminar
+   593→                          </DropdownMenuItem>
+   594→                        </DropdownMenuContent>
+   595→                      </DropdownMenu>
+   596→                    </div>
+   597→                  </div>
+   598→                </div>
+   599→              ))}
+   600→            </div>
+   601→          )}
+   602→
+   603→          {/* Quick tips */}
+   604→          {menus.length > 0 && menus.length <= 2 && (
+   605→            <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-4">
+   606→              <div className="bg-white/[0.03] border border-white/10 rounded-xl p-4 text-sm">
+   607→                <div className="font-semibold mb-1 flex items-center gap-2">
+   608→                  <Upload className="w-4 h-4 text-[#d4af37]" />
+   609→                  Importa rápido
+   610→                </div>
+   611→                <div className="text-white/50">
+   612→                  Sube tu carta en CSV o JSON para llenar tu menú en segundos.
+   613→                </div>
+   614→              </div>
+   615→              <div className="bg-white/[0.03] border border-white/10 rounded-xl p-4 text-sm">
+   616→                <div className="font-semibold mb-1 flex items-center gap-2">
+   617→                  <Download className="w-4 h-4 text-[#d4af37]" />
+   618→                  Exporta en Excel
+   619→                </div>
+   620→                <div className="text-white/50">
+   621→                  Descarga tu menú en Excel, Word, CSV o JSON para compartir.
+   622→                </div>
+   623→              </div>
+   624→              <div className="bg-white/[0.03] border border-white/10 rounded-xl p-4 text-sm">
+   625→                <div className="font-semibold mb-1 flex items-center gap-2">
+   626→                  <Globe className="w-4 h-4 text-[#d4af37]" />
+   627→                  Dominio propio
+   628→                </div>
+   629→                <div className="text-white/50">
+   630→                  Usa tu propio dominio con el plan Pro. Sin branding.
+   631→                </div>
+   632→              </div>
+   633→            </div>
+   634→          )}
+   635→        </main>
+   636→
+   637→        {/* ───────── Bottom nav mobile (fija) ───────── */}
+   638→        <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#0a0a14]/95 backdrop-blur border-t border-white/10 safe-bottom">
+   639→          <div className="grid grid-cols-5 gap-1 px-2 py-1.5">
+   640→            <a href="/dashboard" className="flex flex-col items-center gap-0.5 py-1.5 rounded-lg text-white text-[10px] font-medium bg-white/5">
+   641→              <LayoutDashboard className="w-5 h-5" />
+   642→              Menús
+   643→            </a>
+   644→            <a href="/dashboard/generador" className="flex flex-col items-center gap-0.5 py-1.5 rounded-lg text-white/50 text-[10px]">
+   645→              <Sparkles className="w-5 h-5" />
+   646→              Generar
+   647→            </a>
+   648→            <a href="/dashboard/analytics" className="flex flex-col items-center gap-0.5 py-1.5 rounded-lg text-white/50 text-[10px]">
+   649→              <BarChart3 className="w-5 h-5" />
+   650→              Stats
+   651→            </a>
+   652→            <a href="/dashboard/billing" className="flex flex-col items-center gap-0.5 py-1.5 rounded-lg text-white/50 text-[10px]">
+   653→              <CreditCard className="w-5 h-5" />
+   654→              Plan
+   655→            </a>
+   656→            <a href="/" className="flex flex-col items-center gap-0.5 py-1.5 rounded-lg text-white/50 text-[10px]">
+   657→              <Home className="w-5 h-5" />
+   658→              Inicio
+   659→            </a>
+   660→          </div>
+   661→        </nav>
+   662→      </div>
+   663→    </div>
+   664→  );
+   665→}
+   666→

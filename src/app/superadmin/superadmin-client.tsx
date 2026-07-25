@@ -222,26 +222,26 @@ export function SuperAdminClient({ admin }: { admin: AdminInfo }) {
 
   return (
     <div className="min-h-screen bg-[#050507] text-white">
-      {/* TOP NAV — Distinto al dashboard normal */}
-      <header className="border-b border-amber-500/20 bg-gradient-to-r from-[#0a0a14] via-[#0f0a1a] to-[#0a0a14] sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-amber-700 flex items-center justify-center shadow-lg shadow-amber-500/30">
-              <Shield className="w-5 h-5 text-black" />
+      {/* TOP NAV — Mobile-first responsive */}
+      <header className="border-b border-amber-500/20 bg-gradient-to-r from-[#0a0a14] via-[#0f0a1a] to-[#0a0a14] sticky top-0 z-40 safe-top">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-amber-500 to-amber-700 flex items-center justify-center shadow-lg shadow-amber-500/30 flex-shrink-0">
+              <Shield className="w-4 h-4 sm:w-5 sm:h-5 text-black" />
             </div>
-            <div>
-              <div className="font-bold text-base leading-tight flex items-center gap-2">
-                MenuPro · Super Admin
-                <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 text-[10px] font-bold border border-amber-500/30">
+            <div className="min-w-0">
+              <div className="font-bold text-sm sm:text-base leading-tight flex items-center gap-2 flex-wrap">
+                <span className="truncate">MenuPro · Super Admin</span>
+                <span className="px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-400 text-[9px] sm:text-[10px] font-bold border border-amber-500/30 flex-shrink-0">
                   MODO DIOS
                 </span>
               </div>
-              <div className="text-xs text-white/40 leading-tight">Panel interno · Solo administración</div>
+              <div className="text-[10px] sm:text-xs text-white/40 leading-tight hidden xs:block">Panel interno · Solo administración</div>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10">
+          <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+            <div className="flex items-center gap-2 px-2 sm:px-3 py-1.5 rounded-lg bg-white/5 border border-white/10">
               {admin.avatar_url ? (
                 <img src={admin.avatar_url} alt="" className="w-6 h-6 rounded-full" />
               ) : (
@@ -253,16 +253,17 @@ export function SuperAdminClient({ admin }: { admin: AdminInfo }) {
             </div>
             <a
               href="/dashboard"
-              className="text-xs text-white/40 hover:text-white px-3 py-1.5 rounded-lg border border-white/10 hover:bg-white/5 transition"
+              className="text-[11px] sm:text-xs text-white/60 hover:text-white px-2 sm:px-3 py-1.5 rounded-lg border border-white/10 hover:bg-white/5 transition whitespace-nowrap"
               title="Ir al dashboard de usuario normal"
             >
-              Ver dashboard
+              <span className="hidden sm:inline">Ver dashboard</span>
+              <span className="sm:hidden">Dash</span>
             </a>
             <Button
               variant="ghost"
               size="sm"
               onClick={handleLogout}
-              className="text-red-400/70 hover:text-red-400 hover:bg-red-500/10"
+              className="text-red-400/70 hover:text-red-400 hover:bg-red-500/10 h-9 px-2 sm:px-3"
             >
               <LogOut className="w-4 h-4" />
               <span className="hidden md:inline">Salir</span>
@@ -271,9 +272,9 @@ export function SuperAdminClient({ admin }: { admin: AdminInfo }) {
         </div>
       </header>
 
-      {/* TABS */}
+      {/* TABS — Mobile horizontal scroll */}
       <div className="border-b border-white/10 bg-[#070710]/80 backdrop-blur">
-        <div className="max-w-7xl mx-auto px-6 flex gap-1">
+        <div className="max-w-7xl mx-auto px-2 sm:px-6 flex gap-1 overflow-x-auto scrollbar-none">
           {([
             { key: 'stats' as Tab, label: 'Estadísticas', icon: LayoutDashboard },
             { key: 'users' as Tab, label: 'Usuarios', icon: Users },
@@ -282,7 +283,7 @@ export function SuperAdminClient({ admin }: { admin: AdminInfo }) {
             <button
               key={tab.key}
               onClick={() => { setActiveTab(tab.key); setPage(1); }}
-              className={`flex items-center gap-2 px-5 py-3 text-sm font-medium border-b-2 transition-colors ${
+              className={`flex items-center gap-2 px-3 sm:px-5 py-3 text-xs sm:text-sm font-medium border-b-2 transition-colors whitespace-nowrap flex-shrink-0 ${
                 activeTab === tab.key
                   ? 'border-amber-500 text-amber-400'
                   : 'border-transparent text-white/50 hover:text-white/80'
@@ -295,7 +296,7 @@ export function SuperAdminClient({ admin }: { admin: AdminInfo }) {
         </div>
       </div>
 
-      <main className="max-w-7xl mx-auto px-6 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 pb-24 lg:pb-8">
         {/* STATS TAB */}
         {activeTab === 'stats' && (
           loading && !stats ? (
@@ -305,32 +306,32 @@ export function SuperAdminClient({ admin }: { admin: AdminInfo }) {
           ) : stats ? (
             <>
               {/* Top stat cards */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
                 {statCards.map((card) => (
                   <div
                     key={card.label}
-                    className="bg-gradient-to-br from-white/[0.04] to-transparent border border-white/10 rounded-2xl p-5 hover:border-white/20 transition-colors"
+                    className="bg-gradient-to-br from-white/[0.04] to-transparent border border-white/10 rounded-xl sm:rounded-2xl p-3 sm:p-5 hover:border-white/20 transition-colors"
                   >
                     <div className="flex items-center gap-2 mb-2">
-                      <card.icon className="w-4 h-4" style={{ color: card.color }} />
-                      <span className="text-xs text-white/50">{card.label}</span>
+                      <card.icon className="w-4 h-4 flex-shrink-0" style={{ color: card.color }} />
+                      <span className="text-[10px] sm:text-xs text-white/50 truncate">{card.label}</span>
                     </div>
-                    <div className="text-2xl font-bold">{card.value}</div>
-                    <div className="text-[10px] text-white/30 mt-1">{card.sub}</div>
+                    <div className="text-xl sm:text-2xl font-bold truncate">{card.value}</div>
+                    <div className="text-[9px] sm:text-[10px] text-white/30 mt-1 truncate">{card.sub}</div>
                   </div>
                 ))}
               </div>
 
               {/* Revenue block */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-                <div className="bg-gradient-to-br from-amber-500/10 to-transparent border border-amber-500/30 rounded-2xl p-6">
-                  <h3 className="font-semibold mb-3 flex items-center gap-2">
-                    <DollarSign className="w-5 h-5 text-amber-400" />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 mb-6 sm:mb-8">
+                <div className="bg-gradient-to-br from-amber-500/10 to-transparent border border-amber-500/30 rounded-xl sm:rounded-2xl p-4 sm:p-6">
+                  <h3 className="font-semibold mb-3 flex items-center gap-2 text-sm sm:text-base">
+                    <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400" />
                     Ingresos estimados
                   </h3>
-                  <div className="text-4xl font-bold text-amber-400">
+                  <div className="text-3xl sm:text-4xl font-bold text-amber-400">
                     S/ {stats.revenue_estimate_pen}
-                    <span className="text-base text-white/40 ml-2">
+                    <span className="text-sm sm:text-base text-white/40 ml-2 block sm:inline">
                       ≈ ${stats.revenue_estimate_usd} USD
                     </span>
                   </div>
@@ -339,40 +340,40 @@ export function SuperAdminClient({ admin }: { admin: AdminInfo }) {
                   </p>
                 </div>
 
-                <div className="bg-gradient-to-br from-emerald-500/10 to-transparent border border-emerald-500/30 rounded-2xl p-6">
-                  <h3 className="font-semibold mb-3 flex items-center gap-2">
-                    <Activity className="w-5 h-5 text-emerald-400" />
+                <div className="bg-gradient-to-br from-emerald-500/10 to-transparent border border-emerald-500/30 rounded-xl sm:rounded-2xl p-4 sm:p-6">
+                  <h3 className="font-semibold mb-3 flex items-center gap-2 text-sm sm:text-base">
+                    <Activity className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-400" />
                     Actividad reciente
                   </h3>
                   <div className="space-y-2">
                     <div className="flex justify-between">
-                      <span className="text-white/60 text-sm">Registros esta semana</span>
-                      <span className="font-bold text-emerald-400">{stats.recent_signups_7d}</span>
+                      <span className="text-white/60 text-xs sm:text-sm">Registros esta semana</span>
+                      <span className="font-bold text-emerald-400 text-sm sm:text-base">{stats.recent_signups_7d}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-white/60 text-sm">Registros este mes</span>
-                      <span className="font-bold text-emerald-400">{stats.recent_signups_30d}</span>
+                      <span className="text-white/60 text-xs sm:text-sm">Registros este mes</span>
+                      <span className="font-bold text-emerald-400 text-sm sm:text-base">{stats.recent_signups_30d}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-white/60 text-sm">Vistas totales</span>
-                      <span className="font-bold text-emerald-400">{stats.total_views.toLocaleString()}</span>
+                      <span className="text-white/60 text-xs sm:text-sm">Vistas totales</span>
+                      <span className="font-bold text-emerald-400 text-sm sm:text-base">{stats.total_views.toLocaleString()}</span>
                     </div>
                   </div>
                 </div>
               </div>
 
               {/* Top menus by views */}
-              <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-6">
-                <h3 className="font-semibold mb-4 flex items-center gap-2">
-                  <TrendingUp className="w-5 h-5 text-amber-400" />
+              <div className="bg-white/[0.03] border border-white/10 rounded-xl sm:rounded-2xl p-4 sm:p-6">
+                <h3 className="font-semibold mb-4 flex items-center gap-2 text-sm sm:text-base">
+                  <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400" />
                   Top 10 menús más vistos
                 </h3>
                 {stats.top_menus_by_views && stats.top_menus_by_views.length > 0 ? (
                   <div className="space-y-2">
                     {stats.top_menus_by_views.map((m, idx) => (
-                      <div key={m.id} className="flex items-center justify-between p-3 bg-white/[0.02] rounded-lg hover:bg-white/[0.04] transition-colors">
-                        <div className="flex items-center gap-3">
-                          <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
+                      <div key={m.id} className="flex items-center justify-between p-2 sm:p-3 bg-white/[0.02] rounded-lg hover:bg-white/[0.04] transition-colors gap-2">
+                        <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+                          <span className={`w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center text-[10px] sm:text-xs font-bold flex-shrink-0 ${
                             idx === 0 ? 'bg-amber-500/30 text-amber-300' :
                             idx === 1 ? 'bg-gray-400/20 text-gray-300' :
                             idx === 2 ? 'bg-orange-700/30 text-orange-300' :
@@ -380,21 +381,20 @@ export function SuperAdminClient({ admin }: { admin: AdminInfo }) {
                           }`}>
                             {idx + 1}
                           </span>
-                          <div>
-                            <div className="font-medium text-sm">{m.name}</div>
-                            <div className="text-xs text-white/40">{m.owner_email}</div>
+                          <div className="min-w-0">
+                            <div className="font-medium text-xs sm:text-sm truncate">{m.name}</div>
+                            <div className="text-[10px] sm:text-xs text-white/40 truncate">{m.owner_email}</div>
                           </div>
                         </div>
-                        <div className="flex items-center gap-4">
-                          <span className="text-xs text-white/40 hidden md:inline">/{m.slug}</span>
-                          <span className="px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-bold">
-                            {m.views_count.toLocaleString()} vistas
+                        <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
+                          <span className="px-2 py-1 rounded-full bg-emerald-500/20 text-emerald-400 text-[10px] sm:text-xs font-bold whitespace-nowrap">
+                            {m.views_count.toLocaleString()}
                           </span>
                           <a
-                            href={`/m/${m.slug}`}
+                            href={`/r/${m.slug}`}
                             target="_blank"
                             rel="noreferrer"
-                            className="text-white/40 hover:text-white"
+                            className="text-white/40 hover:text-white hidden sm:inline"
                           >
                             <ExternalLink className="w-4 h-4" />
                           </a>
@@ -413,14 +413,14 @@ export function SuperAdminClient({ admin }: { admin: AdminInfo }) {
         {/* USERS TAB */}
         {activeTab === 'users' && (
           <>
-            <div className="flex items-center gap-3 mb-6 flex-wrap">
-              <div className="relative flex-1 max-w-md">
+            <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6 flex-wrap">
+              <div className="relative flex-1 min-w-0 max-w-md">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
                 <Input
                   value={search}
                   onChange={(e) => { setSearch(e.target.value); setPage(1); }}
                   placeholder="Buscar por email o nombre..."
-                  className="pl-10 bg-white/5 border-white/10 text-white"
+                  className="pl-10 bg-white/5 border-white/10 text-white h-10"
                 />
               </div>
               <Button
@@ -428,12 +428,12 @@ export function SuperAdminClient({ admin }: { admin: AdminInfo }) {
                 size="sm"
                 onClick={fetchData}
                 disabled={loading}
-                className="text-white/60"
+                className="text-white/60 h-10 flex-shrink-0"
               >
-                <RefreshCw className={`w-4 h-4 mr-1.5 ${loading ? 'animate-spin' : ''}`} />
-                Actualizar
+                <RefreshCw className={`w-4 h-4 sm:mr-1.5 ${loading ? 'animate-spin' : ''}`} />
+                <span className="hidden sm:inline">Actualizar</span>
               </Button>
-              <span className="text-sm text-white/40 ml-auto">
+              <span className="text-xs sm:text-sm text-white/40 sm:ml-auto w-full sm:w-auto text-center sm:text-right">
                 {users.length} usuario{users.length !== 1 ? 's' : ''} · página {page}
               </span>
             </div>
@@ -514,7 +514,7 @@ export function SuperAdminClient({ admin }: { admin: AdminInfo }) {
                       </div>
 
                       {expandedUser === u.id && (
-                        <div className="border-t border-white/10 p-4 bg-white/[0.02]">
+                        <div className="border-t border-white/10 p-3 sm:p-4 bg-white/[0.02]">
                           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4 text-sm">
                             <div>
                               <div className="text-white/40 text-xs">Plan</div>
@@ -522,7 +522,7 @@ export function SuperAdminClient({ admin }: { admin: AdminInfo }) {
                             </div>
                             <div>
                               <div className="text-white/40 text-xs">Menús</div>
-                              <div className="font-medium">{u.menus_count} ({u.published_menus} publicados)</div>
+                              <div className="font-medium text-xs sm:text-sm">{u.menus_count} ({u.published_menus} pub.)</div>
                             </div>
                             <div>
                               <div className="text-white/40 text-xs">Platos</div>
@@ -534,19 +534,19 @@ export function SuperAdminClient({ admin }: { admin: AdminInfo }) {
                             </div>
                             <div>
                               <div className="text-white/40 text-xs">MP Status</div>
-                              <div className="font-medium">{u.mp_status || '—'}</div>
+                              <div className="font-medium text-xs sm:text-sm">{u.mp_status || '—'}</div>
                             </div>
                             <div>
                               <div className="text-white/40 text-xs">BG removals</div>
-                              <div className="font-medium">{u.bg_removals_used} usados</div>
+                              <div className="font-medium">{u.bg_removals_used}</div>
                             </div>
                             <div>
                               <div className="text-white/40 text-xs">Registro</div>
-                              <div className="font-medium">{new Date(u.created_at).toLocaleDateString('es-PE')}</div>
+                              <div className="font-medium text-xs sm:text-sm">{new Date(u.created_at).toLocaleDateString('es-PE')}</div>
                             </div>
                             <div>
-                              <div className="text-white/40 text-xs">Última actualización</div>
-                              <div className="font-medium">{new Date(u.updated_at).toLocaleDateString('es-PE')}</div>
+                              <div className="text-white/40 text-xs">Última act.</div>
+                              <div className="font-medium text-xs sm:text-sm">{new Date(u.updated_at).toLocaleDateString('es-PE')}</div>
                             </div>
                             {u.banned_at && (
                               <div className="col-span-2 md:col-span-4 text-red-400 text-xs">
@@ -561,17 +561,17 @@ export function SuperAdminClient({ admin }: { admin: AdminInfo }) {
                               size="sm"
                               variant="outline"
                               onClick={() => handleViewUserDetail(u.id)}
-                              className="border-blue-500/40 text-blue-400 hover:bg-blue-500/10"
+                              className="border-blue-500/40 text-blue-400 hover:bg-blue-500/10 h-9 text-xs"
                             >
                               <Eye className="w-3.5 h-3.5 mr-1.5" />
-                              Ver detalle completo
+                              Ver detalle
                             </Button>
                             <Button
                               size="sm"
                               variant="outline"
                               onClick={() => handleAction('toggle_plan', u.id)}
                               disabled={actionLoading === `toggle_plan-${u.id}`}
-                              className={`border-amber-500/40 text-amber-400 hover:bg-amber-500/10 ${
+                              className={`border-amber-500/40 text-amber-400 hover:bg-amber-500/10 h-9 text-xs ${
                                 u.plan === 'pro' ? 'bg-amber-500/10' : ''
                               }`}
                             >
@@ -588,14 +588,14 @@ export function SuperAdminClient({ admin }: { admin: AdminInfo }) {
                                 variant="outline"
                                 onClick={() => handleAction('toggle_super_admin', u.id)}
                                 disabled={actionLoading === `toggle_super_admin-${u.id}`}
-                                className="border-amber-500/40 text-amber-400 hover:bg-amber-500/10"
+                                className="border-amber-500/40 text-amber-400 hover:bg-amber-500/10 h-9 text-xs"
                               >
                                 {actionLoading === `toggle_super_admin-${u.id}` ? (
                                   <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
                                 ) : (
                                   <UserCog className="w-3.5 h-3.5 mr-1.5" />
                                 )}
-                                Dar Super Admin
+                                Super Admin
                               </Button>
                             )}
                             {!u.is_super_admin && (
@@ -604,7 +604,7 @@ export function SuperAdminClient({ admin }: { admin: AdminInfo }) {
                                 variant="outline"
                                 onClick={() => handleAction('toggle_active', u.id, u.is_active === false ? undefined : { reason: 'Desactivado por admin' })}
                                 disabled={actionLoading === `toggle_active-${u.id}`}
-                                className={`${
+                                className={`h-9 text-xs ${
                                   u.is_active === false
                                     ? 'border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/10'
                                     : 'border-orange-500/40 text-orange-400 hover:bg-orange-500/10'
@@ -617,7 +617,7 @@ export function SuperAdminClient({ admin }: { admin: AdminInfo }) {
                                 ) : (
                                   <Ban className="w-3.5 h-3.5 mr-1.5" />
                                 )}
-                                {u.is_active === false ? 'Reactivar' : 'Desactivar (ban)'}
+                                {u.is_active === false ? 'Reactivar' : 'Ban'}
                               </Button>
                             )}
                             {!u.is_super_admin && (
@@ -626,7 +626,7 @@ export function SuperAdminClient({ admin }: { admin: AdminInfo }) {
                                 variant="outline"
                                 onClick={() => handleDeleteUser(u.id, u.email)}
                                 disabled={actionLoading === `delete_user-${u.id}`}
-                                className="border-red-500/40 text-red-400 hover:bg-red-500/10"
+                                className="border-red-500/40 text-red-400 hover:bg-red-500/10 h-9 text-xs"
                               >
                                 {actionLoading === `delete_user-${u.id}` ? (
                                   <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
@@ -645,11 +645,11 @@ export function SuperAdminClient({ admin }: { admin: AdminInfo }) {
 
                 {totalPages > 1 && (
                   <div className="flex items-center justify-center gap-2 mt-6">
-                    <Button variant="ghost" size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1} className="text-white/60">
+                    <Button variant="ghost" size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1} className="text-white/60 h-9 w-9 p-0">
                       <ChevronLeft className="w-4 h-4" />
                     </Button>
                     <span className="text-sm text-white/50">Página {page} de {totalPages}</span>
-                    <Button variant="ghost" size="sm" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages} className="text-white/60">
+                    <Button variant="ghost" size="sm" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages} className="text-white/60 h-9 w-9 p-0">
                       <ChevronRight className="w-4 h-4" />
                     </Button>
                   </div>
@@ -659,7 +659,7 @@ export function SuperAdminClient({ admin }: { admin: AdminInfo }) {
           </>
         )}
 
-        {/* DOMAINS TAB */}
+        {/* DOMAINS TAB — Mobile cards, desktop table */}
         {activeTab === 'domains' && (
           loading ? (
             <div className="flex items-center justify-center py-20">
@@ -672,101 +672,141 @@ export function SuperAdminClient({ admin }: { admin: AdminInfo }) {
               <p className="text-white/50">Ningún usuario ha configurado dominios aún.</p>
             </div>
           ) : (
-            <div className="overflow-x-auto bg-white/[0.03] border border-white/10 rounded-2xl">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-white/10 text-left text-white/50 text-xs">
-                    <th className="p-4">Dominio</th>
-                    <th className="p-4">Usuario</th>
-                    <th className="p-4">Menú</th>
-                    <th className="p-4">Estado</th>
-                    <th className="p-4">SSL</th>
-                    <th className="p-4">Creado</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {domains.map((d) => (
-                    <tr key={d.id} className="border-b border-white/5 hover:bg-white/[0.02]">
-                      <td className="p-4 font-medium">{d.domain}</td>
-                      <td className="p-4">
-                        <div>{d.profiles?.full_name || '—'}</div>
-                        <div className="text-xs text-white/40">{d.profiles?.email}</div>
-                      </td>
-                      <td className="p-4">{d.menus?.name || '—'}</td>
-                      <td className="p-4">
-                        {d.is_verified ? (
-                          <span className="flex items-center gap-1 text-emerald-400 text-xs">
-                            <CheckCircle2 className="w-3.5 h-3.5" /> Verificado
-                          </span>
-                        ) : (
-                          <span className="flex items-center gap-1 text-amber-400 text-xs">
-                            <XCircle className="w-3.5 h-3.5" /> Pendiente
-                          </span>
-                        )}
-                      </td>
-                      <td className="p-4">
-                        <span className={`px-2 py-0.5 rounded-full text-xs ${
-                          d.ssl_status === 'active' ? 'bg-emerald-500/20 text-emerald-400' :
-                          d.ssl_status === 'failed' ? 'bg-red-500/20 text-red-400' :
-                          'bg-white/5 text-white/60'
-                        }`}>
-                          {d.ssl_status}
+            <>
+              {/* Mobile cards */}
+              <div className="md:hidden space-y-3">
+                {domains.map((d) => (
+                  <div key={d.id} className="bg-white/[0.03] border border-white/10 rounded-xl p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="font-medium text-sm truncate">{d.domain}</div>
+                      {d.is_verified ? (
+                        <span className="flex items-center gap-1 text-emerald-400 text-[10px] flex-shrink-0">
+                          <CheckCircle2 className="w-3 h-3" /> Verificado
                         </span>
-                      </td>
-                      <td className="p-4 text-white/50">{new Date(d.created_at).toLocaleDateString('es-PE')}</td>
+                      ) : (
+                        <span className="flex items-center gap-1 text-amber-400 text-[10px] flex-shrink-0">
+                          <XCircle className="w-3 h-3" /> Pendiente
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-xs text-white/60 mb-1">
+                      {d.profiles?.full_name || '—'} · {d.profiles?.email}
+                    </div>
+                    <div className="text-xs text-white/40">
+                      Menú: {d.menus?.name || '—'}
+                    </div>
+                    <div className="flex items-center justify-between mt-2 pt-2 border-t border-white/5">
+                      <span className="text-[10px] text-white/40">SSL</span>
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] ${
+                        d.ssl_status === 'active' ? 'bg-emerald-500/20 text-emerald-400' :
+                        d.ssl_status === 'failed' ? 'bg-red-500/20 text-red-400' :
+                        'bg-white/5 text-white/60'
+                      }`}>
+                        {d.ssl_status}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {/* Desktop table */}
+              <div className="hidden md:block overflow-x-auto bg-white/[0.03] border border-white/10 rounded-2xl">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-white/10 text-left text-white/50 text-xs">
+                      <th className="p-4">Dominio</th>
+                      <th className="p-4">Usuario</th>
+                      <th className="p-4">Menú</th>
+                      <th className="p-4">Estado</th>
+                      <th className="p-4">SSL</th>
+                      <th className="p-4">Creado</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {domains.map((d) => (
+                      <tr key={d.id} className="border-b border-white/5 hover:bg-white/[0.02]">
+                        <td className="p-4 font-medium">{d.domain}</td>
+                        <td className="p-4">
+                          <div>{d.profiles?.full_name || '—'}</div>
+                          <div className="text-xs text-white/40">{d.profiles?.email}</div>
+                        </td>
+                        <td className="p-4">{d.menus?.name || '—'}</td>
+                        <td className="p-4">
+                          {d.is_verified ? (
+                            <span className="flex items-center gap-1 text-emerald-400 text-xs">
+                              <CheckCircle2 className="w-3.5 h-3.5" /> Verificado
+                            </span>
+                          ) : (
+                            <span className="flex items-center gap-1 text-amber-400 text-xs">
+                              <XCircle className="w-3.5 h-3.5" /> Pendiente
+                            </span>
+                          )}
+                        </td>
+                        <td className="p-4">
+                          <span className={`px-2 py-0.5 rounded-full text-xs ${
+                            d.ssl_status === 'active' ? 'bg-emerald-500/20 text-emerald-400' :
+                            d.ssl_status === 'failed' ? 'bg-red-500/20 text-red-400' :
+                            'bg-white/5 text-white/60'
+                          }`}>
+                            {d.ssl_status}
+                          </span>
+                        </td>
+                        <td className="p-4 text-white/50">{new Date(d.created_at).toLocaleDateString('es-PE')}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )
         )}
       </main>
 
-      {/* USER DETAIL MODAL */}
+      {/* USER DETAIL MODAL — Mobile-first ultra-pro responsive */}
       {detailModalOpen && (
         <div
-          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
           onClick={() => setDetailModalOpen(false)}
         >
           <div
-            className="bg-[#0a0a14] border border-amber-500/30 rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+            className="bg-[#0a0a14] border border-amber-500/30 rounded-t-3xl sm:rounded-2xl max-w-4xl w-full max-h-[92vh] sm:max-h-[90vh] overflow-y-auto overscroll-contain"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="sticky top-0 bg-[#0a0a14] border-b border-white/10 p-5 flex items-center justify-between z-10">
-              <h2 className="text-lg font-bold flex items-center gap-2">
-                <Eye className="w-5 h-5 text-amber-400" />
-                Detalle completo del usuario
+            {/* Sticky header — touch-friendly tap target (44px min) */}
+            <div className="sticky top-0 bg-[#0a0a14]/95 backdrop-blur border-b border-white/10 px-4 sm:px-5 py-3.5 sm:py-4 flex items-center justify-between z-10">
+              <h2 className="text-base sm:text-lg font-bold flex items-center gap-2 min-w-0">
+                <Eye className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400 flex-shrink-0" />
+                <span className="truncate">Detalle del usuario</span>
               </h2>
               <button
                 onClick={() => setDetailModalOpen(false)}
-                className="text-white/40 hover:text-white p-1 rounded hover:bg-white/10"
+                className="w-9 h-9 sm:w-8 sm:h-8 flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 rounded-lg transition flex-shrink-0"
+                aria-label="Cerrar"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="p-5">
+            <div className="p-4 sm:p-5 space-y-4">
               {detailLoading || !userDetail ? (
-                <div className="flex items-center justify-center py-12">
+                <div className="flex items-center justify-center py-16">
                   <Loader2 className="w-8 h-8 animate-spin text-amber-400" />
                 </div>
               ) : (
                 <>
-                  {/* Profile */}
-                  <div className="bg-white/[0.03] border border-white/10 rounded-xl p-4 mb-4">
-                    <div className="flex items-center gap-4 mb-4">
-                      <div className="w-16 h-16 rounded-full bg-gradient-to-br from-amber-500 to-amber-700 flex items-center justify-center text-xl font-bold text-black">
+                  {/* Profile card — mobile-first stacked layout */}
+                  <div className="bg-white/[0.03] border border-white/10 rounded-xl p-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-4">
+                      <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-gradient-to-br from-amber-500 to-amber-700 flex items-center justify-center text-xl font-bold text-black flex-shrink-0 mx-auto sm:mx-0">
                         {userDetail.profile.full_name?.[0]?.toUpperCase() ||
                           userDetail.profile.email[0].toUpperCase()}
                       </div>
-                      <div>
-                        <div className="font-bold text-base">
+                      <div className="text-center sm:text-left min-w-0 flex-1">
+                        <div className="font-bold text-base sm:text-lg break-words">
                           {userDetail.profile.full_name || 'Sin nombre'}
                         </div>
-                        <div className="text-sm text-white/60">{userDetail.profile.email}</div>
-                        <div className="flex gap-2 mt-1">
-                          <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                        <div className="text-sm text-white/60 break-words">{userDetail.profile.email}</div>
+                        <div className="flex flex-wrap gap-1.5 mt-2 justify-center sm:justify-start">
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-bold ${
                             userDetail.profile.plan === 'pro'
                               ? 'bg-emerald-500/20 text-emerald-400'
                               : 'bg-white/10 text-white/60'
@@ -774,95 +814,123 @@ export function SuperAdminClient({ admin }: { admin: AdminInfo }) {
                             {userDetail.profile.plan?.toUpperCase()}
                           </span>
                           {userDetail.profile.is_super_admin && (
-                            <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 text-xs font-bold">
+                            <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 text-[10px] sm:text-xs font-bold">
                               SUPER ADMIN
                             </span>
                           )}
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-bold ${
+                            userDetail.profile.is_active === false
+                              ? 'bg-red-500/20 text-red-400'
+                              : 'bg-emerald-500/20 text-emerald-400'
+                          }`}>
+                            {userDetail.profile.is_active === false ? 'BANEADO' : 'ACTIVO'}
+                          </span>
                         </div>
                       </div>
                     </div>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
-                      <div>
-                        <div className="text-white/40 text-xs">ID</div>
-                        <div className="font-mono text-xs">{userDetail.profile.id.slice(0, 8)}...</div>
+                    {/* Grid de datos — 1 col mobile, 2 tablet, 3 desktop */}
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm pt-3 border-t border-white/5">
+                      <div className="min-w-0">
+                        <div className="text-white/40 text-[10px] uppercase tracking-wider mb-0.5">ID</div>
+                        <div className="font-mono text-xs truncate">{userDetail.profile.id.slice(0, 8)}...</div>
                       </div>
-                      <div>
-                        <div className="text-white/40 text-xs">Registro</div>
-                        <div>{new Date(userDetail.profile.created_at).toLocaleString('es-PE')}</div>
+                      <div className="min-w-0">
+                        <div className="text-white/40 text-[10px] uppercase tracking-wider mb-0.5">Registro</div>
+                        <div className="text-xs sm:text-sm">{new Date(userDetail.profile.created_at).toLocaleDateString('es-PE')}</div>
                       </div>
-                      <div>
-                        <div className="text-white/40 text-xs">MP Status</div>
-                        <div>{userDetail.profile.mp_status || '—'}</div>
+                      <div className="min-w-0">
+                        <div className="text-white/40 text-[10px] uppercase tracking-wider mb-0.5">MP Status</div>
+                        <div className="text-xs sm:text-sm">{userDetail.profile.mp_status || '—'}</div>
                       </div>
-                      <div>
-                        <div className="text-white/40 text-xs">BG removals</div>
-                        <div>{userDetail.profile.bg_removals_used}</div>
+                      <div className="min-w-0">
+                        <div className="text-white/40 text-[10px] uppercase tracking-wider mb-0.5">BG removals</div>
+                        <div className="text-xs sm:text-sm">{userDetail.profile.bg_removals_used}</div>
                       </div>
-                      <div>
-                        <div className="text-white/40 text-xs">Plan renovación</div>
-                        <div>{userDetail.profile.current_period_end
+                      <div className="min-w-0">
+                        <div className="text-white/40 text-[10px] uppercase tracking-wider mb-0.5">Renovación</div>
+                        <div className="text-xs sm:text-sm">{userDetail.profile.current_period_end
                           ? new Date(userDetail.profile.current_period_end).toLocaleDateString('es-PE')
                           : '—'}</div>
                       </div>
-                      <div>
-                        <div className="text-white/40 text-xs">Estado</div>
-                        <div>{userDetail.profile.is_active === false ? '🔴 Baneado' : '🟢 Activo'}</div>
+                      <div className="min-w-0">
+                        <div className="text-white/40 text-[10px] uppercase tracking-wider mb-0.5">Última act.</div>
+                        <div className="text-xs sm:text-sm">{new Date(userDetail.profile.updated_at).toLocaleDateString('es-PE')}</div>
                       </div>
                     </div>
                   </div>
 
-                  {/* Menus */}
-                  <div className="bg-white/[0.03] border border-white/10 rounded-xl p-4 mb-4">
-                    <h3 className="font-semibold mb-3 flex items-center gap-2">
+                  {/* Stats rápidas — 2x2 grid mobile, 4 cols desktop */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    <div className="bg-white/[0.03] border border-white/10 rounded-lg p-3 text-center">
+                      <div className="text-2xl font-bold text-amber-400">{userDetail.profile.menus_count || 0}</div>
+                      <div className="text-[10px] text-white/50 uppercase tracking-wider mt-0.5">Menús</div>
+                    </div>
+                    <div className="bg-white/[0.03] border border-white/10 rounded-lg p-3 text-center">
+                      <div className="text-2xl font-bold text-emerald-400">{userDetail.profile.published_menus || 0}</div>
+                      <div className="text-[10px] text-white/50 uppercase tracking-wider mt-0.5">Publicados</div>
+                    </div>
+                    <div className="bg-white/[0.03] border border-white/10 rounded-lg p-3 text-center">
+                      <div className="text-2xl font-bold text-pink-400">{userDetail.profile.views_total || 0}</div>
+                      <div className="text-[10px] text-white/50 uppercase tracking-wider mt-0.5">Vistas</div>
+                    </div>
+                    <div className="bg-white/[0.03] border border-white/10 rounded-lg p-3 text-center">
+                      <div className="text-2xl font-bold text-purple-400">{userDetail.profile.dishes_count || 0}</div>
+                      <div className="text-[10px] text-white/50 uppercase tracking-wider mt-0.5">Platos</div>
+                    </div>
+                  </div>
+
+                  {/* Menus list — mobile stacked */}
+                  <div className="bg-white/[0.03] border border-white/10 rounded-xl p-4">
+                    <h3 className="font-semibold mb-3 flex items-center gap-2 text-sm sm:text-base">
                       <MenuIcon className="w-4 h-4 text-amber-400" />
                       Menús ({userDetail.menus.length})
                     </h3>
                     {userDetail.menus.length === 0 ? (
-                      <p className="text-sm text-white/40 py-3">Sin menús</p>
+                      <p className="text-sm text-white/40 py-3 text-center">Sin menús creados</p>
                     ) : (
-                      <div className="space-y-3">
+                      <div className="space-y-2.5">
                         {userDetail.menus.map((m: any) => (
-                          <div key={m.id} className="bg-white/[0.02] rounded-lg p-3">
-                            <div className="flex items-center justify-between mb-2">
-                              <div>
-                                <div className="font-medium text-sm flex items-center gap-2">
-                                  {m.name}
+                          <div key={m.id} className="bg-white/[0.02] border border-white/5 rounded-lg p-3">
+                            <div className="flex items-start justify-between gap-2 mb-2">
+                              <div className="min-w-0 flex-1">
+                                <div className="font-medium text-sm flex items-center gap-2 flex-wrap">
+                                  <span className="truncate">{m.name}</span>
                                   {m.is_published ? (
-                                    <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 text-[10px] font-bold">PUBLICADO</span>
+                                    <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 text-[9px] font-bold flex-shrink-0">PUBLICADO</span>
                                   ) : (
-                                    <span className="px-1.5 py-0.5 rounded bg-white/10 text-white/40 text-[10px] font-bold">BORRADOR</span>
+                                    <span className="px-1.5 py-0.5 rounded bg-white/10 text-white/40 text-[9px] font-bold flex-shrink-0">BORRADOR</span>
                                   )}
                                 </div>
-                                <div className="text-xs text-white/40">/{m.slug}</div>
+                                <div className="text-xs text-white/40 truncate">/{m.slug}</div>
                               </div>
-                              <div className="flex items-center gap-2 text-xs">
-                                <span className="px-2 py-0.5 rounded-full bg-pink-500/20 text-pink-400 font-bold">
+                              <div className="flex items-center gap-2 flex-shrink-0">
+                                <span className="px-2 py-0.5 rounded-full bg-pink-500/20 text-pink-400 text-[10px] font-bold whitespace-nowrap">
                                   {m.views_count} vistas
                                 </span>
                                 <a
-                                  href={`/m/${m.slug}`}
+                                  href={`/r/${m.slug}`}
                                   target="_blank"
                                   rel="noreferrer"
-                                  className="text-white/40 hover:text-white"
+                                  className="text-white/40 hover:text-white p-1"
+                                  aria-label="Ver menú público"
                                 >
                                   <ExternalLink className="w-3.5 h-3.5" />
                                 </a>
                               </div>
                             </div>
                             {m.color && (
-                              <div className="flex items-center gap-2 text-xs text-white/50 mb-2">
-                                <span>Color:</span>
-                                <div className="w-4 h-4 rounded-full border border-white/20" style={{ background: m.color }} />
+                              <div className="flex items-center gap-2 text-[11px] text-white/50 mb-2 flex-wrap">
+                                <div className="w-3 h-3 rounded-full border border-white/20 flex-shrink-0" style={{ background: m.color }} />
                                 <span className="font-mono">{m.color}</span>
-                                <span className="ml-3">Moneda: {m.currency}</span>
+                                {m.currency && <span>· {m.currency}</span>}
                                 {m.whatsapp && (
-                                  <span className="ml-3 flex items-center gap-1">
+                                  <span className="flex items-center gap-1">
                                     <Phone className="w-3 h-3" /> {m.whatsapp}
                                   </span>
                                 )}
                               </div>
                             )}
-                            <div className="text-xs text-white/40">
+                            <div className="text-[11px] text-white/40">
                               {m.categories.length} categorías · {m.categories.reduce((sum: number, c: any) => sum + c.dishes.length, 0)} platos
                             </div>
                           </div>
@@ -871,27 +939,40 @@ export function SuperAdminClient({ admin }: { admin: AdminInfo }) {
                     )}
                   </div>
 
-                  {/* Recent views */}
+                  {/* Recent views — mobile scrollable list */}
                   <div className="bg-white/[0.03] border border-white/10 rounded-xl p-4">
-                    <h3 className="font-semibold mb-3 flex items-center gap-2">
+                    <h3 className="font-semibold mb-3 flex items-center gap-2 text-sm sm:text-base">
                       <Eye className="w-4 h-4 text-amber-400" />
-                      Últimas 50 vistas
+                      Últimas vistas
+                      <span className="text-xs text-white/40 font-normal">({userDetail.recent_views.length})</span>
                     </h3>
                     {userDetail.recent_views.length === 0 ? (
-                      <p className="text-sm text-white/40 py-3">Sin vistas registradas</p>
+                      <p className="text-sm text-white/40 py-3 text-center">Sin vistas registradas</p>
                     ) : (
-                      <div className="max-h-60 overflow-y-auto space-y-1">
+                      <div className="max-h-60 overflow-y-auto space-y-1.5 overscroll-contain">
                         {userDetail.recent_views.map((v: any) => (
-                          <div key={v.id} className="flex items-center justify-between text-xs bg-white/[0.02] rounded px-3 py-2">
-                            <div className="flex items-center gap-3">
-                              <span className="text-white/60">{v.menu_name}</span>
-                              <span className="text-white/40 font-mono">{v.ip || '—'}</span>
+                          <div key={v.id} className="flex items-center justify-between gap-2 text-xs bg-white/[0.02] rounded-lg px-3 py-2">
+                            <div className="flex items-center gap-2 min-w-0 flex-1">
+                              <span className="text-white/70 truncate">{v.menu_name}</span>
+                              <span className="text-white/40 font-mono text-[10px] hidden sm:inline">{v.ip || '—'}</span>
                             </div>
-                            <span className="text-white/40">{new Date(v.created_at).toLocaleString('es-PE')}</span>
+                            <span className="text-white/40 text-[10px] whitespace-nowrap">{new Date(v.created_at).toLocaleString('es-PE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>
                           </div>
                         ))}
                       </div>
                     )}
+                  </div>
+
+                  {/* Footer action bar — mobile sticky bottom */}
+                  <div className="sticky bottom-0 bg-[#0a0a14]/95 backdrop-blur border-t border-white/10 -mx-4 sm:-mx-5 -mb-4 sm:-mb-5 px-4 sm:px-5 py-3 flex gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setDetailModalOpen(false)}
+                      className="flex-1 text-white/70 hover:text-white hover:bg-white/5 h-10"
+                    >
+                      Cerrar
+                    </Button>
                   </div>
                 </>
               )}

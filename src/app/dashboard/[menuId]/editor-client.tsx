@@ -91,8 +91,10 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount }: Props)
     show_category_icons: (initialMenu as any).theme_show_category_icons !== false,
     rounded_corners: (initialMenu as any).theme_rounded_corners !== false,
     dark_mode: (initialMenu as any).theme_dark_mode !== false,
+    preset_slug: null as string | null,
   });
   const [showAppearancePanel, setShowAppearancePanel] = useState(false);
+  const [showPreviewMobile, setShowPreviewMobile] = useState(false);
   const [categories, setCategories] = useState<LocalCategory[]>(
     initialMenu.categories?.map((c) => ({
       id: c.id,
@@ -425,22 +427,22 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount }: Props)
 
   return (
     <div className="min-h-screen bg-[#07070b] text-white">
-      {/* Top bar */}
-      <header className="border-b border-white/10 bg-[#0a0a14] backdrop-blur sticky top-0 z-40">
-        <div className="px-6 py-3 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3 min-w-0">
-            <a href="/dashboard" className="text-white/60 hover:text-white flex-shrink-0">
+      {/* Top bar — mobile responsive */}
+      <header className="border-b border-white/10 bg-[#0a0a14] backdrop-blur sticky top-0 z-40 safe-top">
+        <div className="px-3 sm:px-6 py-2.5 sm:py-3 flex items-center justify-between gap-2 sm:gap-4">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+            <a href="/dashboard" className="text-white/60 hover:text-white flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-lg hover:bg-white/5">
               <ArrowLeft className="w-5 h-5" />
             </a>
-            <div className="min-w-0">
-              <div className="font-semibold truncate">{menu.name || 'Sin nombre'}</div>
-              <div className="flex items-center gap-2 text-xs text-white/40">
+            <div className="min-w-0 flex-1">
+              <div className="font-semibold truncate text-sm sm:text-base">{menu.name || 'Sin nombre'}</div>
+              <div className="flex items-center gap-2 text-[10px] sm:text-xs text-white/40">
                 {saving ? (
                   <><Loader2 className="w-3 h-3 animate-spin" /> Guardando...</>
                 ) : savedAt ? (
-                  <><CheckCircle2 className="w-3 h-3 text-emerald-500" /> Guardado {savedAt.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}</>
+                  <><CheckCircle2 className="w-3 h-3 text-emerald-500" /> {savedAt.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}</>
                 ) : (
-                  'Auto-guardado activo'
+                  'Auto-guardado'
                 )}
                 {menu.is_published && (
                   <span className="text-emerald-400">· Publicado</span>
@@ -448,36 +450,36 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount }: Props)
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
             <Button
               variant="ghost"
               size="sm"
               onClick={() => save(false)}
               disabled={saving}
-              className="text-white/70 hover:text-white hover:bg-white/5"
+              className="text-white/70 hover:text-white hover:bg-white/5 h-9 px-2 sm:px-3"
             >
               <Save className="w-4 h-4" />
-              <span className="hidden md:inline">Guardar</span>
+              <span className="hidden md:inline ml-1">Guardar</span>
             </Button>
             {menu.is_published && (
               <Button
                 variant="ghost"
                 size="sm"
                 asChild
-                className="text-white/70 hover:text-white hover:bg-white/5"
+                className="text-white/70 hover:text-white hover:bg-white/5 h-9 px-2 sm:px-3"
               >
                 <a href={`/r/${initialMenu.slug}`} target="_blank" rel="noreferrer">
                   <ExternalLink className="w-4 h-4" />
-                  <span className="hidden md:inline">Ver público</span>
+                  <span className="hidden md:inline ml-1">Ver público</span>
                 </a>
               </Button>
             )}
             <Button
               onClick={handlePublish}
               disabled={publishing}
-              className="bg-gradient-to-r from-[#d4af37] to-[#f4d35e] text-[#1a1a2e] hover:opacity-90"
+              className="bg-gradient-to-r from-[#d4af37] to-[#f4d35e] text-[#1a1a2e] hover:opacity-90 h-9 px-3 sm:px-4 text-xs sm:text-sm"
             >
-              {publishing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+              {publishing ? <Loader2 className="w-4 h-4 mr-1 sm:mr-2 animate-spin" /> : null}
               {menu.is_published ? 'Actualizar' : 'Publicar'}
             </Button>
           </div>
@@ -485,15 +487,15 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount }: Props)
       </header>
 
       <main className="grid grid-cols-1 lg:grid-cols-[1fr_420px] gap-0 max-w-[1600px] mx-auto">
-        {/* Form pane */}
-        <section className="p-6 space-y-6 lg:max-h-[calc(100vh-65px)] lg:overflow-y-auto">
+        {/* Form pane — mobile: full width with padding */}
+        <section className="p-4 sm:p-6 space-y-4 sm:space-y-6 lg:max-h-[calc(100vh-65px)] lg:overflow-y-auto pb-32 lg:pb-6">
           {/* Info card */}
-          <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-6">
-            <div className="flex items-center gap-3 mb-5">
+          <div className="bg-white/[0.03] border border-white/10 rounded-xl sm:rounded-2xl p-4 sm:p-6">
+            <div className="flex items-center gap-3 mb-4 sm:mb-5">
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#d4af37] to-[#f4d35e] flex items-center justify-center text-sm font-bold text-[#1a1a2e]">
                 1
               </div>
-              <h2 className="font-semibold">Información del restaurante</h2>
+              <h2 className="font-semibold text-sm sm:text-base">Información del restaurante</h2>
             </div>
 
             <div className="space-y-4">
@@ -633,6 +635,102 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount }: Props)
               </DialogHeader>
 
               <div className="space-y-5 py-4">
+                {/* Theme presets — Pro highlight feature */}
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    Temas pre-diseñados (Pro)
+                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-[#d4af37]/20 text-[#d4af37] text-[10px] font-semibold">
+                      PREMIUM
+                    </span>
+                  </Label>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {[
+                      { slug: 'elegante-oscuro', name: 'Elegante Oscuro', color: '#d4af37', dark: true },
+                      { slug: 'moderno-claro', name: 'Moderno Claro', color: '#f5f5f0', dark: false },
+                      { slug: 'picante-mexicano', name: 'Picante', color: '#ff6b35', dark: true },
+                      { slug: 'fresco-verde', name: 'Fresco', color: '#06d6a0', dark: false },
+                      { slug: 'premium-gold', name: 'Premium Gold', color: '#d4af37', dark: true },
+                      { slug: 'grid-completo', name: 'Grid', color: '#9d4edd', dark: true },
+                      { slug: 'parrilla-rustica', name: 'Parrilla', color: '#c0392b', dark: true },
+                      { slug: 'libre-pro', name: 'Libre', color: '#ffffff', dark: true },
+                    ].map((p) => {
+                      const isActive = theme.preset_slug === p.slug;
+                      const locked = plan.id === 'free';
+                      return (
+                        <button
+                          key={p.slug}
+                          type="button"
+                          disabled={locked}
+                          onClick={async () => {
+                            if (locked) return;
+                            // Aplicar preset via RPC
+                            try {
+                              const res = await fetch(`/api/menus/${initialMenu.id}/preset`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ preset_slug: p.slug }),
+                              });
+                              const data = await res.json();
+                              if (!res.ok) throw new Error(data.error || 'Error');
+                              // Recargar tema desde data
+                              if (data.theme) {
+                                setTheme({
+                                  color_secondary: data.theme.theme_color_secondary || '#1a1a2e',
+                                  font: data.theme.theme_font || 'Inter',
+                                  layout: data.theme.theme_layout || 'single',
+                                  image_size: data.theme.theme_image_size || 'medium',
+                                  card_style: data.theme.theme_card_style || 'expanded',
+                                  cover_url: data.theme.theme_cover_url || '',
+                                  show_search: data.theme.theme_show_search !== false,
+                                  show_category_icons: data.theme.theme_show_category_icons !== false,
+                                  rounded_corners: data.theme.theme_rounded_corners !== false,
+                                  dark_mode: data.theme.theme_dark_mode !== false,
+                                  preset_slug: p.slug,
+                                } as any);
+                              }
+                              toast.success(`Tema "${p.name}" aplicado`);
+                            } catch (err) {
+                              toast.error(err instanceof Error ? err.message : 'Error al aplicar tema');
+                            }
+                          }}
+                          className={`relative p-2 rounded-lg border text-xs transition overflow-hidden ${
+                            isActive
+                              ? 'border-[#d4af37] ring-2 ring-[#d4af37]/40'
+                              : 'border-white/10 hover:border-white/20'
+                          } disabled:opacity-40 disabled:cursor-not-allowed`}
+                          style={{
+                            background: p.dark
+                              ? `linear-gradient(135deg, ${p.color}33, #0a0a14)`
+                              : `linear-gradient(135deg, ${p.color}, #ffffff)`,
+                            color: p.dark ? '#fff' : '#1a1a2e',
+                          }}
+                        >
+                          <div className="font-medium truncate">{p.name}</div>
+                          <div
+                            className="w-full h-1.5 rounded-full mt-1.5"
+                            style={{ background: p.color }}
+                          />
+                          {locked && (
+                            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                              <span className="text-[9px] font-bold text-[#d4af37]">PRO</span>
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {plan.id === 'free' && (
+                    <p className="text-xs text-white/40">
+                      Upgrade a Pro para aplicar temas pre-diseñados con 1 clic.
+                    </p>
+                  )}
+                </div>
+
+                {/* Divider */}
+                <div className="border-t border-white/10 pt-5">
+                  <div className="text-xs uppercase tracking-wider text-white/40 mb-3">Personalización manual</div>
+                </div>
+
                 {/* Layout */}
                 <div className="space-y-2">
                   <Label>Layout de platos</Label>
@@ -836,29 +934,29 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount }: Props)
           </Dialog>
 
           {/* Categories card */}
-          <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-6">
-            <div className="flex items-center gap-3 mb-5">
+          <div className="bg-white/[0.03] border border-white/10 rounded-xl sm:rounded-2xl p-4 sm:p-6">
+            <div className="flex items-center gap-3 mb-4 sm:mb-5 flex-wrap">
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#d4af37] to-[#f4d35e] flex items-center justify-center text-sm font-bold text-[#1a1a2e]">
                 2
               </div>
-              <h2 className="font-semibold">Categorías y platos</h2>
-              <div className="ml-auto flex items-center gap-2">
+              <h2 className="font-semibold text-sm sm:text-base flex-1 min-w-0">Categorías y platos</h2>
+              <div className="ml-auto flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
                 <input ref={importFileRef} type="file" accept=".json,.csv,.xls,.xlsx" className="hidden" onChange={handleImport} />
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => importFileRef.current?.click()}
                   disabled={importing}
-                  className="text-white/60 hover:text-white hover:bg-white/5 text-xs"
+                  className="text-white/60 hover:text-white hover:bg-white/5 text-xs h-9 px-2 sm:px-3"
                 >
                   {importing ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <Upload className="w-3.5 h-3.5 mr-1" />}
-                  Importar
+                  <span className="hidden sm:inline">Importar</span>
                 </Button>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm" className="text-white/60 hover:text-white hover:bg-white/5 text-xs">
+                    <Button variant="ghost" size="sm" className="text-white/60 hover:text-white hover:bg-white/5 text-xs h-9 px-2 sm:px-3">
                       <Download className="w-3.5 h-3.5 mr-1" />
-                      Exportar
+                      <span className="hidden sm:inline">Exportar</span>
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent className="bg-[#15152a] border-white/10">
@@ -905,17 +1003,19 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount }: Props)
                     {cat.dishes.map((dish) => (
                       <div
                         key={dish.id}
-                        className="grid grid-cols-[64px_1fr] gap-3 p-3 bg-white/[0.02] border border-white/10 rounded-lg"
+                        className="flex flex-col sm:grid sm:grid-cols-[64px_1fr] gap-3 p-3 bg-white/[0.02] border border-white/10 rounded-lg"
                       >
-                        <ImageUploader
-                          initialUrl={dish.image}
-                          onUploaded={(url) => handleDishImageUploaded(cat.id, dish.id, url)}
-                          plan={plan}
-                          imagesCount={imagesCount}
-                          shape="square"
-                          size={64}
-                        />
-                        <div className="space-y-2 min-w-0">
+                        <div className="flex items-start gap-3 sm:block">
+                          <ImageUploader
+                            initialUrl={dish.image}
+                            onUploaded={(url) => handleDishImageUploaded(cat.id, dish.id, url)}
+                            plan={plan}
+                            imagesCount={imagesCount}
+                            shape="square"
+                            size={64}
+                          />
+                        </div>
+                        <div className="space-y-2 min-w-0 flex-1">
                           <Input
                             value={dish.name}
                             onChange={(e) => updateDish(cat.id, dish.id, 'name', e.target.value)}
@@ -981,8 +1081,8 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount }: Props)
           </div>
         </section>
 
-        {/* Preview pane */}
-        <aside className="border-l border-white/10 bg-[#0a0a14] lg:sticky lg:top-[65px] lg:h-[calc(100vh-65px)] p-4 flex flex-col">
+        {/* Preview pane — desktop: sidebar, mobile: collapsible floating button */}
+        <aside className="border-l border-white/10 bg-[#0a0a14] lg:sticky lg:top-[65px] lg:h-[calc(100vh-65px)] p-4 flex-col hidden lg:flex">
           <div className="flex items-center justify-between mb-3 px-2">
             <div className="flex items-center gap-2 text-sm">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
@@ -1005,6 +1105,49 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount }: Props)
           )}
         </aside>
       </main>
+
+      {/* Mobile preview FAB + bottom sheet */}
+      <button
+        onClick={() => setShowPreviewMobile(!showPreviewMobile)}
+        className="lg:hidden fixed bottom-4 right-4 z-30 w-14 h-14 rounded-full bg-gradient-to-br from-[#d4af37] to-[#f4d35e] text-[#1a1a2e] shadow-2xl shadow-[#d4af37]/40 flex items-center justify-center font-bold text-xs safe-bottom"
+        aria-label="Ver preview"
+      >
+        {showPreviewMobile ? <X className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+      </button>
+
+      {showPreviewMobile && (
+        <div
+          className="lg:hidden fixed inset-0 z-40 bg-black/80 backdrop-blur-sm flex items-end"
+          onClick={() => setShowPreviewMobile(false)}
+        >
+          <div
+            className="bg-[#0a0a14] border-t border-white/10 rounded-t-3xl w-full h-[85vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
+              <div className="flex items-center gap-2 text-sm">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="text-white/70 font-medium">Vista previa mobile</span>
+              </div>
+              <button
+                onClick={() => setShowPreviewMobile(false)}
+                className="w-9 h-9 flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 rounded-lg"
+                aria-label="Cerrar preview"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="flex-1 bg-black overflow-hidden p-2">
+              <iframe
+                srcDoc={previewHtml}
+                title="Preview mobile"
+                className="w-full h-full border-0 rounded-xl"
+                sandbox="allow-scripts allow-same-origin"
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

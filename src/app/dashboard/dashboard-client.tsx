@@ -2,6 +2,7 @@
 
 import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -191,41 +192,45 @@ export function DashboardClient({ user, plan, menus, isSuperAdmin = false }: Pro
       {/* ───────── Sidebar desktop (lg+) ───────── */}
       <aside className="hidden lg:flex flex-col w-60 border-r border-white/10 bg-[#0a0a14] p-4 flex-shrink-0">
         <div className="flex items-center gap-3 mb-8 px-2">
-          <a href="/" className="w-9 h-9 rounded-lg bg-gradient-to-br from-[#d4af37] to-[#f4d35e] flex items-center justify-center text-lg font-bold text-[#1a1a2e] hover:opacity-90 transition">
+          <Link href="/" prefetch={false} className="w-9 h-9 rounded-lg bg-gradient-to-br from-[#d4af37] to-[#f4d35e] flex items-center justify-center text-lg font-bold text-[#1a1a2e] hover:opacity-90 transition">
             M
-          </a>
-          <a href="/" className="font-bold hover:text-[#d4af37] transition">MenuPro</a>
+          </Link>
+          <Link href="/" prefetch={false} className="font-bold hover:text-[#d4af37] transition">MenuPro</Link>
         </div>
 
         <nav className="space-y-1 flex-1">
-          <a href="/dashboard" className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-sm font-medium">
+          <Link href="/dashboard" prefetch={true} className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-sm font-medium">
             <LayoutDashboard className="w-4 h-4" />
             Mis menús
-          </a>
-          <a href="/dashboard/generador" className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-white/60 hover:text-white hover:bg-white/5 text-sm transition-colors">
+          </Link>
+          <Link href="/dashboard/generador" prefetch={true} className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-white/60 hover:text-white hover:bg-white/5 text-sm transition-colors">
             <Sparkles className="w-4 h-4" />
             Generador rápido
-          </a>
-          <a href="/dashboard/analytics" className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-white/60 hover:text-white hover:bg-white/5 text-sm transition-colors">
+          </Link>
+          <Link href="/dashboard/analytics" prefetch={true} className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-white/60 hover:text-white hover:bg-white/5 text-sm transition-colors">
             <BarChart3 className="w-4 h-4" />
             Analíticas
             <Crown className="w-3 h-3 text-[#d4af37] ml-auto" />
-          </a>
-          <a href="/dashboard/domains" className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-white/60 hover:text-white hover:bg-white/5 text-sm transition-colors">
+          </Link>
+          <Link href="/dashboard/domains" prefetch={true} className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-white/60 hover:text-white hover:bg-white/5 text-sm transition-colors">
             <Globe className="w-4 h-4" />
             Dominios
             <Crown className="w-3 h-3 text-[#d4af37] ml-auto" />
-          </a>
-          <a href="/dashboard/billing" className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-white/60 hover:text-white hover:bg-white/5 text-sm transition-colors">
+          </Link>
+          <Link href="/dashboard/billing" prefetch={true} className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-white/60 hover:text-white hover:bg-white/5 text-sm transition-colors">
             <CreditCard className="w-4 h-4" />
             Planes
-          </a>
+          </Link>
           {isSuperAdmin && (
-            <a href="/superadmin" className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-amber-400/80 hover:text-amber-400 hover:bg-amber-400/5 text-sm transition-colors border border-amber-400/20 mt-2">
+            <Link href="/superadmin" prefetch={true} className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-amber-400/80 hover:text-amber-400 hover:bg-amber-400/5 text-sm transition-colors border border-amber-400/20 mt-2">
               <Shield className="w-4 h-4" />
               Super Admin
-            </a>
+            </Link>
           )}
+          <Link href="/" prefetch={false} className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-white/40 hover:text-white hover:bg-white/5 text-sm transition-colors mt-2 border-t border-white/5 pt-3">
+            <Home className="w-4 h-4" />
+            Volver al inicio
+          </Link>
         </nav>
 
         {/* User section */}
@@ -260,38 +265,38 @@ export function DashboardClient({ user, plan, menus, isSuperAdmin = false }: Pro
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setDrawerOpen(false)} />
           <aside className="relative w-72 max-w-[80vw] bg-[#0a0a14] border-r border-white/10 p-4 flex flex-col">
             <div className="flex items-center justify-between mb-6">
-              <a href="/" className="flex items-center gap-3">
+              <Link href="/" prefetch={false} onClick={() => setDrawerOpen(false)} className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-[#d4af37] to-[#f4d35e] flex items-center justify-center text-lg font-bold text-[#1a1a2e]">M</div>
                 <span className="font-bold">MenuPro</span>
-              </a>
+              </Link>
               <button onClick={() => setDrawerOpen(false)} className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center">
                 <X className="w-4 h-4" />
               </button>
             </div>
             <nav className="space-y-1 flex-1">
-              <a href="/dashboard" onClick={() => setDrawerOpen(false)} className="flex items-center gap-3 px-3 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-sm font-medium">
+              <Link href="/dashboard" prefetch={true} onClick={() => setDrawerOpen(false)} className="flex items-center gap-3 px-3 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-sm font-medium">
                 <LayoutDashboard className="w-4 h-4" /> Mis menús
-              </a>
-              <a href="/dashboard/generador" onClick={() => setDrawerOpen(false)} className="flex items-center gap-3 px-3 py-3 rounded-xl text-white/60 hover:text-white hover:bg-white/5 text-sm">
+              </Link>
+              <Link href="/dashboard/generador" prefetch={true} onClick={() => setDrawerOpen(false)} className="flex items-center gap-3 px-3 py-3 rounded-xl text-white/60 hover:text-white hover:bg-white/5 text-sm">
                 <Sparkles className="w-4 h-4" /> Generador rápido
-              </a>
-              <a href="/dashboard/analytics" onClick={() => setDrawerOpen(false)} className="flex items-center gap-3 px-3 py-3 rounded-xl text-white/60 hover:text-white hover:bg-white/5 text-sm">
+              </Link>
+              <Link href="/dashboard/analytics" prefetch={true} onClick={() => setDrawerOpen(false)} className="flex items-center gap-3 px-3 py-3 rounded-xl text-white/60 hover:text-white hover:bg-white/5 text-sm">
                 <BarChart3 className="w-4 h-4" /> Analíticas
-              </a>
-              <a href="/dashboard/domains" onClick={() => setDrawerOpen(false)} className="flex items-center gap-3 px-3 py-3 rounded-xl text-white/60 hover:text-white hover:bg-white/5 text-sm">
+              </Link>
+              <Link href="/dashboard/domains" prefetch={true} onClick={() => setDrawerOpen(false)} className="flex items-center gap-3 px-3 py-3 rounded-xl text-white/60 hover:text-white hover:bg-white/5 text-sm">
                 <Globe className="w-4 h-4" /> Dominios
-              </a>
-              <a href="/dashboard/billing" onClick={() => setDrawerOpen(false)} className="flex items-center gap-3 px-3 py-3 rounded-xl text-white/60 hover:text-white hover:bg-white/5 text-sm">
+              </Link>
+              <Link href="/dashboard/billing" prefetch={true} onClick={() => setDrawerOpen(false)} className="flex items-center gap-3 px-3 py-3 rounded-xl text-white/60 hover:text-white hover:bg-white/5 text-sm">
                 <CreditCard className="w-4 h-4" /> Planes
-              </a>
+              </Link>
               {isSuperAdmin && (
-                <a href="/superadmin" onClick={() => setDrawerOpen(false)} className="flex items-center gap-3 px-3 py-3 rounded-xl text-amber-400 hover:bg-amber-400/5 text-sm border border-amber-400/20 mt-2">
+                <Link href="/superadmin" prefetch={true} onClick={() => setDrawerOpen(false)} className="flex items-center gap-3 px-3 py-3 rounded-xl text-amber-400 hover:bg-amber-400/5 text-sm border border-amber-400/20 mt-2">
                   <Shield className="w-4 h-4" /> Super Admin
-                </a>
+                </Link>
               )}
-              <a href="/" onClick={() => setDrawerOpen(false)} className="flex items-center gap-3 px-3 py-3 rounded-xl text-white/50 hover:text-white hover:bg-white/5 text-sm mt-2">
+              <Link href="/" prefetch={false} onClick={() => setDrawerOpen(false)} className="flex items-center gap-3 px-3 py-3 rounded-xl text-white/50 hover:text-white hover:bg-white/5 text-sm mt-2">
                 <Home className="w-4 h-4" /> Volver al inicio
-              </a>
+              </Link>
             </nav>
             <div className="border-t border-white/10 pt-4 space-y-3">
               <div className="px-3 space-y-1">
@@ -637,26 +642,26 @@ export function DashboardClient({ user, plan, menus, isSuperAdmin = false }: Pro
         {/* ───────── Bottom nav mobile (fija) ───────── */}
         <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#0a0a14]/95 backdrop-blur border-t border-white/10 safe-bottom">
           <div className="grid grid-cols-5 gap-1 px-2 py-1.5">
-            <a href="/dashboard" className="flex flex-col items-center gap-0.5 py-1.5 rounded-lg text-white text-[10px] font-medium bg-white/5">
+            <Link href="/dashboard" prefetch={true} className="flex flex-col items-center gap-0.5 py-1.5 rounded-lg text-white text-[10px] font-medium bg-white/5">
               <LayoutDashboard className="w-5 h-5" />
               Menús
-            </a>
-            <a href="/dashboard/generador" className="flex flex-col items-center gap-0.5 py-1.5 rounded-lg text-white/50 text-[10px]">
+            </Link>
+            <Link href="/dashboard/generador" prefetch={true} className="flex flex-col items-center gap-0.5 py-1.5 rounded-lg text-white/50 text-[10px]">
               <Sparkles className="w-5 h-5" />
               Generar
-            </a>
-            <a href="/dashboard/analytics" className="flex flex-col items-center gap-0.5 py-1.5 rounded-lg text-white/50 text-[10px]">
+            </Link>
+            <Link href="/dashboard/analytics" prefetch={true} className="flex flex-col items-center gap-0.5 py-1.5 rounded-lg text-white/50 text-[10px]">
               <BarChart3 className="w-5 h-5" />
               Stats
-            </a>
-            <a href="/dashboard/billing" className="flex flex-col items-center gap-0.5 py-1.5 rounded-lg text-white/50 text-[10px]">
+            </Link>
+            <Link href="/dashboard/billing" prefetch={true} className="flex flex-col items-center gap-0.5 py-1.5 rounded-lg text-white/50 text-[10px]">
               <CreditCard className="w-5 h-5" />
               Plan
-            </a>
-            <a href="/" className="flex flex-col items-center gap-0.5 py-1.5 rounded-lg text-white/50 text-[10px]">
+            </Link>
+            <Link href="/" prefetch={false} className="flex flex-col items-center gap-0.5 py-1.5 rounded-lg text-white/50 text-[10px]">
               <Home className="w-5 h-5" />
               Inicio
-            </a>
+            </Link>
           </div>
         </nav>
       </div>

@@ -168,3 +168,40 @@ body {
     font-size: 16px !important;
   }
 }
+
+/* ───────── xs breakpoint (400px+) para headers densos en mobile ───────── */
+@media (min-width: 400px) {
+  .xs\:block { display: block; }
+  .xs\:inline { display: inline; }
+  .xs\:hidden { display: none; }
+  .xs\:flex { display: flex; }
+}
+
+/* ───────── Hide scrollbar utility (horizontal scroll tabs) ───────── */
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+/* ───────── Better tap targets on mobile ───────── */
+@media (max-width: 768px) {
+  button,
+  a[role="button"],
+  [data-touch-target] {
+    min-height: 36px;
+    min-width: 36px;
+  }
+}
+
+/* ───────── Prevent layout shift on iOS Safari 100vh ───────── */
+.h-screen-mobile {
+  height: 100vh;
+  height: 100dvh;
+}
+.min-h-screen-mobile {
+  min-height: 100vh;
+  min-height: 100dvh;
+}

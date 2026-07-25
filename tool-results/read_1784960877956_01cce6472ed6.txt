@@ -1,0 +1,905 @@
+     1→'use client';
+     2→
+     3→import { useState, useEffect, useCallback } from 'react';
+     4→import { Button } from '@/components/ui/button';
+     5→import { Input } from '@/components/ui/input';
+     6→import {
+     7→  LogOut,
+     8→  Users,
+     9→  LayoutDashboard,
+    10→  Globe,
+    11→  Crown,
+    12→  Shield,
+    13→  Trash2,
+    14→  Search,
+    15→  Loader2,
+    16→  Eye,
+    17→  Menu as MenuIcon,
+    18→  TrendingUp,
+    19→  ChevronLeft,
+    20→  ChevronRight,
+    21→  RefreshCw,
+    22→  CheckCircle2,
+    23→  XCircle,
+    24→  UserCog,
+    25→  Ban,
+    26→  UserCheck,
+    27→  DollarSign,
+    28→  Activity,
+    29→  AlertTriangle,
+    30→  X,
+    31→  ExternalLink,
+    32→  ImageIcon,
+    33→  Phone,
+    34→  Hash,
+    35→} from 'lucide-react';
+    36→import { toast } from 'sonner';
+    37→import { useRouter } from 'next/navigation';
+    38→
+    39→interface AdminInfo {
+    40→  email: string;
+    41→  name: string;
+    42→  avatar_url: string | null;
+    43→}
+    44→
+    45→interface UserRow {
+    46→  id: string;
+    47→  email: string;
+    48→  full_name: string | null;
+    49→  avatar_url: string | null;
+    50→  plan: string;
+    51→  is_super_admin: boolean;
+    52→  is_active: boolean;
+    53→  banned_at: string | null;
+    54→  banned_reason: string | null;
+    55→  mp_status: string | null;
+    56→  mp_preapproval_id: string | null;
+    57→  current_period_end: string | null;
+    58→  bg_removals_used: number;
+    59→  bg_removals_reset_at: string;
+    60→  created_at: string;
+    61→  updated_at: string;
+    62→  menus_count: number;
+    63→  views_total: number;
+    64→  published_menus: number;
+    65→  dishes_count: number;
+    66→}
+    67→
+    68→interface Stats {
+    69→  total_users: number;
+    70→  active_users: number;
+    71→  banned_users: number;
+    72→  pro_users: number;
+    73→  free_users: number;
+    74→  super_admins: number;
+    75→  total_menus: number;
+    76→  published_menus: number;
+    77→  total_categories: number;
+    78→  total_dishes: number;
+    79→  total_views: number;
+    80→  total_domains: number;
+    81→  verified_domains: number;
+    82→  recent_signups_7d: number;
+    83→  recent_signups_30d: number;
+    84→  revenue_estimate_pen: number;
+    85→  revenue_estimate_usd: number;
+    86→  top_menus_by_views: Array<{
+    87→    id: string;
+    88→    name: string;
+    89→    slug: string;
+    90→    views_count: number;
+    91→    owner_email: string;
+    92→    owner_name: string | null;
+    93→  }>;
+    94→}
+    95→
+    96→interface UserDetail {
+    97→  profile: UserRow;
+    98→  menus: Array<any>;
+    99→  domains: Array<any>;
+   100→  recent_views: Array<any>;
+   101→}
+   102→
+   103→type Tab = 'stats' | 'users' | 'domains';
+   104→
+   105→export function SuperAdminClient({ admin }: { admin: AdminInfo }) {
+   106→  const router = useRouter();
+   107→  const [activeTab, setActiveTab] = useState<Tab>('stats');
+   108→  const [stats, setStats] = useState<Stats | null>(null);
+   109→  const [users, setUsers] = useState<UserRow[]>([]);
+   110→  const [domains, setDomains] = useState<any[]>([]);
+   111→  const [loading, setLoading] = useState(true);
+   112→  const [actionLoading, setActionLoading] = useState<string | null>(null);
+   113→  const [search, setSearch] = useState('');
+   114→  const [page, setPage] = useState(1);
+   115→  const [totalPages, setTotalPages] = useState(1);
+   116→  const [expandedUser, setExpandedUser] = useState<string | null>(null);
+   117→  const [userDetail, setUserDetail] = useState<UserDetail | null>(null);
+   118→  const [detailLoading, setDetailLoading] = useState(false);
+   119→  const [detailModalOpen, setDetailModalOpen] = useState(false);
+   120→
+   121→  const fetchData = useCallback(async () => {
+   122→    setLoading(true);
+   123→    try {
+   124→      const params = new URLSearchParams({ tab: activeTab });
+   125→      if (activeTab === 'users') {
+   126→        params.set('search', search);
+   127→        params.set('page', String(page));
+   128→      }
+   129→      const res = await fetch(`/api/admin?${params}`);
+   130→      const data = await res.json();
+   131→      if (!res.ok) throw new Error(data.error || 'Error');
+   132→
+   133→      if (activeTab === 'stats') {
+   134→        setStats(data.stats);
+   135→      } else if (activeTab === 'users') {
+   136→        setUsers(data.users || []);
+   137→        setTotalPages(Math.ceil((data.total || 0) / 20));
+   138→      } else if (activeTab === 'domains') {
+   139→        setDomains(data.domains || []);
+   140→      }
+   141→    } catch (err) {
+   142→      toast.error(err instanceof Error ? err.message : 'Error cargando datos');
+   143→    } finally {
+   144→      setLoading(false);
+   145→    }
+   146→  }, [activeTab, search, page]);
+   147→
+   148→  useEffect(() => {
+   149→    fetchData();
+   150→  }, [fetchData]);
+   151→
+   152→  async function handleAction(action: string, userId: string, extra?: Record<string, any>) {
+   153→    setActionLoading(`${action}-${userId}`);
+   154→    try {
+   155→      const res = await fetch('/api/admin', {
+   156→        method: 'PUT',
+   157→        headers: { 'Content-Type': 'application/json' },
+   158→        body: JSON.stringify({ action, userId, ...extra }),
+   159→      });
+   160→      const data = await res.json();
+   161→      if (!res.ok) throw new Error(data.error || 'Error');
+   162→
+   163→      if (action === 'toggle_plan') {
+   164→        toast.success(`Plan cambiado a ${data.newPlan}`);
+   165→      } else if (action === 'toggle_super_admin') {
+   166→        toast.success(`Super admin: ${data.is_super_admin ? 'activado' : 'desactivado'}`);
+   167→      } else if (action === 'toggle_active') {
+   168→        toast.success(data.is_active ? 'Usuario reactivado' : 'Usuario desactivado');
+   169→      } else {
+   170→        toast.success('Acción completada');
+   171→      }
+   172→      fetchData();
+   173→    } catch (err) {
+   174→      toast.error(err instanceof Error ? err.message : 'Error');
+   175→    } finally {
+   176→      setActionLoading(null);
+   177→    }
+   178→  }
+   179→
+   180→  async function handleViewUserDetail(userId: string) {
+   181→    setDetailLoading(true);
+   182→    setDetailModalOpen(true);
+   183→    try {
+   184→      const res = await fetch(`/api/admin?tab=user_detail&userId=${userId}`);
+   185→      const data = await res.json();
+   186→      if (!res.ok) throw new Error(data.error || 'Error');
+   187→      setUserDetail(data.detail);
+   188→    } catch (err) {
+   189→      toast.error(err instanceof Error ? err.message : 'Error');
+   190→      setDetailModalOpen(false);
+   191→    } finally {
+   192→      setDetailLoading(false);
+   193→    }
+   194→  }
+   195→
+   196→  async function handleDeleteUser(userId: string, email: string) {
+   197→    if (!confirm(`¿Eliminar usuario ${email} y TODOS sus menús, categorías, platos, dominios y vistas? Esta acción es IRREVERSIBLE.`)) return;
+   198→    await handleAction('delete_user', userId);
+   199→  }
+   200→
+   201→  async function handleLogout() {
+   202→    try {
+   203→      await fetch('/api/auth/logout', { method: 'POST' });
+   204→      router.push('/login');
+   205→    } catch (err) {
+   206→      router.push('/login');
+   207→    }
+   208→  }
+   209→
+   210→  const statCards = stats
+   211→    ? [
+   212→        { label: 'Total usuarios', value: stats.total_users, icon: Users, color: '#d4af37', sub: `${stats.active_users} activos · ${stats.banned_users} baneados` },
+   213→        { label: 'Usuarios Pro', value: stats.pro_users, icon: Crown, color: '#22c55e', sub: `${stats.free_users} gratis` },
+   214→        { label: 'Registros 7 días', value: stats.recent_signups_7d, icon: TrendingUp, color: '#3b82f6', sub: `${stats.recent_signups_30d} en 30 días` },
+   215→        { label: 'Total menús', value: stats.total_menus, icon: MenuIcon, color: '#f97316', sub: `${stats.published_menus} publicados` },
+   216→        { label: 'Total platos', value: stats.total_dishes, icon: Hash, color: '#a855f7', sub: `${stats.total_categories} categorías` },
+   217→        { label: 'Vistas totales', value: stats.total_views, icon: Eye, color: '#ec4899', sub: 'Acumulado global' },
+   218→        { label: 'Dominios', value: `${stats.verified_domains}/${stats.total_domains}`, icon: Globe, color: '#14b8a6', sub: 'verificados/total' },
+   219→        { label: 'Super admins', value: stats.super_admins, icon: Shield, color: '#ef4444', sub: 'con acceso total' },
+   220→      ]
+   221→    : [];
+   222→
+   223→  return (
+   224→    <div className="min-h-screen bg-[#050507] text-white">
+   225→      {/* TOP NAV — Distinto al dashboard normal */}
+   226→      <header className="border-b border-amber-500/20 bg-gradient-to-r from-[#0a0a14] via-[#0f0a1a] to-[#0a0a14] sticky top-0 z-40">
+   227→        <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
+   228→          <div className="flex items-center gap-3">
+   229→            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-amber-700 flex items-center justify-center shadow-lg shadow-amber-500/30">
+   230→              <Shield className="w-5 h-5 text-black" />
+   231→            </div>
+   232→            <div>
+   233→              <div className="font-bold text-base leading-tight flex items-center gap-2">
+   234→                MenuPro · Super Admin
+   235→                <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 text-[10px] font-bold border border-amber-500/30">
+   236→                  MODO DIOS
+   237→                </span>
+   238→              </div>
+   239→              <div className="text-xs text-white/40 leading-tight">Panel interno · Solo administración</div>
+   240→            </div>
+   241→          </div>
+   242→
+   243→          <div className="flex items-center gap-3">
+   244→            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10">
+   245→              {admin.avatar_url ? (
+   246→                <img src={admin.avatar_url} alt="" className="w-6 h-6 rounded-full" />
+   247→              ) : (
+   248→                <div className="w-6 h-6 rounded-full bg-gradient-to-br from-amber-500 to-amber-700 flex items-center justify-center text-[10px] font-bold text-black">
+   249→                  {admin.name[0]?.toUpperCase()}
+   250→                </div>
+   251→              )}
+   252→              <span className="text-xs text-white/70 hidden md:inline">{admin.email}</span>
+   253→            </div>
+   254→            <a
+   255→              href="/dashboard"
+   256→              className="text-xs text-white/40 hover:text-white px-3 py-1.5 rounded-lg border border-white/10 hover:bg-white/5 transition"
+   257→              title="Ir al dashboard de usuario normal"
+   258→            >
+   259→              Ver dashboard
+   260→            </a>
+   261→            <Button
+   262→              variant="ghost"
+   263→              size="sm"
+   264→              onClick={handleLogout}
+   265→              className="text-red-400/70 hover:text-red-400 hover:bg-red-500/10"
+   266→            >
+   267→              <LogOut className="w-4 h-4" />
+   268→              <span className="hidden md:inline">Salir</span>
+   269→            </Button>
+   270→          </div>
+   271→        </div>
+   272→      </header>
+   273→
+   274→      {/* TABS */}
+   275→      <div className="border-b border-white/10 bg-[#070710]/80 backdrop-blur">
+   276→        <div className="max-w-7xl mx-auto px-6 flex gap-1">
+   277→          {([
+   278→            { key: 'stats' as Tab, label: 'Estadísticas', icon: LayoutDashboard },
+   279→            { key: 'users' as Tab, label: 'Usuarios', icon: Users },
+   280→            { key: 'domains' as Tab, label: 'Dominios', icon: Globe },
+   281→          ]).map((tab) => (
+   282→            <button
+   283→              key={tab.key}
+   284→              onClick={() => { setActiveTab(tab.key); setPage(1); }}
+   285→              className={`flex items-center gap-2 px-5 py-3 text-sm font-medium border-b-2 transition-colors ${
+   286→                activeTab === tab.key
+   287→                  ? 'border-amber-500 text-amber-400'
+   288→                  : 'border-transparent text-white/50 hover:text-white/80'
+   289→              }`}
+   290→            >
+   291→              <tab.icon className="w-4 h-4" />
+   292→              {tab.label}
+   293→            </button>
+   294→          ))}
+   295→        </div>
+   296→      </div>
+   297→
+   298→      <main className="max-w-7xl mx-auto px-6 py-8">
+   299→        {/* STATS TAB */}
+   300→        {activeTab === 'stats' && (
+   301→          loading && !stats ? (
+   302→            <div className="flex items-center justify-center py-20">
+   303→              <Loader2 className="w-8 h-8 animate-spin text-amber-400" />
+   304→            </div>
+   305→          ) : stats ? (
+   306→            <>
+   307→              {/* Top stat cards */}
+   308→              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+   309→                {statCards.map((card) => (
+   310→                  <div
+   311→                    key={card.label}
+   312→                    className="bg-gradient-to-br from-white/[0.04] to-transparent border border-white/10 rounded-2xl p-5 hover:border-white/20 transition-colors"
+   313→                  >
+   314→                    <div className="flex items-center gap-2 mb-2">
+   315→                      <card.icon className="w-4 h-4" style={{ color: card.color }} />
+   316→                      <span className="text-xs text-white/50">{card.label}</span>
+   317→                    </div>
+   318→                    <div className="text-2xl font-bold">{card.value}</div>
+   319→                    <div className="text-[10px] text-white/30 mt-1">{card.sub}</div>
+   320→                  </div>
+   321→                ))}
+   322→              </div>
+   323→
+   324→              {/* Revenue block */}
+   325→              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+   326→                <div className="bg-gradient-to-br from-amber-500/10 to-transparent border border-amber-500/30 rounded-2xl p-6">
+   327→                  <h3 className="font-semibold mb-3 flex items-center gap-2">
+   328→                    <DollarSign className="w-5 h-5 text-amber-400" />
+   329→                    Ingresos estimados
+   330→                  </h3>
+   331→                  <div className="text-4xl font-bold text-amber-400">
+   332→                    S/ {stats.revenue_estimate_pen}
+   333→                    <span className="text-base text-white/40 ml-2">
+   334→                      ≈ ${stats.revenue_estimate_usd} USD
+   335→                    </span>
+   336→                  </div>
+   337→                  <p className="text-xs text-white/50 mt-2">
+   338→                    {stats.pro_users} suscriptores Pro × S/35/mes
+   339→                  </p>
+   340→                </div>
+   341→
+   342→                <div className="bg-gradient-to-br from-emerald-500/10 to-transparent border border-emerald-500/30 rounded-2xl p-6">
+   343→                  <h3 className="font-semibold mb-3 flex items-center gap-2">
+   344→                    <Activity className="w-5 h-5 text-emerald-400" />
+   345→                    Actividad reciente
+   346→                  </h3>
+   347→                  <div className="space-y-2">
+   348→                    <div className="flex justify-between">
+   349→                      <span className="text-white/60 text-sm">Registros esta semana</span>
+   350→                      <span className="font-bold text-emerald-400">{stats.recent_signups_7d}</span>
+   351→                    </div>
+   352→                    <div className="flex justify-between">
+   353→                      <span className="text-white/60 text-sm">Registros este mes</span>
+   354→                      <span className="font-bold text-emerald-400">{stats.recent_signups_30d}</span>
+   355→                    </div>
+   356→                    <div className="flex justify-between">
+   357→                      <span className="text-white/60 text-sm">Vistas totales</span>
+   358→                      <span className="font-bold text-emerald-400">{stats.total_views.toLocaleString()}</span>
+   359→                    </div>
+   360→                  </div>
+   361→                </div>
+   362→              </div>
+   363→
+   364→              {/* Top menus by views */}
+   365→              <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-6">
+   366→                <h3 className="font-semibold mb-4 flex items-center gap-2">
+   367→                  <TrendingUp className="w-5 h-5 text-amber-400" />
+   368→                  Top 10 menús más vistos
+   369→                </h3>
+   370→                {stats.top_menus_by_views && stats.top_menus_by_views.length > 0 ? (
+   371→                  <div className="space-y-2">
+   372→                    {stats.top_menus_by_views.map((m, idx) => (
+   373→                      <div key={m.id} className="flex items-center justify-between p-3 bg-white/[0.02] rounded-lg hover:bg-white/[0.04] transition-colors">
+   374→                        <div className="flex items-center gap-3">
+   375→                          <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
+   376→                            idx === 0 ? 'bg-amber-500/30 text-amber-300' :
+   377→                            idx === 1 ? 'bg-gray-400/20 text-gray-300' :
+   378→                            idx === 2 ? 'bg-orange-700/30 text-orange-300' :
+   379→                            'bg-white/5 text-white/40'
+   380→                          }`}>
+   381→                            {idx + 1}
+   382→                          </span>
+   383→                          <div>
+   384→                            <div className="font-medium text-sm">{m.name}</div>
+   385→                            <div className="text-xs text-white/40">{m.owner_email}</div>
+   386→                          </div>
+   387→                        </div>
+   388→                        <div className="flex items-center gap-4">
+   389→                          <span className="text-xs text-white/40 hidden md:inline">/{m.slug}</span>
+   390→                          <span className="px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-bold">
+   391→                            {m.views_count.toLocaleString()} vistas
+   392→                          </span>
+   393→                          <a
+   394→                            href={`/m/${m.slug}`}
+   395→                            target="_blank"
+   396→                            rel="noreferrer"
+   397→                            className="text-white/40 hover:text-white"
+   398→                          >
+   399→                            <ExternalLink className="w-4 h-4" />
+   400→                          </a>
+   401→                        </div>
+   402→                      </div>
+   403→                    ))}
+   404→                  </div>
+   405→                ) : (
+   406→                  <p className="text-sm text-white/40 text-center py-6">No hay datos aún</p>
+   407→                )}
+   408→              </div>
+   409→            </>
+   410→          ) : null
+   411→        )}
+   412→
+   413→        {/* USERS TAB */}
+   414→        {activeTab === 'users' && (
+   415→          <>
+   416→            <div className="flex items-center gap-3 mb-6 flex-wrap">
+   417→              <div className="relative flex-1 max-w-md">
+   418→                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+   419→                <Input
+   420→                  value={search}
+   421→                  onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+   422→                  placeholder="Buscar por email o nombre..."
+   423→                  className="pl-10 bg-white/5 border-white/10 text-white"
+   424→                />
+   425→              </div>
+   426→              <Button
+   427→                variant="ghost"
+   428→                size="sm"
+   429→                onClick={fetchData}
+   430→                disabled={loading}
+   431→                className="text-white/60"
+   432→              >
+   433→                <RefreshCw className={`w-4 h-4 mr-1.5 ${loading ? 'animate-spin' : ''}`} />
+   434→                Actualizar
+   435→              </Button>
+   436→              <span className="text-sm text-white/40 ml-auto">
+   437→                {users.length} usuario{users.length !== 1 ? 's' : ''} · página {page}
+   438→              </span>
+   439→            </div>
+   440→
+   441→            {loading ? (
+   442→              <div className="flex items-center justify-center py-20">
+   443→                <Loader2 className="w-6 h-6 animate-spin text-amber-400" />
+   444→              </div>
+   445→            ) : users.length === 0 ? (
+   446→              <div className="text-center py-16">
+   447→                <Users className="w-12 h-12 text-white/20 mx-auto mb-4" />
+   448→                <h3 className="text-lg font-semibold mb-2">Sin usuarios</h3>
+   449→                <p className="text-white/50">No se encontraron usuarios con ese criterio.</p>
+   450→              </div>
+   451→            ) : (
+   452→              <>
+   453→                <div className="space-y-2">
+   454→                  {users.map((u) => (
+   455→                    <div
+   456→                      key={u.id}
+   457→                      className={`bg-white/[0.03] border rounded-xl overflow-hidden transition-colors ${
+   458→                        u.is_active === false
+   459→                          ? 'border-red-500/40 bg-red-500/[0.03]'
+   460→                          : 'border-white/10'
+   461→                      }`}
+   462→                    >
+   463→                      <div
+   464→                        className="flex items-center justify-between p-4 cursor-pointer hover:bg-white/[0.02]"
+   465→                        onClick={() => setExpandedUser(expandedUser === u.id ? null : u.id)}
+   466→                      >
+   467→                        <div className="flex items-center gap-3 min-w-0">
+   468→                          <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${
+   469→                            u.is_super_admin
+   470→                              ? 'bg-gradient-to-br from-amber-500 to-amber-700 text-black'
+   471→                              : u.avatar_url
+   472→                              ? ''
+   473→                              : 'bg-white/10 text-white/60'
+   474→                          }`}>
+   475→                            {u.avatar_url ? (
+   476→                              <img src={u.avatar_url} alt="" className="w-10 h-10 rounded-full object-cover" />
+   477→                            ) : (
+   478→                              (u.full_name || u.email)[0].toUpperCase()
+   479→                            )}
+   480→                          </div>
+   481→                          <div className="min-w-0">
+   482→                            <div className="font-medium text-sm truncate flex items-center gap-2">
+   483→                              {u.full_name || 'Sin nombre'}
+   484→                              {u.is_super_admin && (
+   485→                                <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 text-[10px] font-bold border border-amber-500/30">
+   486→                                  SUPER ADMIN
+   487→                                </span>
+   488→                              )}
+   489→                              {u.is_active === false && (
+   490→                                <span className="px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 text-[10px] font-bold border border-red-500/30">
+   491→                                  BANEADO
+   492→                                </span>
+   493→                              )}
+   494→                              {u.plan === 'pro' && (
+   495→                                <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 text-[10px] font-bold">
+   496→                                  PRO
+   497→                                </span>
+   498→                              )}
+   499→                            </div>
+   500→                            <div className="text-xs text-white/50 truncate">{u.email}</div>
+   501→                          </div>
+   502→                        </div>
+   503→                        <div className="flex items-center gap-3 flex-shrink-0 text-xs">
+   504→                          <span className="hidden md:inline text-white/40">
+   505→                            <strong className="text-white/70">{u.menus_count}</strong> menús
+   506→                          </span>
+   507→                          <span className="hidden md:inline text-white/40">
+   508→                            <strong className="text-white/70">{u.views_total}</strong> vistas
+   509→                          </span>
+   510→                          <span className="text-white/30">
+   511→                            {new Date(u.created_at).toLocaleDateString('es-PE')}
+   512→                          </span>
+   513→                        </div>
+   514→                      </div>
+   515→
+   516→                      {expandedUser === u.id && (
+   517→                        <div className="border-t border-white/10 p-4 bg-white/[0.02]">
+   518→                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4 text-sm">
+   519→                            <div>
+   520→                              <div className="text-white/40 text-xs">Plan</div>
+   521→                              <div className="font-medium">{u.plan}</div>
+   522→                            </div>
+   523→                            <div>
+   524→                              <div className="text-white/40 text-xs">Menús</div>
+   525→                              <div className="font-medium">{u.menus_count} ({u.published_menus} publicados)</div>
+   526→                            </div>
+   527→                            <div>
+   528→                              <div className="text-white/40 text-xs">Platos</div>
+   529→                              <div className="font-medium">{u.dishes_count}</div>
+   530→                            </div>
+   531→                            <div>
+   532→                              <div className="text-white/40 text-xs">Vistas totales</div>
+   533→                              <div className="font-medium">{u.views_total}</div>
+   534→                            </div>
+   535→                            <div>
+   536→                              <div className="text-white/40 text-xs">MP Status</div>
+   537→                              <div className="font-medium">{u.mp_status || '—'}</div>
+   538→                            </div>
+   539→                            <div>
+   540→                              <div className="text-white/40 text-xs">BG removals</div>
+   541→                              <div className="font-medium">{u.bg_removals_used} usados</div>
+   542→                            </div>
+   543→                            <div>
+   544→                              <div className="text-white/40 text-xs">Registro</div>
+   545→                              <div className="font-medium">{new Date(u.created_at).toLocaleDateString('es-PE')}</div>
+   546→                            </div>
+   547→                            <div>
+   548→                              <div className="text-white/40 text-xs">Última actualización</div>
+   549→                              <div className="font-medium">{new Date(u.updated_at).toLocaleDateString('es-PE')}</div>
+   550→                            </div>
+   551→                            {u.banned_at && (
+   552→                              <div className="col-span-2 md:col-span-4 text-red-400 text-xs">
+   553→                                Baneado el {new Date(u.banned_at).toLocaleString('es-PE')}
+   554→                                {u.banned_reason ? ` — ${u.banned_reason}` : ''}
+   555→                              </div>
+   556→                            )}
+   557→                          </div>
+   558→
+   559→                          <div className="flex flex-wrap gap-2">
+   560→                            <Button
+   561→                              size="sm"
+   562→                              variant="outline"
+   563→                              onClick={() => handleViewUserDetail(u.id)}
+   564→                              className="border-blue-500/40 text-blue-400 hover:bg-blue-500/10"
+   565→                            >
+   566→                              <Eye className="w-3.5 h-3.5 mr-1.5" />
+   567→                              Ver detalle completo
+   568→                            </Button>
+   569→                            <Button
+   570→                              size="sm"
+   571→                              variant="outline"
+   572→                              onClick={() => handleAction('toggle_plan', u.id)}
+   573→                              disabled={actionLoading === `toggle_plan-${u.id}`}
+   574→                              className={`border-amber-500/40 text-amber-400 hover:bg-amber-500/10 ${
+   575→                                u.plan === 'pro' ? 'bg-amber-500/10' : ''
+   576→                              }`}
+   577→                            >
+   578→                              {actionLoading === `toggle_plan-${u.id}` ? (
+   579→                                <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+   580→                              ) : (
+   581→                                <Crown className="w-3.5 h-3.5 mr-1.5" />
+   582→                              )}
+   583→                              {u.plan === 'pro' ? 'Quitar Pro' : 'Dar Pro'}
+   584→                            </Button>
+   585→                            {!u.is_super_admin && (
+   586→                              <Button
+   587→                                size="sm"
+   588→                                variant="outline"
+   589→                                onClick={() => handleAction('toggle_super_admin', u.id)}
+   590→                                disabled={actionLoading === `toggle_super_admin-${u.id}`}
+   591→                                className="border-amber-500/40 text-amber-400 hover:bg-amber-500/10"
+   592→                              >
+   593→                                {actionLoading === `toggle_super_admin-${u.id}` ? (
+   594→                                  <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+   595→                                ) : (
+   596→                                  <UserCog className="w-3.5 h-3.5 mr-1.5" />
+   597→                                )}
+   598→                                Dar Super Admin
+   599→                              </Button>
+   600→                            )}
+   601→                            {!u.is_super_admin && (
+   602→                              <Button
+   603→                                size="sm"
+   604→                                variant="outline"
+   605→                                onClick={() => handleAction('toggle_active', u.id, u.is_active === false ? undefined : { reason: 'Desactivado por admin' })}
+   606→                                disabled={actionLoading === `toggle_active-${u.id}`}
+   607→                                className={`${
+   608→                                  u.is_active === false
+   609→                                    ? 'border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/10'
+   610→                                    : 'border-orange-500/40 text-orange-400 hover:bg-orange-500/10'
+   611→                                }`}
+   612→                              >
+   613→                                {actionLoading === `toggle_active-${u.id}` ? (
+   614→                                  <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+   615→                                ) : u.is_active === false ? (
+   616→                                  <UserCheck className="w-3.5 h-3.5 mr-1.5" />
+   617→                                ) : (
+   618→                                  <Ban className="w-3.5 h-3.5 mr-1.5" />
+   619→                                )}
+   620→                                {u.is_active === false ? 'Reactivar' : 'Desactivar (ban)'}
+   621→                              </Button>
+   622→                            )}
+   623→                            {!u.is_super_admin && (
+   624→                              <Button
+   625→                                size="sm"
+   626→                                variant="outline"
+   627→                                onClick={() => handleDeleteUser(u.id, u.email)}
+   628→                                disabled={actionLoading === `delete_user-${u.id}`}
+   629→                                className="border-red-500/40 text-red-400 hover:bg-red-500/10"
+   630→                              >
+   631→                                {actionLoading === `delete_user-${u.id}` ? (
+   632→                                  <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+   633→                                ) : (
+   634→                                  <Trash2 className="w-3.5 h-3.5 mr-1.5" />
+   635→                                )}
+   636→                                Eliminar
+   637→                              </Button>
+   638→                            )}
+   639→                          </div>
+   640→                        </div>
+   641→                      )}
+   642→                    </div>
+   643→                  ))}
+   644→                </div>
+   645→
+   646→                {totalPages > 1 && (
+   647→                  <div className="flex items-center justify-center gap-2 mt-6">
+   648→                    <Button variant="ghost" size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1} className="text-white/60">
+   649→                      <ChevronLeft className="w-4 h-4" />
+   650→                    </Button>
+   651→                    <span className="text-sm text-white/50">Página {page} de {totalPages}</span>
+   652→                    <Button variant="ghost" size="sm" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages} className="text-white/60">
+   653→                      <ChevronRight className="w-4 h-4" />
+   654→                    </Button>
+   655→                  </div>
+   656→                )}
+   657→              </>
+   658→            )}
+   659→          </>
+   660→        )}
+   661→
+   662→        {/* DOMAINS TAB */}
+   663→        {activeTab === 'domains' && (
+   664→          loading ? (
+   665→            <div className="flex items-center justify-center py-20">
+   666→              <Loader2 className="w-6 h-6 animate-spin text-amber-400" />
+   667→            </div>
+   668→          ) : domains.length === 0 ? (
+   669→            <div className="text-center py-16">
+   670→              <Globe className="w-12 h-12 text-white/20 mx-auto mb-4" />
+   671→              <h3 className="text-lg font-semibold mb-2">Sin dominios personalizados</h3>
+   672→              <p className="text-white/50">Ningún usuario ha configurado dominios aún.</p>
+   673→            </div>
+   674→          ) : (
+   675→            <div className="overflow-x-auto bg-white/[0.03] border border-white/10 rounded-2xl">
+   676→              <table className="w-full text-sm">
+   677→                <thead>
+   678→                  <tr className="border-b border-white/10 text-left text-white/50 text-xs">
+   679→                    <th className="p-4">Dominio</th>
+   680→                    <th className="p-4">Usuario</th>
+   681→                    <th className="p-4">Menú</th>
+   682→                    <th className="p-4">Estado</th>
+   683→                    <th className="p-4">SSL</th>
+   684→                    <th className="p-4">Creado</th>
+   685→                  </tr>
+   686→                </thead>
+   687→                <tbody>
+   688→                  {domains.map((d) => (
+   689→                    <tr key={d.id} className="border-b border-white/5 hover:bg-white/[0.02]">
+   690→                      <td className="p-4 font-medium">{d.domain}</td>
+   691→                      <td className="p-4">
+   692→                        <div>{d.profiles?.full_name || '—'}</div>
+   693→                        <div className="text-xs text-white/40">{d.profiles?.email}</div>
+   694→                      </td>
+   695→                      <td className="p-4">{d.menus?.name || '—'}</td>
+   696→                      <td className="p-4">
+   697→                        {d.is_verified ? (
+   698→                          <span className="flex items-center gap-1 text-emerald-400 text-xs">
+   699→                            <CheckCircle2 className="w-3.5 h-3.5" /> Verificado
+   700→                          </span>
+   701→                        ) : (
+   702→                          <span className="flex items-center gap-1 text-amber-400 text-xs">
+   703→                            <XCircle className="w-3.5 h-3.5" /> Pendiente
+   704→                          </span>
+   705→                        )}
+   706→                      </td>
+   707→                      <td className="p-4">
+   708→                        <span className={`px-2 py-0.5 rounded-full text-xs ${
+   709→                          d.ssl_status === 'active' ? 'bg-emerald-500/20 text-emerald-400' :
+   710→                          d.ssl_status === 'failed' ? 'bg-red-500/20 text-red-400' :
+   711→                          'bg-white/5 text-white/60'
+   712→                        }`}>
+   713→                          {d.ssl_status}
+   714→                        </span>
+   715→                      </td>
+   716→                      <td className="p-4 text-white/50">{new Date(d.created_at).toLocaleDateString('es-PE')}</td>
+   717→                    </tr>
+   718→                  ))}
+   719→                </tbody>
+   720→              </table>
+   721→            </div>
+   722→          )
+   723→        )}
+   724→      </main>
+   725→
+   726→      {/* USER DETAIL MODAL */}
+   727→      {detailModalOpen && (
+   728→        <div
+   729→          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+   730→          onClick={() => setDetailModalOpen(false)}
+   731→        >
+   732→          <div
+   733→            className="bg-[#0a0a14] border border-amber-500/30 rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+   734→            onClick={(e) => e.stopPropagation()}
+   735→          >
+   736→            <div className="sticky top-0 bg-[#0a0a14] border-b border-white/10 p-5 flex items-center justify-between z-10">
+   737→              <h2 className="text-lg font-bold flex items-center gap-2">
+   738→                <Eye className="w-5 h-5 text-amber-400" />
+   739→                Detalle completo del usuario
+   740→              </h2>
+   741→              <button
+   742→                onClick={() => setDetailModalOpen(false)}
+   743→                className="text-white/40 hover:text-white p-1 rounded hover:bg-white/10"
+   744→              >
+   745→                <X className="w-5 h-5" />
+   746→              </button>
+   747→            </div>
+   748→
+   749→            <div className="p-5">
+   750→              {detailLoading || !userDetail ? (
+   751→                <div className="flex items-center justify-center py-12">
+   752→                  <Loader2 className="w-8 h-8 animate-spin text-amber-400" />
+   753→                </div>
+   754→              ) : (
+   755→                <>
+   756→                  {/* Profile */}
+   757→                  <div className="bg-white/[0.03] border border-white/10 rounded-xl p-4 mb-4">
+   758→                    <div className="flex items-center gap-4 mb-4">
+   759→                      <div className="w-16 h-16 rounded-full bg-gradient-to-br from-amber-500 to-amber-700 flex items-center justify-center text-xl font-bold text-black">
+   760→                        {userDetail.profile.full_name?.[0]?.toUpperCase() ||
+   761→                          userDetail.profile.email[0].toUpperCase()}
+   762→                      </div>
+   763→                      <div>
+   764→                        <div className="font-bold text-base">
+   765→                          {userDetail.profile.full_name || 'Sin nombre'}
+   766→                        </div>
+   767→                        <div className="text-sm text-white/60">{userDetail.profile.email}</div>
+   768→                        <div className="flex gap-2 mt-1">
+   769→                          <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+   770→                            userDetail.profile.plan === 'pro'
+   771→                              ? 'bg-emerald-500/20 text-emerald-400'
+   772→                              : 'bg-white/10 text-white/60'
+   773→                          }`}>
+   774→                            {userDetail.profile.plan?.toUpperCase()}
+   775→                          </span>
+   776→                          {userDetail.profile.is_super_admin && (
+   777→                            <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 text-xs font-bold">
+   778→                              SUPER ADMIN
+   779→                            </span>
+   780→                          )}
+   781→                        </div>
+   782→                      </div>
+   783→                    </div>
+   784→                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
+   785→                      <div>
+   786→                        <div className="text-white/40 text-xs">ID</div>
+   787→                        <div className="font-mono text-xs">{userDetail.profile.id.slice(0, 8)}...</div>
+   788→                      </div>
+   789→                      <div>
+   790→                        <div className="text-white/40 text-xs">Registro</div>
+   791→                        <div>{new Date(userDetail.profile.created_at).toLocaleString('es-PE')}</div>
+   792→                      </div>
+   793→                      <div>
+   794→                        <div className="text-white/40 text-xs">MP Status</div>
+   795→                        <div>{userDetail.profile.mp_status || '—'}</div>
+   796→                      </div>
+   797→                      <div>
+   798→                        <div className="text-white/40 text-xs">BG removals</div>
+   799→                        <div>{userDetail.profile.bg_removals_used}</div>
+   800→                      </div>
+   801→                      <div>
+   802→                        <div className="text-white/40 text-xs">Plan renovación</div>
+   803→                        <div>{userDetail.profile.current_period_end
+   804→                          ? new Date(userDetail.profile.current_period_end).toLocaleDateString('es-PE')
+   805→                          : '—'}</div>
+   806→                      </div>
+   807→                      <div>
+   808→                        <div className="text-white/40 text-xs">Estado</div>
+   809→                        <div>{userDetail.profile.is_active === false ? '🔴 Baneado' : '🟢 Activo'}</div>
+   810→                      </div>
+   811→                    </div>
+   812→                  </div>
+   813→
+   814→                  {/* Menus */}
+   815→                  <div className="bg-white/[0.03] border border-white/10 rounded-xl p-4 mb-4">
+   816→                    <h3 className="font-semibold mb-3 flex items-center gap-2">
+   817→                      <MenuIcon className="w-4 h-4 text-amber-400" />
+   818→                      Menús ({userDetail.menus.length})
+   819→                    </h3>
+   820→                    {userDetail.menus.length === 0 ? (
+   821→                      <p className="text-sm text-white/40 py-3">Sin menús</p>
+   822→                    ) : (
+   823→                      <div className="space-y-3">
+   824→                        {userDetail.menus.map((m: any) => (
+   825→                          <div key={m.id} className="bg-white/[0.02] rounded-lg p-3">
+   826→                            <div className="flex items-center justify-between mb-2">
+   827→                              <div>
+   828→                                <div className="font-medium text-sm flex items-center gap-2">
+   829→                                  {m.name}
+   830→                                  {m.is_published ? (
+   831→                                    <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 text-[10px] font-bold">PUBLICADO</span>
+   832→                                  ) : (
+   833→                                    <span className="px-1.5 py-0.5 rounded bg-white/10 text-white/40 text-[10px] font-bold">BORRADOR</span>
+   834→                                  )}
+   835→                                </div>
+   836→                                <div className="text-xs text-white/40">/{m.slug}</div>
+   837→                              </div>
+   838→                              <div className="flex items-center gap-2 text-xs">
+   839→                                <span className="px-2 py-0.5 rounded-full bg-pink-500/20 text-pink-400 font-bold">
+   840→                                  {m.views_count} vistas
+   841→                                </span>
+   842→                                <a
+   843→                                  href={`/m/${m.slug}`}
+   844→                                  target="_blank"
+   845→                                  rel="noreferrer"
+   846→                                  className="text-white/40 hover:text-white"
+   847→                                >
+   848→                                  <ExternalLink className="w-3.5 h-3.5" />
+   849→                                </a>
+   850→                              </div>
+   851→                            </div>
+   852→                            {m.color && (
+   853→                              <div className="flex items-center gap-2 text-xs text-white/50 mb-2">
+   854→                                <span>Color:</span>
+   855→                                <div className="w-4 h-4 rounded-full border border-white/20" style={{ background: m.color }} />
+   856→                                <span className="font-mono">{m.color}</span>
+   857→                                <span className="ml-3">Moneda: {m.currency}</span>
+   858→                                {m.whatsapp && (
+   859→                                  <span className="ml-3 flex items-center gap-1">
+   860→                                    <Phone className="w-3 h-3" /> {m.whatsapp}
+   861→                                  </span>
+   862→                                )}
+   863→                              </div>
+   864→                            )}
+   865→                            <div className="text-xs text-white/40">
+   866→                              {m.categories.length} categorías · {m.categories.reduce((sum: number, c: any) => sum + c.dishes.length, 0)} platos
+   867→                            </div>
+   868→                          </div>
+   869→                        ))}
+   870→                      </div>
+   871→                    )}
+   872→                  </div>
+   873→
+   874→                  {/* Recent views */}
+   875→                  <div className="bg-white/[0.03] border border-white/10 rounded-xl p-4">
+   876→                    <h3 className="font-semibold mb-3 flex items-center gap-2">
+   877→                      <Eye className="w-4 h-4 text-amber-400" />
+   878→                      Últimas 50 vistas
+   879→                    </h3>
+   880→                    {userDetail.recent_views.length === 0 ? (
+   881→                      <p className="text-sm text-white/40 py-3">Sin vistas registradas</p>
+   882→                    ) : (
+   883→                      <div className="max-h-60 overflow-y-auto space-y-1">
+   884→                        {userDetail.recent_views.map((v: any) => (
+   885→                          <div key={v.id} className="flex items-center justify-between text-xs bg-white/[0.02] rounded px-3 py-2">
+   886→                            <div className="flex items-center gap-3">
+   887→                              <span className="text-white/60">{v.menu_name}</span>
+   888→                              <span className="text-white/40 font-mono">{v.ip || '—'}</span>
+   889→                            </div>
+   890→                            <span className="text-white/40">{new Date(v.created_at).toLocaleString('es-PE')}</span>
+   891→                          </div>
+   892→                        ))}
+   893→                      </div>
+   894→                    )}
+   895→                  </div>
+   896→                </>
+   897→              )}
+   898→            </div>
+   899→          </div>
+   900→        </div>
+   901→      )}
+   902→    </div>
+   903→  );
+   904→}
+   905→

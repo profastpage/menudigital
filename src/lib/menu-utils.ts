@@ -26,6 +26,7 @@ export interface MenuData {
   theme_show_category_icons?: boolean;
   theme_rounded_corners?: boolean;
   theme_dark_mode?: boolean;
+  theme_preset_id?: string | null;
   categories?: CategoryData[];
 }
 
