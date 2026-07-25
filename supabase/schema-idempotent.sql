@@ -53,6 +53,23 @@ ALTER TABLE profiles ADD COLUMN IF NOT EXISTS bg_removals_reset_at TIMESTAMPTZ N
 
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 
+-- Función helper SECURITY DEFINER (bypassa RLS, evita recursión infinita)
+-- Debe declararse ANTES de las policies que la usan.
+CREATE OR REPLACE FUNCTION public.is_self_super_admin()
+RETURNS BOOLEAN
+LANGUAGE sql
+SECURITY DEFINER
+STABLE
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.profiles
+    WHERE id = auth.uid()
+      AND is_super_admin = true
+      AND is_active = true
+  );
+$$;
+
 -- Políticas profiles (DROP antes de CREATE, la tabla ya existe)
 DROP POLICY IF EXISTS "profiles_select_self" ON profiles;
 DROP POLICY IF EXISTS "profiles_update_self" ON profiles;
@@ -60,6 +77,7 @@ DROP POLICY IF EXISTS "profiles_insert_self" ON profiles;
 DROP POLICY IF EXISTS "profiles_select_admin" ON profiles;
 DROP POLICY IF EXISTS "profiles_update_admin" ON profiles;
 DROP POLICY IF EXISTS "profiles_delete_admin" ON profiles;
+DROP POLICY IF EXISTS "profiles_select_super_admin" ON profiles;
 
 CREATE POLICY "profiles_select_self" ON profiles
   FOR SELECT USING (auth.uid() = id);
@@ -68,18 +86,13 @@ CREATE POLICY "profiles_update_self" ON profiles
 CREATE POLICY "profiles_insert_self" ON profiles
   FOR INSERT WITH CHECK (auth.uid() = id);
 
+-- Super admin via función SECURITY DEFINER (NO recursivo)
 CREATE POLICY "profiles_select_admin" ON profiles
-  FOR SELECT USING (
-    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND is_super_admin = true)
-  );
+  FOR SELECT USING (public.is_self_super_admin());
 CREATE POLICY "profiles_update_admin" ON profiles
-  FOR UPDATE USING (
-    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND is_super_admin = true)
-  );
+  FOR UPDATE USING (public.is_self_super_admin());
 CREATE POLICY "profiles_delete_admin" ON profiles
-  FOR DELETE USING (
-    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND is_super_admin = true)
-  );
+  FOR DELETE USING (public.is_self_super_admin());
 
 -- ============================================================
 -- 3) Trigger: crear profile automáticamente al registrarse
@@ -151,13 +164,9 @@ CREATE POLICY "menus_delete_own" ON menus
   FOR DELETE USING (auth.uid() = user_id);
 
 CREATE POLICY "menus_select_admin" ON menus
-  FOR SELECT USING (
-    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND is_super_admin = true)
-  );
+  FOR SELECT USING (public.is_self_super_admin());
 CREATE POLICY "menus_delete_admin" ON menus
-  FOR DELETE USING (
-    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND is_super_admin = true)
-  );
+  FOR DELETE USING (public.is_self_super_admin());
 
 -- ============================================================
 -- 5) Tabla categories
@@ -198,9 +207,7 @@ CREATE POLICY "categories_delete_own" ON categories
   );
 
 CREATE POLICY "categories_select_admin" ON categories
-  FOR SELECT USING (
-    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND is_super_admin = true)
-  );
+  FOR SELECT USING (public.is_self_super_admin());
 
 -- ============================================================
 -- 6) Tabla dishes
@@ -260,9 +267,7 @@ CREATE POLICY "dishes_delete_own" ON dishes
   );
 
 CREATE POLICY "dishes_select_admin" ON dishes
-  FOR SELECT USING (
-    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND is_super_admin = true)
-  );
+  FOR SELECT USING (public.is_self_super_admin());
 
 -- ============================================================
 -- 7) Tabla menu_views (analytics)
@@ -291,9 +296,7 @@ CREATE POLICY "menu_views_insert_any" ON menu_views
   FOR INSERT WITH CHECK (true);
 
 CREATE POLICY "menu_views_select_admin" ON menu_views
-  FOR SELECT USING (
-    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND is_super_admin = true)
-  );
+  FOR SELECT USING (public.is_self_super_admin());
 
 -- ============================================================
 -- 8) Tabla custom_domains (solo Pro)
@@ -333,9 +336,7 @@ CREATE POLICY "custom_domains_delete_own" ON custom_domains
   FOR DELETE USING (auth.uid() = user_id);
 
 CREATE POLICY "custom_domains_select_admin" ON custom_domains
-  FOR SELECT USING (
-    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND is_super_admin = true)
-  );
+  FOR SELECT USING (public.is_self_super_admin());
 
 -- ============================================================
 -- 9) Storage bucket para logos y platos
