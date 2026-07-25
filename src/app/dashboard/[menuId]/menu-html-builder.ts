@@ -244,26 +244,60 @@ function buildCSS(opts: ThemeOpts): string {
   c += '.added-flash{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) scale(0);background:#06d6a0;color:#fff;padding:8px 18px;border-radius:24px;font-size:12px;font-weight:700;pointer-events:none;z-index:5;box-shadow:0 6px 18px rgba(6,214,160,0.5);animation:flashAdd 0.9s ease forwards;letter-spacing:0.3px;}';
   c += '@keyframes flashAdd{0%{transform:translate(-50%,-50%) scale(0);opacity:0;}25%{transform:translate(-50%,-50%) scale(1);opacity:1;}75%{transform:translate(-50%,-90%) scale(1);opacity:1;}100%{transform:translate(-50%,-130%) scale(0.8);opacity:0;}}';
 
-  // ─── Lightbox / Modal de plato (carrusel) ───
+  // ─── Lightbox de plato (estilo PedidosYa/Rappi — mobile-first ultra pro) ───
   if (showGallery) {
-    c += '.dish-lightbox{position:fixed;inset:0;background:rgba(0,0,0,0.85);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);z-index:300;display:none;align-items:center;justify-content:center;padding:20px;animation:fadeIn 0.25s ease;}';
+    // Overlay full-screen en mobile, sheet centrado en desktop
+    c += '.dish-lightbox{position:fixed;inset:0;background:rgba(0,0,0,0.92);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);z-index:300;display:none;align-items:flex-end;justify-content:center;padding:0;animation:dlbFadeIn 0.2s ease;}';
     c += '.dish-lightbox.visible{display:flex;}';
-    c += '@keyframes fadeIn{from{opacity:0;}to{opacity:1;}}';
-    c += '.dish-lightbox-inner{background:linear-gradient(180deg,' + (darkMode ? '#1c1c2e,#14141f' : '#fff,#f5f5f5') + ');width:100%;max-width:480px;max-height:90vh;overflow-y:auto;border-radius:24px;border:1px solid rgba(255,255,255,0.08);box-shadow:0 20px 60px rgba(0,0,0,0.6);animation:slideUp 0.35s cubic-bezier(0.4,0,0.2,1);position:relative;color:var(--text);}';
-    c += '@keyframes slideUp{from{transform:translateY(40px);opacity:0;}to{transform:translateY(0);opacity:1;}}';
-    c += '.dish-lightbox-close{position:absolute;top:14px;right:14px;width:36px;height:36px;border-radius:50%;background:rgba(0,0,0,0.5);color:#fff;border:none;cursor:pointer;font-size:20px;line-height:1;display:flex;align-items:center;justify-content:center;z-index:5;backdrop-filter:blur(4px);}';
-    c += '.dish-lightbox-close:hover{background:rgba(0,0,0,0.7);transform:rotate(90deg);transition:all 0.25s;}';
-    c += '.dish-lightbox-img{width:100%;height:280px;object-fit:cover;border-radius:24px 24px 0 0;background:linear-gradient(135deg,var(--glass),var(--glass-strong));}';
-    c += '@media(min-width:600px){.dish-lightbox-img{height:320px;}}';
-    c += '.dish-lightbox-img-placeholder{width:100%;height:200px;display:flex;align-items:center;justify-content:center;border-radius:24px 24px 0 0;background:linear-gradient(135deg,var(--accent),rgba(var(--accent-rgb),0.6));color:#fff;font-size:64px;font-weight:800;}';
-    c += '.dish-lightbox-content{padding:24px;}';
-    c += '.dish-lightbox-name{font-size:24px;font-weight:800;margin-bottom:8px;letter-spacing:-0.5px;color:var(--text);}';
-    c += '.dish-lightbox-desc{font-size:14.5px;color:var(--text-soft);line-height:1.6;margin-bottom:18px;}';
-    c += '.dish-lightbox-bottom{display:flex;justify-content:space-between;align-items:center;gap:14px;}';
-    c += '.dish-lightbox-price{font-size:28px;font-weight:800;color:var(--accent);letter-spacing:-0.5px;}';
-    c += '.dish-lightbox-add{flex:1;background:linear-gradient(135deg,var(--accent),rgba(var(--accent-rgb),0.85));color:#fff;border:none;padding:14px 22px;border-radius:var(--radius);font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all 0.2s;box-shadow:0 6px 20px rgba(var(--accent-rgb),0.4);}';
-    c += '.dish-lightbox-add:hover{transform:translateY(-2px);box-shadow:0 10px 28px rgba(var(--accent-rgb),0.55);}';
+    c += '@keyframes dlbFadeIn{from{opacity:0;}to{opacity:1;}}';
+    c += '@media(min-width:640px){.dish-lightbox{align-items:center;padding:24px;}}';
+    // Inner: full-screen en mobile (bottom-sheet con border-radius top),
+    // card con border-radius grande en desktop
+    c += '.dish-lightbox-inner{background:' + (darkMode ? '#14141f' : '#ffffff') + ';width:100%;max-width:520px;max-height:100vh;overflow-y:auto;position:relative;color:var(--text);border-radius:24px 24px 0 0;animation:dlbSlideUp 0.32s cubic-bezier(0.32,0.72,0,1);box-shadow:0 -10px 40px rgba(0,0,0,0.5);}';
+    c += '@media(min-width:640px){.dish-lightbox-inner{border-radius:28px;max-height:92vh;animation:dlbZoomIn 0.3s cubic-bezier(0.32,0.72,0,1);box-shadow:0 30px 80px rgba(0,0,0,0.6);}}';
+    c += '@keyframes dlbSlideUp{from{transform:translateY(100%);}to{transform:translateY(0);}}';
+    c += '@keyframes dlbZoomIn{from{transform:scale(0.95);opacity:0;}to{transform:scale(1);opacity:1;}}';
+    // Handle bar en mobile (estilo bottom-sheet nativo iOS/Android)
+    c += '.dish-lightbox-handle{display:block;width:40px;height:4px;background:rgba(255,255,255,0.18);border-radius:4px;margin:8px auto 0;}';
+    c += '@media(min-width:640px){.dish-lightbox-handle{display:none;}}';
+    // Close button — flota sobre la imagen (estilo Rappi)
+    c += '.dish-lightbox-close{position:absolute;top:14px;right:14px;width:38px;height:38px;border-radius:50%;background:rgba(0,0,0,0.55);color:#fff;border:none;cursor:pointer;font-size:22px;line-height:1;display:flex;align-items:center;justify-content:center;z-index:10;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);transition:all 0.2s;box-shadow:0 4px 12px rgba(0,0,0,0.3);}';
+    c += '.dish-lightbox-close:hover{background:rgba(0,0,0,0.78);transform:scale(1.05);}';
+    c += '.dish-lightbox-close:active{transform:scale(0.95);}';
+    // HERO IMAGE — large, square-ish, dominant (estilo PedidosYa/Rappi)
+    c += '.dish-lightbox-hero{position:relative;width:100%;aspect-ratio:1/1;max-height:60vh;overflow:hidden;background:linear-gradient(135deg,var(--glass),var(--glass-strong));}';
+    c += '@media(min-width:640px){.dish-lightbox-hero{aspect-ratio:4/3;border-radius:28px 28px 0 0;max-height:480px;}}';
+    c += '.dish-lightbox-img{width:100%;height:100%;object-fit:cover;display:block;}';
+    // Gradient overlay para legibilidad del close button
+    c += '.dish-lightbox-hero::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,0.35) 0%,rgba(0,0,0,0) 30%,rgba(0,0,0,0) 70%,rgba(0,0,0,0.25) 100%);pointer-events:none;}';
+    // Placeholder cuando no hay imagen — diseño premium
+    c += '.dish-lightbox-img-placeholder{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:linear-gradient(135deg,var(--accent),rgba(var(--accent-rgb),0.6));color:#fff;}';
+    c += '.dish-lightbox-img-placeholder .ph-letter{font-size:120px;font-weight:900;line-height:1;text-shadow:0 4px 16px rgba(0,0,0,0.25);}';
+    c += '@media(min-width:640px){.dish-lightbox-img-placeholder .ph-letter{font-size:140px;}}';
+    c += '.dish-lightbox-img-placeholder .ph-label{font-size:13px;opacity:0.9;font-weight:600;letter-spacing:0.5px;text-transform:uppercase;}';
+    // Content area — padding generoso, mobile-first
+    c += '.dish-lightbox-content{padding:20px 20px 24px;}';
+    c += '@media(min-width:640px){.dish-lightbox-content{padding:28px 32px 32px;}}';
+    // Category badge (pequeño, encima del título)
+    c += '.dish-lightbox-cat{display:inline-block;font-size:11px;font-weight:700;color:var(--accent);background:rgba(var(--accent-rgb),0.12);padding:4px 10px;border-radius:20px;letter-spacing:0.5px;text-transform:uppercase;margin-bottom:10px;}';
+    // Title — grande, bold
+    c += '.dish-lightbox-name{font-size:24px;font-weight:800;letter-spacing:-0.5px;color:var(--text);margin:0 0 6px;line-height:1.2;}';
+    c += '@media(min-width:640px){.dish-lightbox-name{font-size:28px;}}';
+    // Price row — destacado debajo del título (estilo Rappi)
+    c += '.dish-lightbox-price-row{display:flex;align-items:baseline;gap:8px;margin:4px 0 18px;flex-wrap:wrap;}';
+    c += '.dish-lightbox-price{font-size:26px;font-weight:800;color:var(--accent);letter-spacing:-0.5px;line-height:1;}';
+    c += '@media(min-width:640px){.dish-lightbox-price{font-size:30px;}}';
+    c += '.dish-lightbox-currency{font-size:14px;font-weight:600;color:var(--text-soft);opacity:0.7;}';
+    // Description
+    c += '.dish-lightbox-desc-label{font-size:11px;font-weight:700;color:var(--text-soft);opacity:0.6;letter-spacing:0.8px;text-transform:uppercase;margin:0 0 6px;}';
+    c += '.dish-lightbox-desc{font-size:15px;color:var(--text-soft);line-height:1.6;margin:0 0 22px;}';
+    c += '@media(min-width:640px){.dish-lightbox-desc{font-size:16px;line-height:1.65;}}';
+    // Sticky CTA bar — siempre visible en la parte inferior
+    c += '.dish-lightbox-cta{position:sticky;bottom:0;left:0;right:0;padding:14px 20px 20px;background:linear-gradient(180deg,rgba(20,20,31,0) 0%,' + (darkMode ? '#14141f 35%' : '#ffffff 35%') + ');}';
+    c += '.dish-lightbox-add{width:100%;background:linear-gradient(135deg,var(--accent),rgba(var(--accent-rgb),0.85));color:#fff;border:none;padding:16px 22px;border-radius:var(--radius);font-size:16px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;transition:all 0.2s;box-shadow:0 8px 24px rgba(var(--accent-rgb),0.45);-webkit-tap-highlight-color:transparent;}';
+    c += '.dish-lightbox-add:hover{transform:translateY(-2px);box-shadow:0 12px 32px rgba(var(--accent-rgb),0.6);}';
     c += '.dish-lightbox-add:active{transform:translateY(0);}';
+    c += '.dish-lightbox-add.added{background:linear-gradient(135deg,#22c55e,#16a34a);box-shadow:0 8px 24px rgba(34,197,94,0.4);}';
   }
 
   // Cart
@@ -492,23 +526,35 @@ function buildJS(opts: JSOpts): string {
   s += '  window.addEventListener("scroll",updateActiveNav,{passive:true});\n';
   s += '}\n';
 
-  // ─── Lightbox de plato ───
+  // ─── Lightbox de plato (estilo PedidosYa/Rappi) ───
   if (showGallery) {
     s += 'function openDishLightbox(catIdx,dishIdx){\n';
     s += '  var dish=RESTAURANT.categories[catIdx].dishes[dishIdx];\n';
+    s += '  var catName=RESTAURANT.categories[catIdx].name||"Plato";\n';
     s += '  var lightbox=document.getElementById("dishLightbox");\n';
     s += '  var html="";\n';
     s += '  html+="<div class=\\"dish-lightbox-inner\\">";\n';
+    s += '  html+="<div class=\\"dish-lightbox-handle\\"></div>";\n';
     s += '  html+="<button class=\\"dish-lightbox-close\\" id=\\"dishLightboxClose\\" aria-label=\\"Cerrar\\">&times;</button>";\n';
-    s += '  if(dish.image_url){html+="<img src=\\""+escapeHtml(dish.image_url)+"\\" class=\\"dish-lightbox-img\\" alt=\\""+escapeHtml(dish.name)+"\\" onerror=\\"this.outerHTML=\\\'<div class=\\\\\\"dish-lightbox-img-placeholder\\\\\\">"+escapeHtml(dish.name.charAt(0).toUpperCase())+"</div>\\\'\\"/>";}\n';
-    s += '  else{html+="<div class=\\"dish-lightbox-img-placeholder\\">"+escapeHtml(dish.name.charAt(0).toUpperCase())+"</div>";}\n';
+    // HERO IMAGE (grande, cuadrado en mobile, 4:3 en desktop)
+    s += '  html+="<div class=\\"dish-lightbox-hero\\">";\n';
+    s += '  if(dish.image_url){html+="<img src=\\""+escapeHtml(dish.image_url)+"\\" class=\\"dish-lightbox-img\\" alt=\\""+escapeHtml(dish.name)+"\\" onerror=\\"this.outerHTML=\\\'<div class=\\\\\\"dish-lightbox-img-placeholder\\\\\\"><div class=\\\\\\"ph-letter\\\\\\">"+escapeHtml(dish.name.charAt(0).toUpperCase())+"</div><div class=\\\\\\"ph-label\\\\\\">"+escapeHtml(catName)+"</div></div>\\\'\\"/>";}\n';
+    s += '  else{html+="<div class=\\"dish-lightbox-img-placeholder\\"><div class=\\"ph-letter\\">"+escapeHtml(dish.name.charAt(0).toUpperCase())+"</div><div class=\\"ph-label\\">"+escapeHtml(catName)+"</div></div>";}\n';
+    s += '  html+="</div>";\n';
+    // CONTENT (debajo del hero, estilo PedidosYa)
     s += '  html+="<div class=\\"dish-lightbox-content\\">";\n';
+    s += '  html+="<span class=\\"dish-lightbox-cat\\">"+escapeHtml(catName)+"</span>";\n';
     s += '  html+="<h3 class=\\"dish-lightbox-name\\">"+escapeHtml(dish.name)+"</h3>";\n';
+    // Price row debajo del título
+    s += '  var priceStr=formatPrice(dish.price);\n';
+    s += '  html+="<div class=\\"dish-lightbox-price-row\\"><span class=\\"dish-lightbox-price\\">"+escapeHtml(priceStr)+"</span></div>";\n';
+    // Description
+    s += '  html+="<div class=\\"dish-lightbox-desc-label\\">Descripción</div>";\n';
     s += '  if(dish.description){html+="<p class=\\"dish-lightbox-desc\\">"+escapeHtml(dish.description)+"</p>";}\n';
-    s += '  else{html+="<p class=\\"dish-lightbox-desc\\">Plato delicioso preparado con ingredientes frescos.</p>";}\n';
-    s += '  html+="<div class=\\"dish-lightbox-bottom\\">";\n';
-    s += '  html+="<div class=\\"dish-lightbox-price\\">"+formatPrice(dish.price)+"</div>";\n';
-    s += '  html+="<button class=\\"dish-lightbox-add\\" data-cat=\\""+catIdx+"\\" data-dish=\\""+dishIdx+"\\"><svg width=\\"18\\" height=\\"18\\" viewBox=\\"0 0 24 24\\" fill=\\"none\\" stroke=\\"currentColor\\" stroke-width=\\"2.5\\"><path d=\\"M12 5v14M5 12h14\\"/></svg>Agregar al pedido</button>";\n';
+    s += '  else{html+="<p class=\\"dish-lightbox-desc\\">Plato delicioso preparado con ingredientes frescos y de la mejor calidad. Pídelo ahora mismo por WhatsApp.</p>";}\n';
+    // Sticky CTA bar
+    s += '  html+="<div class=\\"dish-lightbox-cta\\">";\n';
+    s += '  html+="<button class=\\"dish-lightbox-add\\" data-cat=\\""+catIdx+"\\" data-dish=\\""+dishIdx+"\\"><svg width=\\"20\\" height=\\"20\\" viewBox=\\"0 0 24 24\\" fill=\\"none\\" stroke=\\"currentColor\\" stroke-width=\\"2.5\\" stroke-linecap=\\"round\\" stroke-linejoin=\\"round\\"><path d=\\"M12 5v14M5 12h14\\"/></svg>Agregar al pedido</button>";\n';
     s += '  html+="</div></div></div>";\n';
     s += '  lightbox.innerHTML=html;\n';
     s += '  lightbox.classList.add("visible");\n';
@@ -516,7 +562,7 @@ function buildJS(opts: JSOpts): string {
     s += '  document.getElementById("dishLightboxClose").addEventListener("click",closeDishLightbox);\n';
     s += '  lightbox.addEventListener("click",function(e){if(e.target===lightbox)closeDishLightbox();});\n';
     s += '  var addBtn=lightbox.querySelector(".dish-lightbox-add");\n';
-    s += '  if(addBtn){addBtn.addEventListener("click",function(){addToCart(catIdx,dishIdx);closeDishLightbox();});}\n';
+    s += '  if(addBtn){addBtn.addEventListener("click",function(){addToCart(catIdx,dishIdx);addBtn.classList.add("added");addBtn.innerHTML="<svg width=\\\"20\\\" height=\\\"20\\\" viewBox=\\\"0 0 24 24\\\" fill=\\\"none\\\" stroke=\\\"currentColor\\\" stroke-width=\\\"3\\\" stroke-linecap=\\\"round\\\" stroke-linejoin=\\\"round\\\"><polyline points=\\\"20 6 9 17 4 12\\\"/></svg> Agregado";setTimeout(closeDishLightbox,900);});}\n';
     s += '}\n';
     s += 'function closeDishLightbox(){var lightbox=document.getElementById("dishLightbox");lightbox.classList.remove("visible");lightbox.innerHTML="";document.body.style.overflow="";}\n';
   }

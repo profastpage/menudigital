@@ -196,3 +196,79 @@ Stage Summary:
   * SQL: /home/z/my-project/supabase/add-social-and-gallery.sql
   * Code changes: menu-html-builder.ts, editor-client.tsx, route.ts, menu-utils.ts
   * Screenshots: download/menu-fixed-preview.png, download/menu-lightbox.png
+
+---
+Task ID: superadmin-detail-lightbox-consolidate-guide
+Agent: main (Super Z)
+Task: (1) Fix "ver detalles" error en super admin, (2) Reescribir lightbox de plato estilo PedidosYa/Rappi mobile-first, (3) Consolidar editores a 1 solo, (4) Crear subpágina /dashboard/guia con tutorial paso a paso, (5) Verificar autoguardado perfecto, (6) Entregar SQL de add-social-and-gallery.sql + nuevo fix-admin-user-detail.sql
+
+Work Log:
+- Diagnóstico del error "ver detalles" en super admin:
+  * La función admin_get_user_detail() en schema-superadmin.sql usaba `SELECT is_super_admin FROM profiles WHERE id = auth.uid()` (posible recursión RLS)
+  * NO incluía los campos calculados menus_count/views_total/published_menus/dishes_count que el frontend espera en userDetail.profile
+  * NO retornaba las columnas nuevas theme_*/social_*
+- Creado `supabase/fix-admin-user-detail.sql` (idempotente):
+  * Reescrita admin_get_user_detail() con public.is_self_super_admin() (sin recursión)
+  * Calcula menus_count/views_total/published_menus/dishes_count y los mezcla en profile_data via jsonb_set
+  * Retorna TODAS las columnas theme_*/social_*/theme_dish_gallery de cada menú
+  * SECURITY DEFINER + SET search_path=public
+- Reescrito lightbox de plato en `src/app/dashboard/[menuId]/menu-html-builder.ts` (estilo PedidosYa/Rappi):
+  * CSS: overlay full-screen en mobile (align-items:flex-end → bottom-sheet), card centrada en desktop
+  * CSS: handle bar de 40x4px en mobile (estilo iOS/Android nativo bottom-sheet)
+  * CSS: close button flotante sobre hero con backdrop-filter blur (estilo Rappi)
+  * CSS: hero image aspect-ratio 1/1 mobile, 4/3 desktop, max-height 60vh/480px
+  * CSS: gradient overlay ::after en hero para legibilidad del close
+  * CSS: placeholder premium cuando no hay imagen (letra 120-140px + label uppercase)
+  * CSS: content padding 20px mobile, 28-32px desktop
+  * CSS: category badge pequeño (uppercase, accent color, pill)
+  * CSS: title 24px mobile / 28px desktop (font-weight 800)
+  * CSS: price-row destacado debajo del título (26px mobile / 30px desktop, accent color)
+  * CSS: description con label "Descripción" arriba (uppercase, small, opacity 0.6)
+  * CSS: CTA sticky en bottom con gradient fade para que siempre sea visible
+  * CSS: botón "Agregar al pedido" full-width con shadow accent y animación hover
+  * CSS: estado ".added" (verde) con checkmark SVG y "Agregado" por 900ms antes de cerrar
+  * JS: openDishLightbox construye HTML con catName, hero, content, price-row, desc-label, CTA
+  * JS: al hacer clic en agregar: addToCart + clase "added" + innerHTML con SVG check + setTimeout 900ms
+  * Animaciones: dlbFadeIn (overlay), dlbSlideUp (mobile bottom-sheet), dlbZoomIn (desktop card)
+- Consolidado editores a 1 solo:
+  * Eliminado "Generador rápido" de NAV_ITEMS en dashboard-shell.tsx
+  * Añadido nav item "Guía" → /dashboard/guia con icono HelpCircle
+  * Reemplazado /dashboard/generador/page.tsx con redirect a /dashboard?from=generador
+  * Reemplazado /dashboard/generador/generador-client.tsx con stub deprecado
+  * Eliminado /dashboard/generador/loading.tsx
+- Creada subpágina /dashboard/guia con tutorial paso a paso:
+  * `src/app/dashboard/guia/page.tsx`: server component que valida auth y carga plan
+  * `src/app/dashboard/guia/guia-client.tsx`: cliente con 15 secciones acordeón
+  * Secciones: crear-menú, datos-restaurante, portada-redes, categorías-platos, lightbox-platos, apariencia-tema, publicar, qr-codigo, dominio-propio, analíticas, exportar-importar, planes-facturación, super-admin, tips-pro
+  * Cada sección: emoji + número + título + descripción + 1-5 pasos numerados
+  * Cada paso: título, detalle, tip Pro opcional (caja amarilla), link opcional
+  * Hero gradient gold + stat cards (5 min, 100% mobile, autoguardado, +40% ventas)
+  * CTA final "¿Listo para publicar?" con links a /dashboard y /dashboard/billing
+- Fix autoguardado en editor-client.tsx:
+  * El useEffect del save timer NO incluía `theme` en deps array → cambios de tema no se autoguardaban
+  * Agregado `theme` a deps: `[menu, categories, theme, socials, save]`
+  * Reducido debounce de 3000ms → 1500ms (más responsivo)
+- Verificado con agent-browser (iPhone 14 emulation):
+  * HTML generado (43KB) sin errores JS
+  * 4 platos renderizados correctamente con clases .dish.revealed
+  * Click en plato con imagen → lightbox abre con .dish-lightbox.visible
+  * Estructura completa: hero, handle, close, cat ("Entradas"), name ("Ceviche Clásico"), price ("S/ 28.00"), desc, CTA ("Agregar al pedido")
+  * Click en plato SIN imagen → placeholder premium renderiza con .ph-letter ("A") y .ph-label ("Entradas")
+  * Screenshots: download/lightbox-pedidosya-style.png + download/lightbox-no-image.png
+- Build OK: 25 rutas generadas (incluye nueva /dashboard/guia)
+- TypeScript: 0 errores en src/ (solo warnings en skills/ y examples/ no relacionados)
+
+Stage Summary:
+- ✅ FIX admin_get_user_detail() → SQL entregado en `supabase/fix-admin-user-detail.sql` (user debe correr en Supabase SQL Editor)
+- ✅ LIGHTBOX estilo PedidosYa/Rappi mobile-first ultra pro (hero grande, title+price debajo, desc profesional, CTA sticky)
+- ✅ CONSOLIDACIÓN: 1 solo editor integrado (/dashboard/[menuId]), generador standalone deprecado y redirige
+- ✅ GUÍA: /dashboard/guia con 15 secciones paso a paso, emojis, tips Pro, links contextuales
+- ✅ AUTOGUARDADO: fix bug (theme no estaba en deps) + debounce 1.5s (más rápido)
+- ✅ SQL add-social-and-gallery.sql entregado al user para copiar a Supabase SQL Editor
+- ⚠️ USER MUST RUN: `supabase/fix-admin-user-detail.sql` en Supabase SQL Editor para fixear "ver detalles"
+- Artifacts:
+  * SQL: /home/z/my-project/supabase/fix-admin-user-detail.sql
+  * Code: menu-html-builder.ts, editor-client.tsx, dashboard-shell.tsx, generador/page.tsx, generador/generador-client.tsx
+  * New page: /home/z/my-project/src/app/dashboard/guia/page.tsx + guia-client.tsx
+  * Screenshots: download/lightbox-pedidosya-style.png, download/lightbox-no-image.png
+  * Test: download/menu-lightbox-test.html

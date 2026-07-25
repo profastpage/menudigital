@@ -6,7 +6,6 @@ import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import {
   LogOut,
-  Sparkles,
   BarChart3,
   CreditCard,
   Globe,
@@ -16,6 +15,7 @@ import {
   Home,
   Menu as MenuIcon,
   X,
+  HelpCircle,
 } from 'lucide-react';
 import type { Plan } from '@/lib/plans';
 
@@ -29,7 +29,7 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { href: '/dashboard', label: 'Mis menús', icon: LayoutDashboard },
-  { href: '/dashboard/generador', label: 'Generador rápido', icon: Sparkles },
+  { href: '/dashboard/guia', label: 'Guía', icon: HelpCircle },
   { href: '/dashboard/analytics', label: 'Analíticas', icon: BarChart3, pro: true },
   { href: '/dashboard/domains', label: 'Dominios', icon: Globe, pro: true },
   { href: '/dashboard/billing', label: 'Planes', icon: CreditCard },

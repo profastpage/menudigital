@@ -199,11 +199,11 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount }: Props)
 
   useEffect(() => {
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-    saveTimerRef.current = setTimeout(() => save(true), 3000);
+    saveTimerRef.current = setTimeout(() => save(true), 1500);
     return () => {
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     };
-  }, [menu, categories, socials, save]);
+  }, [menu, categories, theme, socials, save]);
 
   // Vista previa en vivo (debounced)
   useEffect(() => {
