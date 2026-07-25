@@ -1,65 +1,19 @@
 -- ============================================================
--- MenuPro SaaS — Schema Supabase IDEMPOTENTE (run-safe)
+-- MenuPro SaaS — Schema Supabase IDEMPOTENTE v2 (run-safe)
 -- 
--- CÓMO EJECUTAR (paso a paso):
--- 1. Entra a https://supabase.com/dashboard y abre tu proyecto
---    (bkxtploibraiovgrjtwn o el que tengas)
--- 2. En el menú izquierdo haz clic en "SQL Editor" (ícono de base de datos)
--- 3. Haz clic en el botón azul "+ New query" (arriba a la derecha)
--- 4. Selecciona TODO el contenido de abajo (desde la línea "CREATE TYPE" 
---    hasta el último "UPDATE profiles SET is_super_admin")
--- 5. Pégalo en el editor (Ctrl+V / Cmd+V)
--- 6. Haz clic en "Run" (botón verde abajo) o presiona Ctrl+Enter
--- 7. Verás "Success" al final — ¡listo!
+-- CORRECCIÓN v2: los DROP POLICY ahora van DESPUÉS de CREATE TABLE
+-- para que no fallen si la tabla no existe todavía.
 -- 
--- Este script es IDEMPOTENTE: puedes ejecutarlo 1, 2, 10 veces sin errores.
--- Si ya tenías tablas creadas, este script las actualiza sin romper nada.
+-- CÓMO EJECUTAR:
+-- 1. Supabase Dashboard → tu proyecto
+-- 2. SQL Editor (ícono de base de datos)
+-- 3. "+ New query"
+-- 4. Pega TODO este contenido
+-- 5. Click en "Run" (o Ctrl+Enter)
+-- 6. Verás "Success" al final
+-- 
+-- Seguro de ejecutar 1, 2, 10 veces — no rompe nada.
 -- ============================================================
-
--- ============================================================
--- 0) Limpieza preventiva de políticas (idempotente)
---    Elimina políticas existentes antes de crearlas de nuevo
--- ============================================================
-DROP POLICY IF EXISTS "profiles_select_self" ON profiles;
-DROP POLICY IF EXISTS "profiles_update_self" ON profiles;
-DROP POLICY IF EXISTS "profiles_insert_self" ON profiles;
-DROP POLICY IF EXISTS "profiles_select_admin" ON profiles;
-DROP POLICY IF EXISTS "profiles_update_admin" ON profiles;
-DROP POLICY IF EXISTS "profiles_delete_admin" ON profiles;
-
-DROP POLICY IF EXISTS "menus_select_own" ON menus;
-DROP POLICY IF EXISTS "menus_insert_own" ON menus;
-DROP POLICY IF EXISTS "menus_update_own" ON menus;
-DROP POLICY IF EXISTS "menus_delete_own" ON menus;
-DROP POLICY IF EXISTS "menus_select_admin" ON menus;
-DROP POLICY IF EXISTS "menus_delete_admin" ON menus;
-
-DROP POLICY IF EXISTS "categories_select_own" ON categories;
-DROP POLICY IF EXISTS "categories_insert_own" ON categories;
-DROP POLICY IF EXISTS "categories_update_own" ON categories;
-DROP POLICY IF EXISTS "categories_delete_own" ON categories;
-DROP POLICY IF EXISTS "categories_select_admin" ON categories;
-
-DROP POLICY IF EXISTS "dishes_select_own" ON dishes;
-DROP POLICY IF EXISTS "dishes_insert_own" ON dishes;
-DROP POLICY IF EXISTS "dishes_update_own" ON dishes;
-DROP POLICY IF EXISTS "dishes_delete_own" ON dishes;
-DROP POLICY IF EXISTS "dishes_select_admin" ON dishes;
-
-DROP POLICY IF EXISTS "menu_views_select_own" ON menu_views;
-DROP POLICY IF EXISTS "menu_views_insert_any" ON menu_views;
-DROP POLICY IF EXISTS "menu_views_select_admin" ON menu_views;
-
-DROP POLICY IF EXISTS "custom_domains_select_own" ON custom_domains;
-DROP POLICY IF EXISTS "custom_domains_insert_own" ON custom_domains;
-DROP POLICY IF EXISTS "custom_domains_update_own" ON custom_domains;
-DROP POLICY IF EXISTS "custom_domains_delete_own" ON custom_domains;
-DROP POLICY IF EXISTS "custom_domains_select_admin" ON custom_domains;
-
-DROP POLICY IF EXISTS "menus_storage_select_all" ON storage.objects;
-DROP POLICY IF EXISTS "menus_storage_insert_own" ON storage.objects;
-DROP POLICY IF EXISTS "menus_storage_update_own" ON storage.objects;
-DROP POLICY IF EXISTS "menus_storage_delete_own" ON storage.objects;
 
 -- ============================================================
 -- 1) ENUM para planes (idempotente)
@@ -72,7 +26,6 @@ END $$;
 
 -- ============================================================
 -- 2) Tabla profiles (1:1 con auth.users)
---    ADD COLUMN IF NOT EXISTS → seguro si la tabla ya existe
 -- ============================================================
 CREATE TABLE IF NOT EXISTS profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -90,7 +43,7 @@ CREATE TABLE IF NOT EXISTS profiles (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Agregar columnas si la tabla ya existía sin ellas (migración segura)
+-- Agregar columnas si la tabla ya existía sin ellas
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS is_super_admin BOOLEAN NOT NULL DEFAULT false;
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS mp_preapproval_id TEXT;
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS mp_status TEXT;
@@ -100,6 +53,14 @@ ALTER TABLE profiles ADD COLUMN IF NOT EXISTS bg_removals_reset_at TIMESTAMPTZ N
 
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 
+-- Políticas profiles (DROP antes de CREATE, la tabla ya existe)
+DROP POLICY IF EXISTS "profiles_select_self" ON profiles;
+DROP POLICY IF EXISTS "profiles_update_self" ON profiles;
+DROP POLICY IF EXISTS "profiles_insert_self" ON profiles;
+DROP POLICY IF EXISTS "profiles_select_admin" ON profiles;
+DROP POLICY IF EXISTS "profiles_update_admin" ON profiles;
+DROP POLICY IF EXISTS "profiles_delete_admin" ON profiles;
+
 CREATE POLICY "profiles_select_self" ON profiles
   FOR SELECT USING (auth.uid() = id);
 CREATE POLICY "profiles_update_self" ON profiles
@@ -107,7 +68,6 @@ CREATE POLICY "profiles_update_self" ON profiles
 CREATE POLICY "profiles_insert_self" ON profiles
   FOR INSERT WITH CHECK (auth.uid() = id);
 
--- Super admin policies (bypass RLS para administradores)
 CREATE POLICY "profiles_select_admin" ON profiles
   FOR SELECT USING (
     EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND is_super_admin = true)
@@ -174,6 +134,13 @@ CREATE INDEX IF NOT EXISTS idx_menus_user_id ON menus(user_id);
 CREATE INDEX IF NOT EXISTS idx_menus_slug ON menus(slug);
 CREATE UNIQUE INDEX IF NOT EXISTS menus_user_slug_unique ON menus(user_id, slug);
 
+DROP POLICY IF EXISTS "menus_select_own" ON menus;
+DROP POLICY IF EXISTS "menus_insert_own" ON menus;
+DROP POLICY IF EXISTS "menus_update_own" ON menus;
+DROP POLICY IF EXISTS "menus_delete_own" ON menus;
+DROP POLICY IF EXISTS "menus_select_admin" ON menus;
+DROP POLICY IF EXISTS "menus_delete_admin" ON menus;
+
 CREATE POLICY "menus_select_own" ON menus
   FOR SELECT USING (auth.uid() = user_id);
 CREATE POLICY "menus_insert_own" ON menus
@@ -183,7 +150,6 @@ CREATE POLICY "menus_update_own" ON menus
 CREATE POLICY "menus_delete_own" ON menus
   FOR DELETE USING (auth.uid() = user_id);
 
--- Admin: puede ver y eliminar menús de cualquier usuario
 CREATE POLICY "menus_select_admin" ON menus
   FOR SELECT USING (
     EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND is_super_admin = true)
@@ -208,6 +174,12 @@ ALTER TABLE categories ENABLE ROW LEVEL SECURITY;
 
 CREATE INDEX IF NOT EXISTS idx_categories_menu_id ON categories(menu_id);
 
+DROP POLICY IF EXISTS "categories_select_own" ON categories;
+DROP POLICY IF EXISTS "categories_insert_own" ON categories;
+DROP POLICY IF EXISTS "categories_update_own" ON categories;
+DROP POLICY IF EXISTS "categories_delete_own" ON categories;
+DROP POLICY IF EXISTS "categories_select_admin" ON categories;
+
 CREATE POLICY "categories_select_own" ON categories
   FOR SELECT USING (
     EXISTS (SELECT 1 FROM menus WHERE menus.id = categories.menu_id AND menus.user_id = auth.uid())
@@ -225,7 +197,6 @@ CREATE POLICY "categories_delete_own" ON categories
     EXISTS (SELECT 1 FROM menus WHERE menus.id = categories.menu_id AND menus.user_id = auth.uid())
   );
 
--- Admin categories
 CREATE POLICY "categories_select_admin" ON categories
   FOR SELECT USING (
     EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND is_super_admin = true)
@@ -248,6 +219,12 @@ CREATE TABLE IF NOT EXISTS dishes (
 ALTER TABLE dishes ENABLE ROW LEVEL SECURITY;
 
 CREATE INDEX IF NOT EXISTS idx_dishes_category_id ON dishes(category_id);
+
+DROP POLICY IF EXISTS "dishes_select_own" ON dishes;
+DROP POLICY IF EXISTS "dishes_insert_own" ON dishes;
+DROP POLICY IF EXISTS "dishes_update_own" ON dishes;
+DROP POLICY IF EXISTS "dishes_delete_own" ON dishes;
+DROP POLICY IF EXISTS "dishes_select_admin" ON dishes;
 
 CREATE POLICY "dishes_select_own" ON dishes
   FOR SELECT USING (
@@ -282,7 +259,6 @@ CREATE POLICY "dishes_delete_own" ON dishes
     )
   );
 
--- Admin dishes
 CREATE POLICY "dishes_select_admin" ON dishes
   FOR SELECT USING (
     EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND is_super_admin = true)
@@ -303,6 +279,10 @@ ALTER TABLE menu_views ENABLE ROW LEVEL SECURITY;
 
 CREATE INDEX IF NOT EXISTS idx_menu_views_menu_id ON menu_views(menu_id);
 
+DROP POLICY IF EXISTS "menu_views_select_own" ON menu_views;
+DROP POLICY IF EXISTS "menu_views_insert_any" ON menu_views;
+DROP POLICY IF EXISTS "menu_views_select_admin" ON menu_views;
+
 CREATE POLICY "menu_views_select_own" ON menu_views
   FOR SELECT USING (
     EXISTS (SELECT 1 FROM menus WHERE menus.id = menu_views.menu_id AND menus.user_id = auth.uid())
@@ -310,7 +290,6 @@ CREATE POLICY "menu_views_select_own" ON menu_views
 CREATE POLICY "menu_views_insert_any" ON menu_views
   FOR INSERT WITH CHECK (true);
 
--- Admin menu_views
 CREATE POLICY "menu_views_select_admin" ON menu_views
   FOR SELECT USING (
     EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND is_super_admin = true)
@@ -338,6 +317,12 @@ CREATE INDEX IF NOT EXISTS idx_custom_domains_user_id ON custom_domains(user_id)
 CREATE INDEX IF NOT EXISTS idx_custom_domains_domain ON custom_domains(domain);
 CREATE UNIQUE INDEX IF NOT EXISTS custom_domains_domain_unique ON custom_domains(domain);
 
+DROP POLICY IF EXISTS "custom_domains_select_own" ON custom_domains;
+DROP POLICY IF EXISTS "custom_domains_insert_own" ON custom_domains;
+DROP POLICY IF EXISTS "custom_domains_update_own" ON custom_domains;
+DROP POLICY IF EXISTS "custom_domains_delete_own" ON custom_domains;
+DROP POLICY IF EXISTS "custom_domains_select_admin" ON custom_domains;
+
 CREATE POLICY "custom_domains_select_own" ON custom_domains
   FOR SELECT USING (auth.uid() = user_id);
 CREATE POLICY "custom_domains_insert_own" ON custom_domains
@@ -347,7 +332,6 @@ CREATE POLICY "custom_domains_update_own" ON custom_domains
 CREATE POLICY "custom_domains_delete_own" ON custom_domains
   FOR DELETE USING (auth.uid() = user_id);
 
--- Admin custom_domains
 CREATE POLICY "custom_domains_select_admin" ON custom_domains
   FOR SELECT USING (
     EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND is_super_admin = true)
@@ -359,6 +343,12 @@ CREATE POLICY "custom_domains_select_admin" ON custom_domains
 INSERT INTO storage.buckets (id, name, public)
 VALUES ('menus', 'menus', true)
 ON CONFLICT (id) DO NOTHING;
+
+-- Storage policies (DROP antes de CREATE — storage.objects siempre existe)
+DROP POLICY IF EXISTS "menus_storage_select_all" ON storage.objects;
+DROP POLICY IF EXISTS "menus_storage_insert_own" ON storage.objects;
+DROP POLICY IF EXISTS "menus_storage_update_own" ON storage.objects;
+DROP POLICY IF EXISTS "menus_storage_delete_own" ON storage.objects;
 
 CREATE POLICY "menus_storage_select_all" ON storage.objects
   FOR SELECT USING (bucket_id = 'menus');
@@ -379,7 +369,7 @@ CREATE POLICY "menus_storage_delete_own" ON storage.objects
   );
 
 -- ============================================================
--- 10) Triggers updated_at (idempotentes con DROP TRIGGER)
+-- 10) Triggers updated_at
 -- ============================================================
 CREATE OR REPLACE FUNCTION public.touch_updated_at()
 RETURNS TRIGGER AS $$
@@ -412,8 +402,7 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- ============================================================
--- 12) Función: incrementar contador de "Quitar fondo"
---     (con reset automático cada 30 días)
+-- 12) Función: incrementar "Quitar fondo" (con reset 30 días)
 -- ============================================================
 CREATE OR REPLACE FUNCTION public.increment_bg_removals(user_uuid UUID)
 RETURNS INTEGER AS $$
@@ -441,8 +430,7 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- ============================================================
--- 13) Función: obtener créditos disponibles de "Quitar fondo"
---     Devuelve JSON: { used, limit, remaining, reset_at }
+-- 13) Función: obtener cuota "Quitar fondo"
 -- ============================================================
 CREATE OR REPLACE FUNCTION public.get_bg_removals_quota(user_uuid UUID, monthly_limit INTEGER)
 RETURNS JSON AS $$
@@ -472,20 +460,6 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- ============================================================
--- 14) Marcar al primer usuario como super admin
---     CAMBIA el email por el tuyo y descomenta estas líneas
---     después de haberte registrado por primera vez (con Google
---     o email/contraseña):
--- ============================================================
+-- 14) Marcar TU cuenta como super admin (descomenta y cambia el email):
 -- UPDATE profiles SET is_super_admin = true WHERE email = 'tu-email@gmail.com';
-
--- ============================================================
--- FIN — Si ves "Success" ya está todo listo.
--- Tablas creadas: profiles, menus, categories, dishes,
---                  menu_views, custom_domains
--- Storage bucket: menus (público)
--- Triggers: on_auth_user_created, touch_profiles, touch_menus,
---           touch_custom_domains
--- Funciones: handle_new_user, touch_updated_at, increment_menu_views,
---            increment_bg_removals, get_bg_removals_quota
 -- ============================================================
