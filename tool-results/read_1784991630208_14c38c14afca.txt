@@ -1,0 +1,670 @@
+     1→import { escapeHtml, hexToRgbStr, type MenuData } from '@/lib/menu-utils';
+     2→
+     3→/**
+     4→ * Construye el HTML completo autocontenido del menú público.
+     5→ * Usa concatenación de strings (no template literals anidados) para evitar
+     6→ * problemas de escape. Inyecta los datos via JSON.stringify().
+     7→ *
+     8→ * Soporta tema personalizables (plan Pro): layout, image_size, card_style,
+     9→ * font, secondary color, dark mode, cover image, search, etc.
+    10→ *
+    11→ * NOVEDADES:
+    12→ *  - Cover image como fondo detrás del header de perfil (efecto ultra pro)
+    13→ *  - Redes sociales con iconos SVG premium (Facebook, Instagram, WhatsApp,
+    14→ *    TikTok, Twitter/X, YouTube, Web)
+    15→ *  - Lightbox carrusel: al hacer clic en un plato se abre un overlay con
+    16→ *    imagen grande + info detallada. Si el plato no tiene imagen, se muestra
+    17→ *    un placeholder elegante.
+    18→ *  - Fix del bug "sans is not defined" (property CSS sin comillas)
+    19→ */
+    20→export function buildMenuHTML(data: MenuData): string {
+    21→  // Defaults seguros (plan Free = single col, medium img, expanded card, dark)
+    22→  const layout = data.theme_layout || 'single';
+    23→  const imageSize = data.theme_image_size || 'medium';
+    24→  const cardStyle = data.theme_card_style || 'expanded';
+    25→  const font = data.theme_font || 'Inter';
+    26→  const darkMode = data.theme_dark_mode !== false; // default true
+    27→  const showSearch = data.theme_show_search !== false;
+    28→  const showCatIcons = data.theme_show_category_icons !== false;
+    29→  const rounded = data.theme_rounded_corners !== false;
+    30→  const coverUrl = data.theme_cover_url || null;
+    31→  const secondary = data.theme_color_secondary || '#1a1a2e';
+    32→  const showGallery = data.theme_dish_gallery !== false; // default true
+    33→
+    34→  const css = buildCSS({ layout, imageSize, cardStyle, font, darkMode, showSearch, showCatIcons, rounded, coverUrl, secondary, showGallery });
+    35→  const js = buildJS({ layout, imageSize, cardStyle, showSearch, showGallery });
+    36→  const colorRgb = hexToRgbStr(data.color);
+    37→  const secondaryRgb = hexToRgbStr(secondary);
+    38→
+    39→  // Font CDN (solo si no es Inter/system)
+    40→  const fontImport = ['Inter', 'system-ui', '-apple-system'].includes(font)
+    41→    ? ''
+    42→    : `<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=${encodeURIComponent(font)}:wght@400;500;600;700;800&display=swap" rel="stylesheet">`;
+    43→
+    44→  // ⚠️ FIX CRITICAL: el valor de la property CSS debe ser un JS string completo
+    45→  // y CORRECTAMENTE ESCAPADO. Antes generábamos "Inter, "Inter", sans-serif"
+    46→  // lo que rompía el parser JS y mataba todo el script (ReferenceError: sans).
+    47→  // Usamos JSON.stringify para escapar comillas internas correctamente.
+    48→  const fontMainJs = JSON.stringify(font + ', "Inter", sans-serif');
+    49→
+    50→  let html = '';
+    51→  html += '<!DOCTYPE html>\n';
+    52→  html += '<html lang="es">\n';
+    53→  html += '<head>\n';
+    54→  html += '<meta charset="UTF-8">\n';
+    55→  html += '<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">\n';
+    56→  html += '<meta name="theme-color" content="' + data.color + '">\n';
+    57→  html += '<meta name="description" content="' + escapeHtml(data.description || data.name) + '">\n';
+    58→  html += '<title>' + escapeHtml(data.name) + '</title>\n';
+    59→  html += fontImport + '\n';
+    60→  html += '<style>' + css + '</style>\n';
+    61→  html += '</head>\n';
+    62→  html += '<body>\n';
+    63→  html += '<div id="app"></div>\n';
+    64→  html += '<script>\n';
+    65→  html += 'var RESTAURANT = ' + JSON.stringify(data) + ';\n';
+    66→  html += 'var SHOW_BRANDING = ' + (!!data.branding_text) + ';\n';
+    67→  html += 'var BRANDING_TEXT = ' + JSON.stringify(data.branding_text || '') + ';\n';
+    68→  html += 'var THEME = ' + JSON.stringify({ layout, imageSize, cardStyle, showSearch, showGallery }) + ';\n';
+    69→  html += 'document.documentElement.style.setProperty("--accent", "' + data.color + '");\n';
+    70→  html += 'document.documentElement.style.setProperty("--accent-rgb", "' + colorRgb + '");\n';
+    71→  html += 'document.documentElement.style.setProperty("--secondary", "' + secondary + '");\n';
+    72→  html += 'document.documentElement.style.setProperty("--secondary-rgb", "' + secondaryRgb + '");\n';
+    73→  // ⚠️ FIX: property CSS value debe ser un string COMPLETO entre comillas
+    74→  html += 'document.documentElement.style.setProperty("--font-main", ' + fontMainJs + ');\n';
+    75→  html += js + '\n';
+    76→  html += '</scr' + 'ipt>\n';
+    77→  html += '</body>\n';
+    78→  html += '</html>';
+    79→  return html;
+    80→}
+    81→
+    82→interface ThemeOpts {
+    83→  layout: 'single' | 'double' | 'grid';
+    84→  imageSize: 'none' | 'small' | 'medium' | 'large' | 'hero';
+    85→  cardStyle: 'compact' | 'expanded' | 'minimal';
+    86→  font: string;
+    87→  darkMode: boolean;
+    88→  showSearch: boolean;
+    89→  showCatIcons: boolean;
+    90→  rounded: boolean;
+    91→  coverUrl: string | null;
+    92→  secondary: string;
+    93→  showGallery: boolean;
+    94→}
+    95→
+    96→function buildCSS(opts: ThemeOpts): string {
+    97→  const { layout, imageSize, cardStyle, font, darkMode, showSearch, showCatIcons, rounded, coverUrl, showGallery } = opts;
+    98→  const radius = rounded ? '16px' : '4px';
+    99→  const radiusSm = rounded ? '12px' : '2px';
+   100→  const radiusLg = rounded ? '24px' : '8px';
+   101→
+   102→  // Colores según dark/light
+   103→  const bg0 = darkMode ? '#07070b' : '#fafafa';
+   104→  const bg1 = darkMode ? '#0f0f1a' : '#ffffff';
+   105→  const text = darkMode ? '#f4f4fa' : '#1a1a2e';
+   106→  const textMuted = darkMode ? '#8a8a9a' : '#6a6a7a';
+   107→  const textSoft = darkMode ? '#b8b8c8' : '#3a3a4a';
+   108→  const glass = darkMode ? 'rgba(255,255,255,0.035)' : 'rgba(0,0,0,0.025)';
+   109→  const glassStrong = darkMode ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.05)';
+   110→  const border = darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)';
+   111→  const borderStrong = darkMode ? 'rgba(255,255,255,0.14)' : 'rgba(0,0,0,0.14)';
+   112→
+   113→  let c = '';
+   114→  c += `:root{--accent:#ff6b35;--accent-rgb:255,107,53;--secondary:#1a1a2e;--gold:#d4af37;--bg-0:${bg0};--bg-1:${bg1};--glass:${glass};--glass-strong:${glassStrong};--border:${border};--border-strong:${borderStrong};--text:${text};--text-muted:${textMuted};--text-soft:${textSoft};--font-main:${font},"Inter",sans-serif;--radius:${radius};--radius-sm:${radiusSm};--radius-lg:${radiusLg};}`;
+   115→  c += '*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}';
+   116→  c += 'html{scroll-behavior:smooth;-webkit-text-size-adjust:100%;}';
+   117→  c += `body{font-family:var(--font-main);background:var(--bg-0);color:var(--text);min-height:100vh;padding-bottom:calc(140px + env(safe-area-inset-bottom, 0px));position:relative;overflow-x:hidden;overscroll-behavior-y:contain;-webkit-overflow-scrolling:touch;}`;
+   118→  if (darkMode) {
+   119→    c += 'body::before,body::after{content:"";position:fixed;width:500px;height:500px;border-radius:50%;filter:blur(140px);opacity:0.18;z-index:0;pointer-events:none;}';
+   120→    c += 'body::before{background:var(--accent);top:-200px;right:-150px;}';
+   121→    c += 'body::after{background:var(--gold);bottom:-200px;left:-150px;}';
+   122→  }
+   123→  c += '#app{position:relative;z-index:1;}';
+   124→
+   125→  // ─── HERO / COVER (con efecto blur detrás del header) ───
+   126→  if (coverUrl) {
+   127→    c += '.hero{position:relative;width:100%;height:340px;overflow:hidden;background:var(--bg-1);}';
+   128→    c += '.hero img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:saturate(1.1);}';
+   129→    c += '@media(min-width:600px){.hero{height:420px;}}';
+   130→    // Overlay gradient para legibilidad
+   131→    c += '.hero::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,0.25) 0%,rgba(0,0,0,0.55) 60%,var(--bg-0) 100%);}';
+   132→  }
+   133→
+   134→  // Header — cuando hay cover, se superpone encima con efecto glass
+   135→  if (coverUrl) {
+   136→    c += `.header{position:relative;z-index:2;margin-top:-140px;padding:0 24px 30px;text-align:center;}`;
+   137→    c += '@media(min-width:600px){.header{margin-top:-180px;}}';
+   138→  } else {
+   139→    c += `.header{padding:38px 24px 30px;text-align:center;position:relative;background:linear-gradient(180deg,rgba(255,255,255,0.03) 0%,transparent 100%);border-bottom:1px solid var(--border);}`;
+   140→    c += '.header::after{content:"";position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:140px;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);}';
+   141→  }
+   142→  c += '.logo-wrap{position:relative;display:inline-block;margin-bottom:16px;width:96px;height:96px;}';
+   143→  c += '.logo-wrap::before{content:"";position:absolute;inset:-6px;border-radius:50%;background:conic-gradient(from 0deg,var(--accent),var(--gold),var(--accent));filter:blur(10px);opacity:0.5;z-index:0;animation:rotate 8s linear infinite;}';
+   144→  c += '@keyframes rotate{to{transform:rotate(360deg);}}';
+   145→  c += `.logo{width:96px;height:96px;border-radius:50%;object-fit:cover;border:3px solid rgba(255,255,255,0.18);box-shadow:0 12px 36px rgba(0,0,0,0.55);background:var(--glass);position:absolute;inset:0;z-index:2;}`;
+   146→  c += '.logo-placeholder{width:96px;height:96px;border-radius:50%;background:linear-gradient(135deg,var(--accent),rgba(var(--accent-rgb),0.6));display:flex;align-items:center;justify-content:center;font-size:38px;font-weight:800;color:#fff;position:absolute;inset:0;z-index:1;border:3px solid rgba(255,255,255,0.18);box-shadow:0 12px 36px rgba(0,0,0,0.55);backdrop-filter:blur(8px);}';
+   147→  c += '.restaurant-name{font-size:28px;font-weight:800;margin-bottom:6px;letter-spacing:-0.5px;color:var(--text);text-shadow:' + (coverUrl ? '0 2px 12px rgba(0,0,0,0.6)' : 'none') + ';}';
+   148→  c += '.slogan{font-size:11px;color:var(--gold);letter-spacing:4px;text-transform:uppercase;font-weight:600;margin-bottom:8px;}';
+   149→  c += '.restaurant-desc{color:' + (coverUrl && darkMode ? 'rgba(255,255,255,0.85)' : 'var(--text-soft)') + ';font-size:14px;margin-bottom:18px;max-width:440px;margin-left:auto;margin-right:auto;line-height:1.5;}';
+   150→  c += '.open-badge{display:inline-flex;align-items:center;gap:7px;background:rgba(6,214,160,0.12);color:#06d6a0;padding:6px 14px;border-radius:20px;font-size:11.5px;font-weight:600;border:1px solid rgba(6,214,160,0.25);letter-spacing:0.5px;text-transform:uppercase;}';
+   151→  c += '.open-badge::before{content:"";width:6px;height:6px;border-radius:50%;background:#06d6a0;box-shadow:0 0 8px #06d6a0;animation:pulse 2s infinite;}';
+   152→  c += '@keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:0.4;transform:scale(1.3);}}';
+   153→
+   154→  // ─── Redes sociales ───
+   155→  c += '.socials{display:flex;justify-content:center;align-items:center;gap:10px;margin-top:16px;flex-wrap:wrap;}';
+   156→  c += '.social-link{width:38px;height:38px;border-radius:50%;background:var(--glass);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;color:var(--text-soft);transition:all 0.25s cubic-bezier(0.4,0,0.2,1);cursor:pointer;text-decoration:none;}';
+   157→  c += '.social-link:hover{background:linear-gradient(135deg,var(--accent),rgba(var(--accent-rgb),0.85));color:#fff;border-color:transparent;transform:translateY(-3px);box-shadow:0 8px 20px rgba(var(--accent-rgb),0.4);}';
+   158→  c += '.social-link svg{width:18px;height:18px;}';
+   159→
+   160→  // Search bar (opcional, Pro)
+   161→  if (showSearch) {
+   162→    c += '.search-wrap{padding:12px 20px 0;max-width:620px;margin:0 auto;position:relative;}';
+   163→    c += '.search-input{width:100%;padding:12px 16px 12px 44px;border-radius:var(--radius-sm);background:var(--glass);border:1px solid var(--border);color:var(--text);font-size:15px;font-family:var(--font-main);outline:none;transition:border 0.2s;}';
+   164→    c += '.search-input:focus{border-color:rgba(var(--accent-rgb),0.5);background:var(--glass-strong);}';
+   165→    c += '.search-input::placeholder{color:var(--text-muted);}';
+   166→    c += '.search-icon{position:absolute;left:36px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:var(--text-muted);pointer-events:none;}';
+   167→  }
+   168→
+   169→  // Nav
+   170→  c += '.nav{position:sticky;top:0;background:' + (darkMode ? 'rgba(7,7,11,0.78)' : 'rgba(250,250,250,0.85)') + ';backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);border-bottom:1px solid var(--border);z-index:100;padding:14px 0;overflow-x:auto;scrollbar-width:none;}';
+   171→  c += '.nav::-webkit-scrollbar{display:none;}';
+   172→  c += '.nav-inner{display:flex;gap:8px;padding:0 20px;min-width:max-content;}';
+   173→  c += '.nav-item{white-space:nowrap;padding:8px 18px;background:var(--glass);border:1px solid var(--border);border-radius:24px;color:var(--text-soft);font-size:13.5px;font-weight:500;cursor:pointer;transition:all 0.25s cubic-bezier(0.4,0,0.2,1);display:flex;align-items:center;gap:6px;}';
+   174→  c += '.nav-item:hover{background:var(--glass-strong);color:var(--text);transform:translateY(-1px);}';
+   175→  c += '.nav-item.active{background:linear-gradient(135deg,var(--accent),rgba(var(--accent-rgb),0.85));color:#fff;border-color:transparent;box-shadow:0 4px 16px rgba(var(--accent-rgb),0.4);}';
+   176→  if (showCatIcons) {
+   177→    c += '.nav-item-icon{font-size:16px;line-height:1;}';
+   178→  }
+   179→
+   180→  // Section
+   181→  const sectionMaxW = layout === 'single' ? '620px' : '1100px';
+   182→  c += `.section{padding:24px 20px 8px;max-width:${sectionMaxW};margin:0 auto;width:100%;}`;
+   183→  c += '.section-title{font-size:21px;font-weight:700;margin-bottom:18px;display:flex;align-items:center;gap:12px;letter-spacing:-0.3px;}';
+   184→  c += '.section-title::before{content:"";width:4px;height:22px;background:linear-gradient(180deg,var(--accent),var(--gold));border-radius:2px;}';
+   185→
+   186→  // ─── Layout: contenedor de platos ───
+   187→  if (layout === 'double') {
+   188→    c += '.dishes-grid{display:grid;grid-template-columns:1fr;gap:12px;}';
+   189→    c += '@media(min-width:640px){.dishes-grid{grid-template-columns:1fr 1fr;}}';
+   190→  } else if (layout === 'grid') {
+   191→    c += '.dishes-grid{display:grid;grid-template-columns:1fr;gap:12px;}';
+   192→    c += '@media(min-width:480px){.dishes-grid{grid-template-columns:1fr 1fr;}}';
+   193→    c += '@media(min-width:900px){.dishes-grid{grid-template-columns:1fr 1fr 1fr;}}';
+   194→  } else {
+   195→    c += '.dishes-grid{display:flex;flex-direction:column;gap:12px;}';
+   196→  }
+   197→
+   198→  // ─── Image size variants ───
+   199→  const imgSizeMap: Record<string, string> = {
+   200→    none: '0',
+   201→    small: '60px',
+   202→    medium: '84px',
+   203→    large: '120px',
+   204→  };
+   205→  const imgSize = imgSizeMap[imageSize] || '84px';
+   206→
+   207→  // ─── Card style variants ───
+   208→  if (imageSize === 'hero' || imageSize === 'large') {
+   209→    c += `.dish{flex-direction:column;padding:0;overflow:hidden;}`;
+   210→    c += `.dish-img{width:100%;height:${imageSize === 'hero' ? '200px' : '140px'};border-radius:0;aspect-ratio:${imageSize === 'hero' ? '16/9' : 'auto'};}`;
+   211→    c += '.dish-info{padding:14px;width:100%;}';
+   212→    c += '.dish-bottom{padding:0 14px 14px;}';
+   213→  } else if (imageSize === 'none') {
+   214→    c += '.dish-img{display:none;}';
+   215→  } else {
+   216→    c += `.dish{display:flex;gap:14px;}`;
+   217→    c += `.dish-img{width:${imgSize};height:${imgSize};flex-shrink:0;}`;
+   218→    c += '.dish-info{flex:1;min-width:0;display:flex;flex-direction:column;}';
+   219→  }
+   220→
+   221→  // Card style (compact = menos padding, minimal = sin borde/background)
+   222→  if (cardStyle === 'compact') {
+   223→    c += '.dish{padding:10px;}';
+   224→  } else if (cardStyle === 'minimal') {
+   225→    c += '.dish{background:transparent;border:1px solid transparent;padding:8px 4px;}';
+   226→    c += '.dish:hover{background:transparent;border-color:transparent;transform:none;box-shadow:none;}';
+   227→  }
+   228→
+   229→  // Base dish styles (solo los que no sobreescribimos arriba)
+   230→  c += `.dish{background:var(--glass);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:0;transition:all 0.3s cubic-bezier(0.4,0,0.2,1);opacity:0;transform:translateY(20px);position:relative;overflow:hidden;cursor:pointer;}`;
+   231→  c += '.dish.revealed{opacity:1;transform:translateY(0);}';
+   232→  c += '.dish::before{content:"";position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.12),transparent);opacity:0;transition:opacity 0.3s;}';
+   233→  c += '.dish:hover{border-color:rgba(var(--accent-rgb),0.3);background:rgba(var(--accent-rgb),0.04);transform:translateY(-3px);box-shadow:0 10px 28px rgba(0,0,0,0.35);}';
+   234→  c += '.dish:hover::before{opacity:1;}';
+   235→  c += '.dish:active{transform:translateY(0) scale(0.99);}';
+   236→  c += `.dish-img{object-fit:cover;border-radius:var(--radius-sm);background:linear-gradient(135deg,var(--glass),var(--glass-strong));border:1px solid var(--border);}`;
+   237→  c += '.dish-name{font-size:16px;font-weight:600;margin-bottom:4px;letter-spacing:-0.2px;color:var(--text);}';
+   238→  c += '.dish-desc{font-size:13px;color:var(--text-muted);margin-bottom:10px;line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}';
+   239→  c += '.dish-bottom{display:flex;justify-content:space-between;align-items:center;margin-top:auto;gap:10px;}';
+   240→  c += '.dish-price{font-size:18px;font-weight:700;color:var(--accent);letter-spacing:-0.5px;}';
+   241→  c += '.add-btn{width:36px;height:36px;border-radius:var(--radius-sm);background:linear-gradient(135deg,var(--accent),rgba(var(--accent-rgb),0.8));color:#fff;border:none;font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.25s;line-height:1;font-weight:300;box-shadow:0 4px 14px rgba(var(--accent-rgb),0.35);flex-shrink:0;}';
+   242→  c += '.add-btn:hover{transform:scale(1.1) rotate(90deg);box-shadow:0 6px 20px rgba(var(--accent-rgb),0.55);}';
+   243→  c += '.add-btn:active{transform:scale(0.95);}';
+   244→  c += '.added-flash{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) scale(0);background:#06d6a0;color:#fff;padding:8px 18px;border-radius:24px;font-size:12px;font-weight:700;pointer-events:none;z-index:5;box-shadow:0 6px 18px rgba(6,214,160,0.5);animation:flashAdd 0.9s ease forwards;letter-spacing:0.3px;}';
+   245→  c += '@keyframes flashAdd{0%{transform:translate(-50%,-50%) scale(0);opacity:0;}25%{transform:translate(-50%,-50%) scale(1);opacity:1;}75%{transform:translate(-50%,-90%) scale(1);opacity:1;}100%{transform:translate(-50%,-130%) scale(0.8);opacity:0;}}';
+   246→
+   247→  // ─── Lightbox de plato (estilo PedidosYa/Rappi — mobile-first ultra pro) ───
+   248→  if (showGallery) {
+   249→    // Overlay full-screen en mobile, sheet centrado en desktop
+   250→    c += '.dish-lightbox{position:fixed;inset:0;background:rgba(0,0,0,0.92);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);z-index:300;display:none;align-items:flex-end;justify-content:center;padding:0;animation:dlbFadeIn 0.2s ease;}';
+   251→    c += '.dish-lightbox.visible{display:flex;}';
+   252→    c += '@keyframes dlbFadeIn{from{opacity:0;}to{opacity:1;}}';
+   253→    c += '@media(min-width:640px){.dish-lightbox{align-items:center;padding:24px;}}';
+   254→    // Inner: full-screen en mobile (bottom-sheet con border-radius top),
+   255→    // card con border-radius grande en desktop
+   256→    c += '.dish-lightbox-inner{background:' + (darkMode ? '#14141f' : '#ffffff') + ';width:100%;max-width:520px;max-height:100vh;overflow-y:auto;position:relative;color:var(--text);border-radius:24px 24px 0 0;animation:dlbSlideUp 0.32s cubic-bezier(0.32,0.72,0,1);box-shadow:0 -10px 40px rgba(0,0,0,0.5);}';
+   257→    c += '@media(min-width:640px){.dish-lightbox-inner{border-radius:28px;max-height:92vh;animation:dlbZoomIn 0.3s cubic-bezier(0.32,0.72,0,1);box-shadow:0 30px 80px rgba(0,0,0,0.6);}}';
+   258→    c += '@keyframes dlbSlideUp{from{transform:translateY(100%);}to{transform:translateY(0);}}';
+   259→    c += '@keyframes dlbZoomIn{from{transform:scale(0.95);opacity:0;}to{transform:scale(1);opacity:1;}}';
+   260→    // Handle bar en mobile (estilo bottom-sheet nativo iOS/Android)
+   261→    c += '.dish-lightbox-handle{display:block;width:40px;height:4px;background:rgba(255,255,255,0.18);border-radius:4px;margin:8px auto 0;}';
+   262→    c += '@media(min-width:640px){.dish-lightbox-handle{display:none;}}';
+   263→    // Close button — flota sobre la imagen (estilo Rappi)
+   264→    c += '.dish-lightbox-close{position:absolute;top:14px;right:14px;width:38px;height:38px;border-radius:50%;background:rgba(0,0,0,0.55);color:#fff;border:none;cursor:pointer;font-size:22px;line-height:1;display:flex;align-items:center;justify-content:center;z-index:10;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);transition:all 0.2s;box-shadow:0 4px 12px rgba(0,0,0,0.3);}';
+   265→    c += '.dish-lightbox-close:hover{background:rgba(0,0,0,0.78);transform:scale(1.05);}';
+   266→    c += '.dish-lightbox-close:active{transform:scale(0.95);}';
+   267→    // HERO IMAGE — large, square-ish, dominant (estilo PedidosYa/Rappi)
+   268→    c += '.dish-lightbox-hero{position:relative;width:100%;aspect-ratio:1/1;max-height:60vh;overflow:hidden;background:linear-gradient(135deg,var(--glass),var(--glass-strong));}';
+   269→    c += '@media(min-width:640px){.dish-lightbox-hero{aspect-ratio:4/3;border-radius:28px 28px 0 0;max-height:480px;}}';
+   270→    c += '.dish-lightbox-img{width:100%;height:100%;object-fit:cover;display:block;}';
+   271→    // Gradient overlay para legibilidad del close button
+   272→    c += '.dish-lightbox-hero::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,0.35) 0%,rgba(0,0,0,0) 30%,rgba(0,0,0,0) 70%,rgba(0,0,0,0.25) 100%);pointer-events:none;}';
+   273→    // Placeholder cuando no hay imagen — diseño premium
+   274→    c += '.dish-lightbox-img-placeholder{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:linear-gradient(135deg,var(--accent),rgba(var(--accent-rgb),0.6));color:#fff;}';
+   275→    c += '.dish-lightbox-img-placeholder .ph-letter{font-size:120px;font-weight:900;line-height:1;text-shadow:0 4px 16px rgba(0,0,0,0.25);}';
+   276→    c += '@media(min-width:640px){.dish-lightbox-img-placeholder .ph-letter{font-size:140px;}}';
+   277→    c += '.dish-lightbox-img-placeholder .ph-label{font-size:13px;opacity:0.9;font-weight:600;letter-spacing:0.5px;text-transform:uppercase;}';
+   278→    // Content area — padding generoso, mobile-first
+   279→    c += '.dish-lightbox-content{padding:20px 20px 24px;}';
+   280→    c += '@media(min-width:640px){.dish-lightbox-content{padding:28px 32px 32px;}}';
+   281→    // Category badge (pequeño, encima del título)
+   282→    c += '.dish-lightbox-cat{display:inline-block;font-size:11px;font-weight:700;color:var(--accent);background:rgba(var(--accent-rgb),0.12);padding:4px 10px;border-radius:20px;letter-spacing:0.5px;text-transform:uppercase;margin-bottom:10px;}';
+   283→    // Title — grande, bold
+   284→    c += '.dish-lightbox-name{font-size:24px;font-weight:800;letter-spacing:-0.5px;color:var(--text);margin:0 0 6px;line-height:1.2;}';
+   285→    c += '@media(min-width:640px){.dish-lightbox-name{font-size:28px;}}';
+   286→    // Price row — destacado debajo del título (estilo Rappi)
+   287→    c += '.dish-lightbox-price-row{display:flex;align-items:baseline;gap:8px;margin:4px 0 18px;flex-wrap:wrap;}';
+   288→    c += '.dish-lightbox-price{font-size:26px;font-weight:800;color:var(--accent);letter-spacing:-0.5px;line-height:1;}';
+   289→    c += '@media(min-width:640px){.dish-lightbox-price{font-size:30px;}}';
+   290→    c += '.dish-lightbox-currency{font-size:14px;font-weight:600;color:var(--text-soft);opacity:0.7;}';
+   291→    // Description
+   292→    c += '.dish-lightbox-desc-label{font-size:11px;font-weight:700;color:var(--text-soft);opacity:0.6;letter-spacing:0.8px;text-transform:uppercase;margin:0 0 6px;}';
+   293→    c += '.dish-lightbox-desc{font-size:15px;color:var(--text-soft);line-height:1.6;margin:0 0 22px;}';
+   294→    c += '@media(min-width:640px){.dish-lightbox-desc{font-size:16px;line-height:1.65;}}';
+   295→    // Sticky CTA bar — siempre visible en la parte inferior
+   296→    c += '.dish-lightbox-cta{position:sticky;bottom:0;left:0;right:0;padding:14px 20px 20px;background:linear-gradient(180deg,rgba(20,20,31,0) 0%,' + (darkMode ? '#14141f 35%' : '#ffffff 35%') + ');}';
+   297→    c += '.dish-lightbox-add{width:100%;background:linear-gradient(135deg,var(--accent),rgba(var(--accent-rgb),0.85));color:#fff;border:none;padding:16px 22px;border-radius:var(--radius);font-size:16px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;transition:all 0.2s;box-shadow:0 8px 24px rgba(var(--accent-rgb),0.45);-webkit-tap-highlight-color:transparent;}';
+   298→    c += '.dish-lightbox-add:hover{transform:translateY(-2px);box-shadow:0 12px 32px rgba(var(--accent-rgb),0.6);}';
+   299→    c += '.dish-lightbox-add:active{transform:translateY(0);}';
+   300→    c += '.dish-lightbox-add.added{background:linear-gradient(135deg,#22c55e,#16a34a);box-shadow:0 8px 24px rgba(34,197,94,0.4);}';
+   301→  }
+   302→
+   303→  // Cart
+   304→  c += '.cart{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(140px);width:calc(100% - 32px);max-width:480px;background:linear-gradient(135deg,var(--accent),rgba(var(--accent-rgb),0.9));color:#fff;border-radius:var(--radius);padding:16px 22px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 14px 40px rgba(var(--accent-rgb),0.45),0 4px 12px rgba(0,0,0,0.4);cursor:pointer;transition:transform 0.4s cubic-bezier(0.4,0,0.2,1);z-index:90;border:1px solid rgba(255,255,255,0.18);margin-bottom:env(safe-area-inset-bottom,0px);}';
+   305→  c += '.cart.visible{transform:translateX(-50%) translateY(0);}';
+   306→  c += '.cart-left{display:flex;align-items:center;gap:10px;font-weight:600;font-size:15px;}';
+   307→  c += '.cart-count{background:rgba(255,255,255,0.25);padding:3px 10px;border-radius:12px;font-size:13px;font-weight:700;min-width:28px;text-align:center;}';
+   308→  c += '.cart-count.pulse{animation:countPulse 0.4s ease;}';
+   309→  c += '@keyframes countPulse{0%,100%{transform:scale(1);}50%{transform:scale(1.4);background:rgba(255,255,255,0.4);}}';
+   310→  c += '.cart-total{font-size:18px;font-weight:800;letter-spacing:-0.3px;}';
+   311→  // Modal
+   312→  c += '.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);z-index:200;display:none;align-items:flex-end;justify-content:center;padding-bottom:env(safe-area-inset-bottom,0px);}';
+   313→  c += '.modal-overlay.visible{display:flex;}';
+   314→  c += `.modal{background:linear-gradient(180deg,${darkMode ? '#1c1c2e,#14141f' : '#fff,#f5f5f5'});width:100%;max-width:500px;border-radius:24px 24px 0 0;padding:28px 24px;max-height:85vh;overflow-y:auto;animation:slideUp 0.4s cubic-bezier(0.4,0,0.2,1);border:1px solid rgba(255,255,255,0.08);border-bottom:none;box-shadow:0 -16px 48px rgba(0,0,0,0.5);color:var(--text);}`;
+   315→  c += '.modal-title{font-size:22px;font-weight:700;margin-bottom:4px;text-align:center;letter-spacing:-0.3px;color:var(--text);}';
+   316→  c += '.modal-subtitle{text-align:center;font-size:12.5px;color:var(--text-muted);margin-bottom:22px;letter-spacing:0.3px;}';
+   317→  c += '.modal-divider{height:1px;background:linear-gradient(90deg,transparent,var(--border-strong),transparent);margin:0 -24px 20px;}';
+   318→  c += '.cart-item{display:flex;justify-content:space-between;align-items:center;padding:14px 0;border-bottom:1px solid var(--border);gap:10px;animation:itemIn 0.3s ease;}';
+   319→  c += '@keyframes itemIn{from{opacity:0;transform:translateX(-10px);}to{opacity:1;transform:translateX(0);}}';
+   320→  c += '.cart-item-info{flex:1;min-width:0;}';
+   321→  c += '.cart-item-name{font-weight:600;font-size:15px;margin-bottom:2px;color:var(--text);}';
+   322→  c += '.cart-item-price{color:var(--text-muted);font-size:12.5px;}';
+   323→  c += '.qty-control{display:flex;align-items:center;gap:10px;background:var(--glass);padding:4px;border-radius:24px;border:1px solid var(--border);}';
+   324→  c += '.qty-btn{width:28px;height:28px;border-radius:50%;background:var(--glass-strong);color:var(--text);border:none;cursor:pointer;font-size:16px;line-height:1;transition:all 0.2s;display:flex;align-items:center;justify-content:center;}';
+   325→  c += '.qty-btn:hover{background:var(--accent);color:#fff;transform:scale(1.1);}';
+   326→  c += '.qty{min-width:24px;text-align:center;font-weight:600;font-size:14px;color:var(--text);}';
+   327→  c += '.cart-item-total{font-weight:700;color:var(--accent);min-width:75px;text-align:right;font-size:15px;}';
+   328→  c += '.cart-empty{text-align:center;padding:50px 0;color:var(--text-muted);font-size:14px;}';
+   329→  c += '.cart-summary{margin-top:20px;padding-top:20px;border-top:2px solid var(--border);}';
+   330→  c += '.summary-row{display:flex;justify-content:space-between;margin-bottom:8px;font-size:14px;color:var(--text-soft);}';
+   331→  c += '.summary-total{font-size:18px;font-weight:700;margin-top:12px;color:var(--text);display:flex;justify-content:space-between;align-items:center;}';
+   332→  c += '.summary-total .amount{color:var(--accent);font-size:24px;font-weight:800;letter-spacing:-0.5px;}';
+   333→  c += '.wa-btn{width:100%;background:linear-gradient(135deg,#25d366,#1da851);color:#fff;border:none;padding:16px;border-radius:var(--radius);font-size:15px;font-weight:700;cursor:pointer;margin-top:22px;display:flex;align-items:center;justify-content:center;gap:10px;transition:all 0.2s;box-shadow:0 6px 20px rgba(37,211,102,0.35);letter-spacing:0.2px;}';
+   334→  c += '.wa-btn:hover{transform:translateY(-2px);box-shadow:0 10px 28px rgba(37,211,102,0.5);}';
+   335→  c += '.wa-btn:active{transform:translateY(0);}';
+   336→  c += '.wa-icon{width:18px;height:18px;fill:currentColor;}';
+   337→  c += '.close-btn{width:100%;background:var(--glass);color:var(--text-soft);border:1px solid var(--border);padding:13px;border-radius:var(--radius-sm);font-size:14px;cursor:pointer;margin-top:10px;transition:all 0.2s;font-weight:500;}';
+   338→  c += '.close-btn:hover{background:var(--glass-strong);color:var(--text);}';
+   339→  c += '.menu-footer{text-align:center;padding:30px 20px;color:var(--text-muted);font-size:11.5px;border-top:1px solid var(--border);margin-top:20px;padding-bottom:calc(30px + env(safe-area-inset-bottom, 0px));}';
+   340→  c += '.menu-footer a{color:var(--gold);text-decoration:none;font-weight:600;letter-spacing:1px;}';
+   341→  c += '.no-results{text-align:center;padding:40px 20px;color:var(--text-muted);font-size:14px;}';
+   342→  return c;
+   343→}
+   344→
+   345→interface JSOpts {
+   346→  layout: 'single' | 'double' | 'grid';
+   347→  imageSize: 'none' | 'small' | 'medium' | 'large' | 'hero';
+   348→  cardStyle: 'compact' | 'expanded' | 'minimal';
+   349→  showSearch: boolean;
+   350→  showGallery: boolean;
+   351→}
+   352→
+   353→function buildJS(opts: JSOpts): string {
+   354→  const { showSearch, showGallery } = opts;
+   355→  let s = '';
+   356→  s += 'var cart = [];\n';
+   357→  s += 'var searchQuery = "";\n';
+   358→  s += 'function escapeHtml(s){if(s==null)return "";return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/\'/g,"&#39;");}\n';
+   359→  s += 'function formatPrice(n){return (RESTAURANT.currency||"S/")+" "+Number(n).toFixed(2);}\n';
+   360→  s += 'function dishMatches(dish,q){if(!q)return true;var n=(dish.name||"").toLowerCase();var d=(dish.description||"").toLowerCase();return n.indexOf(q)>=0||d.indexOf(q)>=0;}\n';
+   361→
+   362→  // SVG icons inline para redes sociales (premium, sin dependencias)
+   363→  s += 'function svgIcon(name){var icons={' + "\n";
+   364→  s += 'facebook:"<svg viewBox=\\"0 0 24 24\\" fill=\\"currentColor\\"><path d=\\"M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z\\"/></svg>",' + "\n";
+   365→  s += 'instagram:"<svg viewBox=\\"0 0 24 24\\" fill=\\"currentColor\\"><path d=\\"M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z\\"/></svg>",' + "\n";
+   366→  s += 'whatsapp:"<svg viewBox=\\"0 0 24 24\\" fill=\\"currentColor\\"><path d=\\"M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.149-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51l-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z\\"/></svg>",' + "\n";
+   367→  s += 'tiktok:"<svg viewBox=\\"0 0 24 24\\" fill=\\"currentColor\\"><path d=\\"M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z\\"/></svg>",' + "\n";
+   368→  s += 'twitter:"<svg viewBox=\\"0 0 24 24\\" fill=\\"currentColor\\"><path d=\\"M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z\\"/></svg>",' + "\n";
+   369→  s += 'youtube:"<svg viewBox=\\"0 0 24 24\\" fill=\\"currentColor\\"><path d=\\"M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z\\"/></svg>",' + "\n";
+   370→  s += 'web:"<svg viewBox=\\"0 0 24 24\\" fill=\\"none\\" stroke=\\"currentColor\\" stroke-width=\\"2\\"><circle cx=\\"12\\" cy=\\"12\\" r=\\"10\\"/><path d=\\"M2 12h20\\"/><path d=\\"M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z\\"/></svg>"' + "\n";
+   371→  s += '};return icons[name]||"";}\n';
+   372→
+   373→  // Normalizar URL de red social
+   374→  s += 'function normalizeSocialUrl(value, type){if(!value)return "";var v=String(value).trim();if(!v)return "";if(v.indexOf("http")!==0){if(type==="instagram")return "https://instagram.com/"+v.replace(/^@/,"");if(type==="facebook")return "https://facebook.com/"+v;if(type==="tiktok")return "https://tiktok.com/@"+v.replace(/^@/,"");if(type==="twitter")return "https://x.com/"+v.replace(/^@/,"");if(type==="youtube")return "https://youtube.com/@"+v.replace(/^@/,"");if(type==="whatsapp")return "https://wa.me/"+v.replace(/\\D/g,"");}return v;}\n';
+   375→
+   376→  s += 'function renderApp(){\n';
+   377→  s += '  var app=document.getElementById("app");\n';
+   378→  s += '  var html="";\n';
+   379→  // Cover image — fondo HERO detrás del header
+   380→  s += '  if(RESTAURANT.theme_cover_url){html+="<div class=\\"hero\\"><img src=\\""+escapeHtml(RESTAURANT.theme_cover_url)+"\\" alt=\\"cover\\" onerror=\\"this.remove()\\"/></div>";}\n';
+   381→  // Header
+   382→  s += '  html+="<header class=\\"header\\">";\n';
+   383→  s += '  html+="<div class=\\"logo-wrap\\">";\n';
+   384→  s += '  html+="<div class=\\"logo-placeholder\\">"+escapeHtml(RESTAURANT.name.charAt(0).toUpperCase())+"</div>";\n';
+   385→  s += '  if(RESTAURANT.logo_url){html+="<img src=\\""+escapeHtml(RESTAURANT.logo_url)+"\\" class=\\"logo\\" alt=\\"logo\\" onerror=\\"this.remove()\\"/>";}\n';
+   386→  s += '  html+="</div>";\n';
+   387→  s += '  html+="<h1 class=\\"restaurant-name\\">"+escapeHtml(RESTAURANT.name)+"</h1>";\n';
+   388→  s += '  if(RESTAURANT.slogan){html+="<div class=\\"slogan\\">"+escapeHtml(RESTAURANT.slogan)+"</div>";}\n';
+   389→  s += '  if(RESTAURANT.description){html+="<p class=\\"restaurant-desc\\">"+escapeHtml(RESTAURANT.description)+"</p>";}\n';
+   390→  s += '  html+="<span class=\\"open-badge\\">Abierto ahora</span>";\n';
+   391→  // Redes sociales
+   392→  s += '  var socials=[];\n';
+   393→  s += '  if(RESTAURANT.social_facebook)socials.push({type:"facebook",value:RESTAURANT.social_facebook});\n';
+   394→  s += '  if(RESTAURANT.social_instagram)socials.push({type:"instagram",value:RESTAURANT.social_instagram});\n';
+   395→  s += '  if(RESTAURANT.social_whatsapp)socials.push({type:"whatsapp",value:RESTAURANT.social_whatsapp});else if(RESTAURANT.whatsapp)socials.push({type:"whatsapp",value:RESTAURANT.whatsapp});\n';
+   396→  s += '  if(RESTAURANT.social_tiktok)socials.push({type:"tiktok",value:RESTAURANT.social_tiktok});\n';
+   397→  s += '  if(RESTAURANT.social_twitter)socials.push({type:"twitter",value:RESTAURANT.social_twitter});\n';
+   398→  s += '  if(RESTAURANT.social_youtube)socials.push({type:"youtube",value:RESTAURANT.social_youtube});\n';
+   399→  s += '  if(RESTAURANT.social_web)socials.push({type:"web",value:RESTAURANT.social_web});\n';
+   400→  s += '  if(socials.length>0){\n';
+   401→  s += '    html+="<div class=\\"socials\\">";\n';
+   402→  s += '    socials.forEach(function(s){var url=normalizeSocialUrl(s.value,s.type);html+="<a class=\\"social-link\\" href=\\""+escapeHtml(url)+"\\" target=\\"_blank\\" rel=\\"noopener noreferrer\\" aria-label=\\""+escapeHtml(s.type)+"\\">"+svgIcon(s.type)+"</a>";});\n';
+   403→  s += '    html+="</div>";\n';
+   404→  s += '  }\n';
+   405→  s += '  html+="</header>";\n';
+   406→  // Search bar (opcional)
+   407→  if (showSearch) {
+   408→    s += '  html+="<div class=\\"search-wrap\\"><svg class=\\"search-icon\\" viewBox=\\"0 0 24 24\\" fill=\\"none\\" stroke=\\"currentColor\\" stroke-width=\\"2\\"><circle cx=\\"11\\" cy=\\"11\\" r=\\"8\\"/><path d=\\"m21 21-4.3-4.3\\"/></svg><input type=\\"text\\" class=\\"search-input\\" id=\\"searchInput\\" placeholder=\\"Buscar plato...\\"/></div>";\n';
+   409→  }
+   410→  // Nav
+   411→  s += '  html+="<nav class=\\"nav\\"><div class=\\"nav-inner\\" id=\\"navInner\\">";\n';
+   412→  s += '  RESTAURANT.categories.forEach(function(cat,i){\n';
+   413→  s += '    var icon=THEME.showSearch? getCategoryIcon(cat.name):"";\n';
+   414→  s += '    html+="<div class=\\"nav-item"+(i===0?" active":"")+"\\" data-idx=\\""+i+"\\">"+(icon?"<span class=\\"nav-item-icon\\">"+icon+"</span>":"")+escapeHtml(cat.name)+"</div>";\n';
+   415→  s += '  });\n';
+   416→  s += '  html+="</div></nav>";\n';
+   417→  // Sections con dishes-grid
+   418→  s += '  RESTAURANT.categories.forEach(function(cat,i){\n';
+   419→  s += '    html+="<section class=\\"section\\" id=\\"cat-"+i+"\\">";\n';
+   420→  s += '    html+="<h2 class=\\"section-title\\">"+escapeHtml(cat.name)+"</h2>";\n';
+   421→  s += '    html+="<div class=\\"dishes-grid\\">";\n';
+   422→  s += '    cat.dishes.forEach(function(dish,j){\n';
+   423→  s += '      html+="<div class=\\"dish\\" data-cat=\\""+i+"\\" data-dish=\\""+j+"\\" data-name=\\""+escapeHtml((dish.name||"").toLowerCase())+"\\" data-desc=\\""+escapeHtml((dish.description||"").toLowerCase())+"\\" style=\\"transition-delay:"+(j*40)+"ms\\">";\n';
+   424→  s += '      if(dish.image_url){html+="<img src=\\""+escapeHtml(dish.image_url)+"\\" class=\\"dish-img\\" alt=\\"\\" onerror=\\"this.style.display=\\\'none\\\'\\" loading=\\"lazy\\"/>";}\n';
+   425→  s += '      else if(THEME.imageSize!=="none"){html+="<div class=\\"dish-img\\"></div>";}\n';
+   426→  s += '      html+="<div class=\\"dish-info\\">";\n';
+   427→  s += '      html+="<div class=\\"dish-name\\">"+escapeHtml(dish.name)+"</div>";\n';
+   428→  s += '      if(dish.description){html+="<div class=\\"dish-desc\\">"+escapeHtml(dish.description)+"</div>";}\n';
+   429→  s += '      html+="<div class=\\"dish-bottom\\">";\n';
+   430→  s += '      html+="<div class=\\"dish-price\\">"+formatPrice(dish.price)+"</div>";\n';
+   431→  s += '      html+="<button class=\\"add-btn\\" data-cat=\\""+i+"\\" data-dish=\\""+j+"\\" title=\\"Agregar\\">+</button>";\n';
+   432→  s += '      html+="</div></div></div>";\n';
+   433→  s += '    });\n';
+   434→  s += '    html+="</div></section>";\n';
+   435→  s += '  });\n';
+   436→  // Footer
+   437→  s += '  html+="<div class=\\"menu-footer\\"><span>"+escapeHtml(RESTAURANT.name)+"</span>";\n';
+   438→  s += '  if(SHOW_BRANDING){html+=" · <a href=\\"https://menupro.app\\" target=\\"_blank\\">"+escapeHtml(BRANDING_TEXT||"Creado con MenuPro")+"</a>";}\n';
+   439→  s += '  html+="</div>";\n';
+   440→  // Cart
+   441→  s += '  html+="<div class=\\"cart\\" id=\\"cartBar\\">";\n';
+   442→  s += '  html+="<div class=\\"cart-left\\"><span>Ver pedido</span><span class=\\"cart-count\\" id=\\"cartCount\\">0</span></div>";\n';
+   443→  s += '  html+="<div class=\\"cart-total\\" id=\\"cartTotal\\">"+formatPrice(0)+"</div>";\n';
+   444→  s += '  html+="</div>";\n';
+   445→  // Modal
+   446→  s += '  html+="<div class=\\"modal-overlay\\" id=\\"modal\\"><div class=\\"modal\\">";\n';
+   447→  s += '  html+="<h2 class=\\"modal-title\\">Tu Pedido</h2>";\n';
+   448→  s += '  html+="<p class=\\"modal-subtitle\\">Revisa tu orden antes de enviar por WhatsApp</p>";\n';
+   449→  s += '  html+="<div class=\\"modal-divider\\"></div>";\n';
+   450→  s += '  html+="<div id=\\"cartItems\\"></div>";\n';
+   451→  s += '  html+="<div class=\\"cart-summary\\" id=\\"cartSummary\\"></div>";\n';
+   452→  s += '  html+="<button class=\\"wa-btn\\" id=\\"waBtn\\"><svg class=\\"wa-icon\\" viewBox=\\"0 0 24 24\\"><path d=\\"M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.149-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51l-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z\\"/></svg>Enviar Pedido por WhatsApp</button>";\n';
+   453→  s += '  html+="<button class=\\"close-btn\\" id=\\"closeBtn\\">Seguir agregando</button>";\n';
+   454→  s += '  html+="</div></div>";\n';
+   455→  // Lightbox contenedor (vacío, se rellena al hacer clic)
+   456→  if (showGallery) {
+   457→    s += '  html+="<div class=\\"dish-lightbox\\" id=\\"dishLightbox\\"></div>";\n';
+   458→  }
+   459→  s += '  app.innerHTML=html;\n';
+   460→  s += '  attachEvents();\n';
+   461→  s += '  setupReveal();\n';
+   462→
+   463→  // Helper getCategoryIcon
+   464→  s += 'function getCategoryIcon(name){var n=(name||"").toLowerCase();if(n.indexOf("entr")>=0||n.indexOf("aperit")>=0)return "🥗";if(n.indexOf("sopa")>=0||n.indexOf("caldo")>=0)return "🍜";if(n.indexOf("pasta")>=0)return "🍝";if(n.indexOf("parrilla")>=0||n.indexOf("grill")>=0||n.indexOf("carne")>=0)return "🥩";if(n.indexOf("pollo")>=0)return "🍗";if(n.indexOf("pesca")>=0||n.indexOf("maris")>=0)return "🐟";if(n.indexOf("postre")>=0)return "🍰";if(n.indexOf("bebida")>=0||n.indexOf("drink")>=0)return "🥤";if(n.indexOf("trago")>=0||n.indexOf("cocktail")>=0||n.indexOf("bar")>=0)return "🍸";if(n.indexOf("desay")>=0)return "🍳";if(n.indexOf("pizza")>=0)return "🍕";if(n.indexOf("burger")>=0||n.indexOf("hambur")>=0)return "🍔";if(n.indexOf("ensal")>=0)return "🥗";if(n.indexOf("sushi")>=0)return "🍣";if(n.indexOf("taco")>=0||n.indexOf("mexic")>=0)return "🌮";if(n.indexOf(" asia")>=0||n.indexOf("chino")>=0||n.indexOf("wok")>=0)return "🥡";if(n.indexOf("vegan")>=0||n.indexOf("veggie")>=0)return "🌱";if(n.indexOf("cafe")>=0||n.indexOf("coffee")>=0)return "☕";return "🍴";}\n';
+   465→
+   466→  // searchInput event listener (si showSearch)
+   467→  if (showSearch) {
+   468→    s += 'var searchInput=document.getElementById("searchInput");\n';
+   469→    s += 'if(searchInput){searchInput.addEventListener("input",function(e){searchQuery=e.target.value.toLowerCase();filterDishes();});}\n';
+   470→    s += 'function filterDishes(){var dishes=document.querySelectorAll(".dish");var anyVisible=false;dishes.forEach(function(d){var n=d.getAttribute("data-name")||"";var desc=d.getAttribute("data-desc")||"";var visible=n.indexOf(searchQuery)>=0||desc.indexOf(searchQuery)>=0;d.style.display=visible?"":"none";if(visible)anyVisible=true;});document.querySelectorAll(".no-results").forEach(function(n){n.remove();});if(!anyVisible&&searchQuery){var sections=document.querySelectorAll(".section");if(sections.length){var last=sections[sections.length-1];last.insertAdjacentHTML("afterend","<div class=\\"no-results\\">No se encontraron platos</div>");}}}\n';
+   471→  }
+   472→
+   473→  s += '  updateCart();\n';
+   474→  s += '}\n';
+   475→  // Reveal
+   476→  s += 'function setupReveal(){\n';
+   477→  s += '  var dishes=document.querySelectorAll(".dish");\n';
+   478→  s += '  if(!("IntersectionObserver" in window)){dishes.forEach(function(d){d.classList.add("revealed");});return;}\n';
+   479→  s += '  var io=new IntersectionObserver(function(entries){\n';
+   480→  s += '    entries.forEach(function(e){if(e.isIntersecting){e.target.classList.add("revealed");io.unobserve(e.target);}});\n';
+   481→  s += '  },{threshold:0.05,rootMargin:"0px 0px -30px 0px"});\n';
+   482→  s += '  dishes.forEach(function(d){io.observe(d);});\n';
+   483→  s += '}\n';
+   484→  // Events
+   485→  s += 'function attachEvents(){\n';
+   486→  s += '  document.querySelectorAll(".add-btn").forEach(function(btn){\n';
+   487→  s += '    btn.addEventListener("click",function(e){\n';
+   488→  s += '      e.stopPropagation();\n';
+   489→  s += '      var catIdx=parseInt(this.dataset.cat);\n';
+   490→  s += '      var dishIdx=parseInt(this.dataset.dish);\n';
+   491→  s += '      addToCart(catIdx,dishIdx,this);\n';
+   492→  s += '    });\n';
+   493→  s += '  });\n';
+   494→  // Dish click → abrir lightbox (si está activado) o agregar al carrito
+   495→  if (showGallery) {
+   496→    s += '  document.querySelectorAll(".dish").forEach(function(d){\n';
+   497→    s += '    d.addEventListener("click",function(e){\n';
+   498→    s += '      if(e.target.classList.contains("add-btn"))return;\n';
+   499→    s += '      var catIdx=parseInt(this.dataset.cat);\n';
+   500→    s += '      var dishIdx=parseInt(this.dataset.dish);\n';
+   501→    s += '      openDishLightbox(catIdx,dishIdx);\n';
+   502→    s += '    });\n';
+   503→    s += '  });\n';
+   504→  } else {
+   505→    s += '  document.querySelectorAll(".dish").forEach(function(d){\n';
+   506→    s += '    d.addEventListener("click",function(){\n';
+   507→    s += '      var catIdx=parseInt(this.dataset.cat);\n';
+   508→    s += '      var dishIdx=parseInt(this.dataset.dish);\n';
+   509→    s += '      addToCart(catIdx,dishIdx);\n';
+   510→    s += '    });\n';
+   511→    s += '  });\n';
+   512→  }
+   513→  s += '  document.querySelectorAll(".nav-item").forEach(function(item){\n';
+   514→  s += '    item.addEventListener("click",function(){\n';
+   515→  s += '      document.querySelectorAll(".nav-item").forEach(function(n){n.classList.remove("active");});\n';
+   516→  s += '      this.classList.add("active");\n';
+   517→  s += '      var idx=parseInt(this.dataset.idx);\n';
+   518→  s += '      var el=document.getElementById("cat-"+idx);\n';
+   519→  s += '      if(el){var top=el.getBoundingClientRect().top+window.pageYOffset-70;window.scrollTo({top:top,behavior:"smooth"});}\n';
+   520→  s += '    });\n';
+   521→  s += '  });\n';
+   522→  s += '  document.getElementById("cartBar").addEventListener("click",openModal);\n';
+   523→  s += '  document.getElementById("closeBtn").addEventListener("click",closeModal);\n';
+   524→  s += '  document.getElementById("waBtn").addEventListener("click",sendWhatsApp);\n';
+   525→  s += '  document.getElementById("modal").addEventListener("click",function(e){if(e.target===this)closeModal();});\n';
+   526→  s += '  window.addEventListener("scroll",updateActiveNav,{passive:true});\n';
+   527→  s += '}\n';
+   528→
+   529→  // ─── Lightbox de plato (estilo PedidosYa/Rappi) ───
+   530→  if (showGallery) {
+   531→    s += 'function openDishLightbox(catIdx,dishIdx){\n';
+   532→    s += '  var dish=RESTAURANT.categories[catIdx].dishes[dishIdx];\n';
+   533→    s += '  var catName=RESTAURANT.categories[catIdx].name||"Plato";\n';
+   534→    s += '  var lightbox=document.getElementById("dishLightbox");\n';
+   535→    s += '  var html="";\n';
+   536→    s += '  html+="<div class=\\"dish-lightbox-inner\\">";\n';
+   537→    s += '  html+="<div class=\\"dish-lightbox-handle\\"></div>";\n';
+   538→    s += '  html+="<button class=\\"dish-lightbox-close\\" id=\\"dishLightboxClose\\" aria-label=\\"Cerrar\\">&times;</button>";\n';
+   539→    // HERO IMAGE (grande, cuadrado en mobile, 4:3 en desktop)
+   540→    s += '  html+="<div class=\\"dish-lightbox-hero\\">";\n';
+   541→    s += '  if(dish.image_url){html+="<img src=\\""+escapeHtml(dish.image_url)+"\\" class=\\"dish-lightbox-img\\" alt=\\""+escapeHtml(dish.name)+"\\" onerror=\\"this.outerHTML=\\\'<div class=\\\\\\"dish-lightbox-img-placeholder\\\\\\"><div class=\\\\\\"ph-letter\\\\\\">"+escapeHtml(dish.name.charAt(0).toUpperCase())+"</div><div class=\\\\\\"ph-label\\\\\\">"+escapeHtml(catName)+"</div></div>\\\'\\"/>";}\n';
+   542→    s += '  else{html+="<div class=\\"dish-lightbox-img-placeholder\\"><div class=\\"ph-letter\\">"+escapeHtml(dish.name.charAt(0).toUpperCase())+"</div><div class=\\"ph-label\\">"+escapeHtml(catName)+"</div></div>";}\n';
+   543→    s += '  html+="</div>";\n';
+   544→    // CONTENT (debajo del hero, estilo PedidosYa)
+   545→    s += '  html+="<div class=\\"dish-lightbox-content\\">";\n';
+   546→    s += '  html+="<span class=\\"dish-lightbox-cat\\">"+escapeHtml(catName)+"</span>";\n';
+   547→    s += '  html+="<h3 class=\\"dish-lightbox-name\\">"+escapeHtml(dish.name)+"</h3>";\n';
+   548→    // Price row debajo del título
+   549→    s += '  var priceStr=formatPrice(dish.price);\n';
+   550→    s += '  html+="<div class=\\"dish-lightbox-price-row\\"><span class=\\"dish-lightbox-price\\">"+escapeHtml(priceStr)+"</span></div>";\n';
+   551→    // Description
+   552→    s += '  html+="<div class=\\"dish-lightbox-desc-label\\">Descripción</div>";\n';
+   553→    s += '  if(dish.description){html+="<p class=\\"dish-lightbox-desc\\">"+escapeHtml(dish.description)+"</p>";}\n';
+   554→    s += '  else{html+="<p class=\\"dish-lightbox-desc\\">Plato delicioso preparado con ingredientes frescos y de la mejor calidad. Pídelo ahora mismo por WhatsApp.</p>";}\n';
+   555→    // Sticky CTA bar
+   556→    s += '  html+="<div class=\\"dish-lightbox-cta\\">";\n';
+   557→    s += '  html+="<button class=\\"dish-lightbox-add\\" data-cat=\\""+catIdx+"\\" data-dish=\\""+dishIdx+"\\"><svg width=\\"20\\" height=\\"20\\" viewBox=\\"0 0 24 24\\" fill=\\"none\\" stroke=\\"currentColor\\" stroke-width=\\"2.5\\" stroke-linecap=\\"round\\" stroke-linejoin=\\"round\\"><path d=\\"M12 5v14M5 12h14\\"/></svg>Agregar al pedido</button>";\n';
+   558→    s += '  html+="</div></div></div>";\n';
+   559→    s += '  lightbox.innerHTML=html;\n';
+   560→    s += '  lightbox.classList.add("visible");\n';
+   561→    s += '  document.body.style.overflow="hidden";\n';
+   562→    s += '  document.getElementById("dishLightboxClose").addEventListener("click",closeDishLightbox);\n';
+   563→    s += '  lightbox.addEventListener("click",function(e){if(e.target===lightbox)closeDishLightbox();});\n';
+   564→    s += '  var addBtn=lightbox.querySelector(".dish-lightbox-add");\n';
+   565→    s += '  if(addBtn){addBtn.addEventListener("click",function(){addToCart(catIdx,dishIdx);addBtn.classList.add("added");addBtn.innerHTML="<svg width=\\\"20\\\" height=\\\"20\\\" viewBox=\\\"0 0 24 24\\\" fill=\\\"none\\\" stroke=\\\"currentColor\\\" stroke-width=\\\"3\\\" stroke-linecap=\\\"round\\\" stroke-linejoin=\\\"round\\\"><polyline points=\\\"20 6 9 17 4 12\\\"/></svg> Agregado";setTimeout(closeDishLightbox,900);});}\n';
+   566→    s += '}\n';
+   567→    s += 'function closeDishLightbox(){var lightbox=document.getElementById("dishLightbox");lightbox.classList.remove("visible");lightbox.innerHTML="";document.body.style.overflow="";}\n';
+   568→  }
+   569→
+   570→  // Update active nav
+   571→  s += 'function updateActiveNav(){\n';
+   572→  s += '  var scrollPos=window.pageYOffset+100;\n';
+   573→  s += '  var sections=document.querySelectorAll(".section");\n';
+   574→  s += '  var activeIdx=0;\n';
+   575→  s += '  for(var i=0;i<sections.length;i++){if(sections[i].offsetTop<=scrollPos)activeIdx=i;}\n';
+   576→  s += '  document.querySelectorAll(".nav-item").forEach(function(n,i){n.classList.toggle("active",i===activeIdx);});\n';
+   577→  s += '}\n';
+   578→  // Add to cart
+   579→  s += 'function addToCart(catIdx,dishIdx,btn){\n';
+   580→  s += '  var dish=RESTAURANT.categories[catIdx].dishes[dishIdx];\n';
+   581→  s += '  var existing=null;\n';
+   582→  s += '  for(var i=0;i<cart.length;i++){if(cart[i].catIdx===catIdx&&cart[i].dishIdx===dishIdx){existing=cart[i];break;}}\n';
+   583→  s += '  if(existing){existing.qty++;}\n';
+   584→  s += '  else{cart.push({catIdx:catIdx,dishIdx:dishIdx,name:dish.name,price:dish.price,qty:1});}\n';
+   585→  s += '  if(btn){showAddedFlash(btn.closest(".dish"));}\n';
+   586→  s += '  updateCart(true);\n';
+   587→  s += '}\n';
+   588→  // Show flash
+   589→  s += 'function showAddedFlash(dishEl){\n';
+   590→  s += '  if(!dishEl)return;\n';
+   591→  s += '  var flash=document.createElement("div");\n';
+   592→  s += '  flash.className="added-flash";\n';
+   593→  s += '  flash.textContent="AGREGADO";\n';
+   594→  s += '  dishEl.appendChild(flash);\n';
+   595→  s += '  setTimeout(function(){if(flash.parentNode)flash.parentNode.removeChild(flash);},900);\n';
+   596→  s += '}\n';
+   597→  // Update cart
+   598→  s += 'function updateCart(pulse){\n';
+   599→  s += '  var count=0,total=0;\n';
+   600→  s += '  cart.forEach(function(c){count+=c.qty;total+=c.price*c.qty;});\n';
+   601→  s += '  var countEl=document.getElementById("cartCount");\n';
+   602→  s += '  countEl.textContent=count;\n';
+   603→  s += '  document.getElementById("cartTotal").textContent=formatPrice(total);\n';
+   604→  s += '  var cartBar=document.getElementById("cartBar");\n';
+   605→  s += '  if(count>0){cartBar.classList.add("visible");}else{cartBar.classList.remove("visible");}\n';
+   606→  s += '  if(pulse){countEl.classList.remove("pulse");void countEl.offsetWidth;countEl.classList.add("pulse");}\n';
+   607→  s += '  renderCartItems();\n';
+   608→  s += '}\n';
+   609→  // Render cart items
+   610→  s += 'function renderCartItems(){\n';
+   611→  s += '  var container=document.getElementById("cartItems");\n';
+   612→  s += '  var summary=document.getElementById("cartSummary");\n';
+   613→  s += '  if(cart.length===0){\n';
+   614→  s += '    container.innerHTML="<div class=\\"cart-empty\\">Tu carrito esta vacio</div>";\n';
+   615→  s += '    summary.innerHTML="";\n';
+   616→  s += '    return;\n';
+   617→  s += '  }\n';
+   618→  s += '  var html="";\n';
+   619→  s += '  cart.forEach(function(item,i){\n';
+   620→  s += '    html+="<div class=\\"cart-item\\">";\n';
+   621→  s += '    html+="<div class=\\"cart-item-info\\">";\n';
+   622→  s += '    html+="<div class=\\"cart-item-name\\">"+escapeHtml(item.name)+"</div>";\n';
+   623→  s += '    html+="<div class=\\"cart-item-price\\">"+formatPrice(item.price)+" c/u</div>";\n';
+   624→  s += '    html+="</div>";\n';
+   625→  s += '    html+="<div class=\\"qty-control\\">";\n';
+   626→  s += '    html+="<button class=\\"qty-btn\\" data-action=\\"dec\\" data-idx=\\""+i+"\\">−</button>";\n';
+   627→  s += '    html+="<span class=\\"qty\\">"+item.qty+"</span>";\n';
+   628→  s += '    html+="<button class=\\"qty-btn\\" data-action=\\"inc\\" data-idx=\\""+i+"\\">+</button>";\n';
+   629→  s += '    html+="</div>";\n';
+   630→  s += '    html+="<div class=\\"cart-item-total\\">"+formatPrice(item.price*item.qty)+"</div>";\n';
+   631→  s += '    html+="</div>";\n';
+   632→  s += '  });\n';
+   633→  s += '  container.innerHTML=html;\n';
+   634→  s += '  var total=0;cart.forEach(function(c){total+=c.price*c.qty;});\n';
+   635→  s += '  summary.innerHTML="<div class=\\"summary-row\\"><span>Subtotal</span><span>"+formatPrice(total)+"</span></div>";\n';
+   636→  s += '  summary.innerHTML+="<div class=\\"summary-total\\"><span>Total</span><span class=\\"amount\\">"+formatPrice(total)+"</span></div>";\n';
+   637→  s += '  container.querySelectorAll(".qty-btn").forEach(function(btn){\n';
+   638→  s += '    btn.addEventListener("click",function(){\n';
+   639→  s += '      var idx=parseInt(this.dataset.idx);\n';
+   640→  s += '      if(this.dataset.action==="inc"){cart[idx].qty++;}\n';
+   641→  s += '      else{cart[idx].qty--;if(cart[idx].qty<=0)cart.splice(idx,1);}\n';
+   642→  s += '      updateCart();\n';
+   643→  s += '    });\n';
+   644→  s += '  });\n';
+   645→  s += '}\n';
+   646→  // Modal
+   647→  s += 'function openModal(){\n';
+   648→  s += '  if(cart.length===0)return;\n';
+   649→  s += '  document.getElementById("modal").classList.add("visible");\n';
+   650→  s += '}\n';
+   651→  s += 'function closeModal(){document.getElementById("modal").classList.remove("visible");}\n';
+   652→  // WhatsApp
+   653→  s += 'function sendWhatsApp(){\n';
+   654→  s += '  if(cart.length===0)return;\n';
+   655→  s += '  var msg="*"+RESTAURANT.name+"*\\n";\n';
+   656→  s += '  if(RESTAURANT.slogan){msg+="_"+RESTAURANT.slogan+"_\\n";}\n';
+   657→  s += '  msg+="\\n*PEDIDO*\\n\\n";\n';
+   658→  s += '  cart.forEach(function(item){\n';
+   659→  s += '    msg+="• "+item.qty+"x "+item.name+" — "+formatPrice(item.price*item.qty)+"\\n";\n';
+   660→  s += '  });\n';
+   661→  s += '  var total=0;cart.forEach(function(c){total+=c.price*c.qty;});\n';
+   662→  s += '  msg+="\\n*TOTAL: "+formatPrice(total)+"*\\n\\n";\n';
+   663→  s += '  msg+="Hola, quisiera confirmar este pedido por favor.";\n';
+   664→  s += '  var url="https://wa.me/"+RESTAURANT.whatsapp+"?text="+encodeURIComponent(msg);\n';
+   665→  s += '  window.open(url,"_blank");\n';
+   666→  s += '}\n';
+   667→  s += 'renderApp();\n';
+   668→  return s;
+   669→}
+   670→

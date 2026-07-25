@@ -150,7 +150,15 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount }: Props)
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ...menu,
+          // ⚠️ FIX: enviar logo_url (no `logo`) — el API espera `logo_url`
+          name: menu.name,
+          slogan: menu.slogan,
+          description: menu.description,
+          whatsapp: menu.whatsapp,
+          logo_url: menu.logo, // ← clave: mapear `menu.logo` → `logo_url`
+          color: menu.color,
+          currency: menu.currency,
+          is_published: menu.is_published,
           // Campos de tema (todos opcionales, se persisten si están presentes)
           theme_color_secondary: theme.color_secondary,
           theme_font: theme.font,
@@ -301,7 +309,14 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount }: Props)
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ...menu,
+          // ⚠️ FIX: enviar logo_url (no `logo`) — el API espera `logo_url`
+          name: menu.name,
+          slogan: menu.slogan,
+          description: menu.description,
+          whatsapp: menu.whatsapp,
+          logo_url: menu.logo, // ← clave: mapear `menu.logo` → `logo_url`
+          color: menu.color,
+          currency: menu.currency,
           is_published: true,
           // Tema
           theme_color_secondary: theme.color_secondary,

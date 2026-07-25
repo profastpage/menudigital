@@ -272,3 +272,49 @@ Stage Summary:
   * New page: /home/z/my-project/src/app/dashboard/guia/page.tsx + guia-client.tsx
   * Screenshots: download/lightbox-pedidosya-style.png, download/lightbox-no-image.png
   * Test: download/menu-lightbox-test.html
+
+---
+Task ID: pedidosya-redesign-logo-fix-lightmode
+Agent: main (Super Z)
+Task: (1) Rediseñar cards de plato estilo PedidosYa/Rappi universal, (2) Fix bug foto de perfil (logo) no se actualizaba al guardar, (3) Light mode toggle con contraste automático del accent color, (4) Mejoras UX/IX en PC y mobile.
+
+Work Log:
+- Diagnóstico del bug "foto de perfil no se actualiza":
+  * El state del editor usa `menu.logo` pero el API espera `logo_url`
+  * Al hacer spread `{...menu}` en save(), el campo `logo_url` quedaba `undefined`
+  * El API hacía `logo_url: undefined || null = null` → siempre sobreescribía a null
+- Fix en editor-client.tsx save() y handlePublish():
+  * Reemplazado `{...menu}` por campos explícitos con `logo_url: menu.logo`
+  * Esto asegura que el logo_url se envíe correctamente al API
+- Rediseño completo de cards de plato (menu-html-builder.ts):
+  * Eliminado el sistema de variantes por imageSize (small/medium/large/hero)
+  * NUEVO diseño universal PedidosYa/Rappi: imagen grande arriba SIEMPRE (aspect-ratio 16/10)
+  * Placeholder gradient con inicial del plato cuando no hay imagen
+  * Badge de categoría flotante (top-left, blur backdrop) sobre la imagen
+  * Zoom on hover (scale 1.06) con transición 0.55s
+  * Info area abajo: nombre (2-line clamp), descripción (2-line clamp), precio + botón Agregar
+  * Botón "Agregar" con icono + texto (no solo "+")
+  * Grid responsivo: 1 col mobile, 2 cols tablet+
+  * Card style variants (compact/minimal) solo afectan padding, mantienen layout
+- Light mode con contraste automático:
+  * Light bg cambiado de #fafafa → #fefcf7 (beige/cream cálido tipo PedidosYa)
+  * Nueva CSS variable `--accent-text`: en light mode = `color-mix(in srgb, var(--accent) 78%, #000)` (accent oscurecido 22% para legibilidad)
+  * En dark mode: `--accent-text = var(--accent)` (suficiente contraste)
+  * dish-price usa `--accent-text` para garantizar legibilidad en ambos modos
+- Toggle "Modo claro" ya existía en el editor (Pro feature)
+- TypeScript: 0 errores en src/ (solo pre-existing errors en examples/skills)
+- Build: 24/24 páginas generadas exitosamente
+- Test script: scripts/test-pedidosya-style.ts genera HTML de prueba con 4 platos (2 con imagen, 2 sin imagen) en dark y light mode
+- HTML verificado: contiene dish-img-wrap, dish-img-placeholder, dish-cat-badge, dish-info, dish-lightbox, logo-placeholder, socials, --accent-text, color-mix, #fefcf7
+
+Stage Summary:
+- ✅ FIX: Profile photo (logo) ahora se guarda correctamente (bug era field name mismatch `logo` vs `logo_url`)
+- ✅ REDESIGN: Cards de plato estilo PedidosYa/Rappi universal (imagen grande arriba siempre, info abajo, badge categoría)
+- ✅ LIGHT MODE: Beige/cream bg (#fefcf7) + accent-text con color-mix para contraste automático
+- ✅ BUILD OK: 24 páginas, TypeScript limpio en src/
+- ✅ TEST: HTML generado verificado con todos los elementos esperados
+- ⚠️ No se necesita SQL nuevo (logo_url ya existe en schema.sql línea 121)
+- Artifacts:
+  * Code: editor-client.tsx (logo fix), menu-html-builder.ts (PedidosYa redesign + light mode)
+  * Test: scripts/test-pedidosya-style.ts
+  * Sample HTML: download/test-pedidosya-dark.html, download/test-pedidosya-light.html

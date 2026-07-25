@@ -99,8 +99,11 @@ function buildCSS(opts: ThemeOpts): string {
   const radiusSm = rounded ? '12px' : '2px';
   const radiusLg = rounded ? '24px' : '8px';
 
-  // Colores según dark/light
-  const bg0 = darkMode ? '#07070b' : '#fafafa';
+  // Colores según dark/light — light mode usa beige/cream suave (no blanco puro)
+  // para dar calidez tipo PedidosYa/Rappi light theme.
+  // --accent-text es la versión oscurecida del accent para texto sobre fondo claro
+  // (garantiza contraste incluso si el usuario elige un accent muy claro como amarillo).
+  const bg0 = darkMode ? '#07070b' : '#fefcf7';
   const bg1 = darkMode ? '#0f0f1a' : '#ffffff';
   const text = darkMode ? '#f4f4fa' : '#1a1a2e';
   const textMuted = darkMode ? '#8a8a9a' : '#6a6a7a';
@@ -111,7 +114,9 @@ function buildCSS(opts: ThemeOpts): string {
   const borderStrong = darkMode ? 'rgba(255,255,255,0.14)' : 'rgba(0,0,0,0.14)';
 
   let c = '';
-  c += `:root{--accent:#ff6b35;--accent-rgb:255,107,53;--secondary:#1a1a2e;--gold:#d4af37;--bg-0:${bg0};--bg-1:${bg1};--glass:${glass};--glass-strong:${glassStrong};--border:${border};--border-strong:${borderStrong};--text:${text};--text-muted:${textMuted};--text-soft:${textSoft};--font-main:${font},"Inter",sans-serif;--radius:${radius};--radius-sm:${radiusSm};--radius-lg:${radiusLg};}`;
+  // En light mode, --accent-text es el accent oscurecido 18% (legible sobre beige/cream).
+  // En dark mode, --accent-text = --accent tal cual (suficiente contraste sobre oscuro).
+  c += `:root{--accent:#ff6b35;--accent-rgb:255,107,53;--secondary:#1a1a2e;--gold:#d4af37;--bg-0:${bg0};--bg-1:${bg1};--glass:${glass};--glass-strong:${glassStrong};--border:${border};--border-strong:${borderStrong};--text:${text};--text-muted:${textMuted};--text-soft:${textSoft};--font-main:${font},"Inter",sans-serif;--radius:${radius};--radius-sm:${radiusSm};--radius-lg:${radiusLg};--accent-text:${darkMode ? 'var(--accent)' : 'color-mix(in srgb, var(--accent) 78%, #000)'};}`;
   c += '*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}';
   c += 'html{scroll-behavior:smooth;-webkit-text-size-adjust:100%;}';
   c += `body{font-family:var(--font-main);background:var(--bg-0);color:var(--text);min-height:100vh;padding-bottom:calc(140px + env(safe-area-inset-bottom, 0px));position:relative;overflow-x:hidden;overscroll-behavior-y:contain;-webkit-overflow-scrolling:touch;}`;
@@ -184,63 +189,63 @@ function buildCSS(opts: ThemeOpts): string {
   c += '.section-title::before{content:"";width:4px;height:22px;background:linear-gradient(180deg,var(--accent),var(--gold));border-radius:2px;}';
 
   // ─── Layout: contenedor de platos ───
+  // PedidosYa/Rappi style: cards con imagen grande arriba → grid responsivo
   if (layout === 'double') {
-    c += '.dishes-grid{display:grid;grid-template-columns:1fr;gap:12px;}';
+    c += '.dishes-grid{display:grid;grid-template-columns:1fr;gap:14px;}';
     c += '@media(min-width:640px){.dishes-grid{grid-template-columns:1fr 1fr;}}';
   } else if (layout === 'grid') {
-    c += '.dishes-grid{display:grid;grid-template-columns:1fr;gap:12px;}';
+    c += '.dishes-grid{display:grid;grid-template-columns:1fr;gap:14px;}';
     c += '@media(min-width:480px){.dishes-grid{grid-template-columns:1fr 1fr;}}';
-    c += '@media(min-width:900px){.dishes-grid{grid-template-columns:1fr 1fr 1fr;}}';
+    c += '@media(min-width:1024px){.dishes-grid{grid-template-columns:1fr 1fr 1fr;}}';
   } else {
-    c += '.dishes-grid{display:flex;flex-direction:column;gap:12px;}';
+    // single = 1 col mobile, 2 col tablet+ (mejor aprovechamiento, estilo PedidosYa)
+    c += '.dishes-grid{display:grid;grid-template-columns:1fr;gap:14px;}';
+    c += '@media(min-width:640px){.dishes-grid{grid-template-columns:1fr 1fr;}}';
   }
 
-  // ─── Image size variants ───
-  const imgSizeMap: Record<string, string> = {
-    none: '0',
-    small: '60px',
-    medium: '84px',
-    large: '120px',
-  };
-  const imgSize = imgSizeMap[imageSize] || '84px';
+  // ─── DISH CARD — PedidosYa/Rappi style universal ───
+  // Siempre: imagen grande arriba (160px mobile, 180px desktop) + info abajo.
+  // Si no hay imagen, placeholder con inicial del plato (gradient accent).
+  // imageSize solo controla si se muestra la imagen o no (none = sin imagen).
+  const showImg = imageSize !== 'none';
 
-  // ─── Card style variants ───
-  if (imageSize === 'hero' || imageSize === 'large') {
-    c += `.dish{flex-direction:column;padding:0;overflow:hidden;}`;
-    c += `.dish-img{width:100%;height:${imageSize === 'hero' ? '200px' : '140px'};border-radius:0;aspect-ratio:${imageSize === 'hero' ? '16/9' : 'auto'};}`;
-    c += '.dish-info{padding:14px;width:100%;}';
-    c += '.dish-bottom{padding:0 14px 14px;}';
-  } else if (imageSize === 'none') {
-    c += '.dish-img{display:none;}';
-  } else {
-    c += `.dish{display:flex;gap:14px;}`;
-    c += `.dish-img{width:${imgSize};height:${imgSize};flex-shrink:0;}`;
-    c += '.dish-info{flex:1;min-width:0;display:flex;flex-direction:column;}';
-  }
-
-  // Card style (compact = menos padding, minimal = sin borde/background)
-  if (cardStyle === 'compact') {
-    c += '.dish{padding:10px;}';
-  } else if (cardStyle === 'minimal') {
-    c += '.dish{background:transparent;border:1px solid transparent;padding:8px 4px;}';
-    c += '.dish:hover{background:transparent;border-color:transparent;transform:none;box-shadow:none;}';
-  }
-
-  // Base dish styles (solo los que no sobreescribimos arriba)
-  c += `.dish{background:var(--glass);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:0;transition:all 0.3s cubic-bezier(0.4,0,0.2,1);opacity:0;transform:translateY(20px);position:relative;overflow:hidden;cursor:pointer;}`;
+  // Base dish — columna siempre (imagen arriba, info abajo)
+  c += '.dish{background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;cursor:pointer;position:relative;transition:transform 0.3s cubic-bezier(0.4,0,0.2,1),box-shadow 0.3s,border-color 0.3s;opacity:0;transform:translateY(20px);display:flex;flex-direction:column;}';
   c += '.dish.revealed{opacity:1;transform:translateY(0);}';
-  c += '.dish::before{content:"";position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.12),transparent);opacity:0;transition:opacity 0.3s;}';
-  c += '.dish:hover{border-color:rgba(var(--accent-rgb),0.3);background:rgba(var(--accent-rgb),0.04);transform:translateY(-3px);box-shadow:0 10px 28px rgba(0,0,0,0.35);}';
-  c += '.dish:hover::before{opacity:1;}';
-  c += '.dish:active{transform:translateY(0) scale(0.99);}';
-  c += `.dish-img{object-fit:cover;border-radius:var(--radius-sm);background:linear-gradient(135deg,var(--glass),var(--glass-strong));border:1px solid var(--border);}`;
-  c += '.dish-name{font-size:16px;font-weight:600;margin-bottom:4px;letter-spacing:-0.2px;color:var(--text);}';
-  c += '.dish-desc{font-size:13px;color:var(--text-muted);margin-bottom:10px;line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}';
-  c += '.dish-bottom{display:flex;justify-content:space-between;align-items:center;margin-top:auto;gap:10px;}';
-  c += '.dish-price{font-size:18px;font-weight:700;color:var(--accent);letter-spacing:-0.5px;}';
-  c += '.add-btn{width:36px;height:36px;border-radius:var(--radius-sm);background:linear-gradient(135deg,var(--accent),rgba(var(--accent-rgb),0.8));color:#fff;border:none;font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.25s;line-height:1;font-weight:300;box-shadow:0 4px 14px rgba(var(--accent-rgb),0.35);flex-shrink:0;}';
-  c += '.add-btn:hover{transform:scale(1.1) rotate(90deg);box-shadow:0 6px 20px rgba(var(--accent-rgb),0.55);}';
-  c += '.add-btn:active{transform:scale(0.95);}';
+  c += '.dish:hover{transform:translateY(-4px);box-shadow:0 14px 32px rgba(0,0,0,0.18);border-color:rgba(var(--accent-rgb),0.35);}';
+  c += '.dish:active{transform:translateY(-1px) scale(0.997);}';
+
+  // HERO IMAGE WRAPPER (siempre 16/10 aspect, overflow hidden para zoom hover)
+  if (showImg) {
+    c += '.dish-img-wrap{position:relative;width:100%;aspect-ratio:16/10;overflow:hidden;background:linear-gradient(135deg,var(--glass),var(--glass-strong));flex-shrink:0;}';
+    c += '.dish-img{width:100%;height:100%;object-fit:cover;display:block;transition:transform 0.55s cubic-bezier(0.2,0,0.2,1);}';
+    c += '.dish:hover .dish-img{transform:scale(1.06);}';
+    // Placeholder cuando no hay image_url — gradient con inicial del plato
+    c += '.dish-img-placeholder{width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--accent),rgba(var(--accent-rgb),0.55));color:#fff;font-size:54px;font-weight:900;letter-spacing:-2px;text-shadow:0 4px 14px rgba(0,0,0,0.18);}';
+    // Pequeño badge de categoría opcional encima de la imagen (esquina sup-izq)
+    c += '.dish-cat-badge{position:absolute;top:10px;left:10px;background:rgba(0,0,0,0.62);color:#fff;font-size:10.5px;font-weight:700;padding:4px 9px;border-radius:14px;letter-spacing:0.4px;text-transform:uppercase;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);z-index:2;}';
+  }
+
+  // INFO area (debajo de la imagen)
+  c += '.dish-info{padding:14px 16px 16px;display:flex;flex-direction:column;flex:1;min-height:0;}';
+  c += '.dish-name{font-size:16px;font-weight:700;color:var(--text);letter-spacing:-0.2px;line-height:1.3;margin:0 0 4px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}';
+  c += '.dish-desc{font-size:13px;color:var(--text-muted);line-height:1.5;margin:0 0 10px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:39px;}';
+  c += '.dish-bottom{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:auto;padding-top:6px;}';
+  c += '.dish-price{font-size:19px;font-weight:800;color:var(--accent-text);letter-spacing:-0.5px;line-height:1;}';
+  c += '.add-btn{background:linear-gradient(135deg,var(--accent),rgba(var(--accent-rgb),0.82));color:#fff;border:none;padding:8px 16px;border-radius:24px;font-size:13.5px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;box-shadow:0 4px 14px rgba(var(--accent-rgb),0.35);transition:all 0.22s;line-height:1;flex-shrink:0;}';
+  c += '.add-btn:hover{transform:scale(1.06);box-shadow:0 6px 20px rgba(var(--accent-rgb),0.55);}';
+  c += '.add-btn:active{transform:scale(0.96);}';
+
+  // Card style variants (afectan padding y borde, mantienen PedidosYa/Rappi layout)
+  if (cardStyle === 'compact') {
+    c += '.dish-info{padding:10px 12px 12px;}';
+    c += '.dish-name{font-size:15px;}';
+    c += '.dish-desc{font-size:12.5px;min-height:36px;}';
+  } else if (cardStyle === 'minimal') {
+    c += '.dish{background:transparent;border-color:transparent;}';
+    c += '.dish:hover{box-shadow:0 8px 22px rgba(0,0,0,0.10);border-color:rgba(var(--accent-rgb),0.18);}';
+  }
+
   c += '.added-flash{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) scale(0);background:#06d6a0;color:#fff;padding:8px 18px;border-radius:24px;font-size:12px;font-weight:700;pointer-events:none;z-index:5;box-shadow:0 6px 18px rgba(6,214,160,0.5);animation:flashAdd 0.9s ease forwards;letter-spacing:0.3px;}';
   c += '@keyframes flashAdd{0%{transform:translate(-50%,-50%) scale(0);opacity:0;}25%{transform:translate(-50%,-50%) scale(1);opacity:1;}75%{transform:translate(-50%,-90%) scale(1);opacity:1;}100%{transform:translate(-50%,-130%) scale(0.8);opacity:0;}}';
 
@@ -421,14 +426,22 @@ function buildJS(opts: JSOpts): string {
   s += '    html+="<div class=\\"dishes-grid\\">";\n';
   s += '    cat.dishes.forEach(function(dish,j){\n';
   s += '      html+="<div class=\\"dish\\" data-cat=\\""+i+"\\" data-dish=\\""+j+"\\" data-name=\\""+escapeHtml((dish.name||"").toLowerCase())+"\\" data-desc=\\""+escapeHtml((dish.description||"").toLowerCase())+"\\" style=\\"transition-delay:"+(j*40)+"ms\\">";\n';
-  s += '      if(dish.image_url){html+="<img src=\\""+escapeHtml(dish.image_url)+"\\" class=\\"dish-img\\" alt=\\"\\" onerror=\\"this.style.display=\\\'none\\\'\\" loading=\\"lazy\\"/>";}\n';
-  s += '      else if(THEME.imageSize!=="none"){html+="<div class=\\"dish-img\\"></div>";}\n';
+  // HERO IMAGE — PedidosYa/Rappi style: imagen grande arriba SIEMPRE (si THEME.imageSize!=="none")
+  s += '      if(THEME.imageSize!=="none"){\n';
+  s += '        html+="<div class=\\"dish-img-wrap\\">";\n';
+  s += '        html+="<span class=\\"dish-cat-badge\\">"+escapeHtml(cat.name||"Plato")+"</span>";\n';
+  s += '        if(dish.image_url){html+="<img src=\\""+escapeHtml(dish.image_url)+"\\" class=\\"dish-img\\" alt=\\""+escapeHtml(dish.name||"Plato")+"\\" onerror=\\"this.outerHTML=\\\'<div class=\\\\\\"dish-img-placeholder\\\\\\">"+escapeHtml((dish.name||"P").charAt(0).toUpperCase())+"</div>\\\'\\" loading=\\"lazy\\"/>";}\n';
+  s += '        else{html+="<div class=\\"dish-img-placeholder\\">"+escapeHtml((dish.name||"P").charAt(0).toUpperCase())+"</div>";}\n';
+  s += '        html+="</div>";\n';
+  s += '      }\n';
+  // INFO area — nombre, descripción, precio + add btn
   s += '      html+="<div class=\\"dish-info\\">";\n';
-  s += '      html+="<div class=\\"dish-name\\">"+escapeHtml(dish.name)+"</div>";\n';
+  s += '      html+="<div class=\\"dish-name\\">"+escapeHtml(dish.name||"Plato")+"</div>";\n';
   s += '      if(dish.description){html+="<div class=\\"dish-desc\\">"+escapeHtml(dish.description)+"</div>";}\n';
+  s += '      else{html+="<div class=\\"dish-desc\\">Delicioso plato preparado con ingredientes frescos.</div>";}\n';
   s += '      html+="<div class=\\"dish-bottom\\">";\n';
   s += '      html+="<div class=\\"dish-price\\">"+formatPrice(dish.price)+"</div>";\n';
-  s += '      html+="<button class=\\"add-btn\\" data-cat=\\""+i+"\\" data-dish=\\""+j+"\\" title=\\"Agregar\\">+</button>";\n';
+  s += '      html+="<button class=\\"add-btn\\" data-cat=\\""+i+"\\" data-dish=\\""+j+"\\" title=\\"Agregar\\"><svg width=\\"14\\" height=\\"14\\" viewBox=\\"0 0 24 24\\" fill=\\"none\\" stroke=\\"currentColor\\" stroke-width=\\"3\\" stroke-linecap=\\"round\\" stroke-linejoin=\\"round\\"><path d=\\"M12 5v14M5 12h14\\"/></svg>Agregar</button>";\n';
   s += '      html+="</div></div></div>";\n';
   s += '    });\n';
   s += '    html+="</div></section>";\n';
