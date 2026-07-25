@@ -83,6 +83,11 @@ export function buildMenuHTML(data: MenuData, opts?: { isPreview?: boolean }): s
   html += '    <span>Pedido</span>\n';
   html += '  </button>\n';
   html += '</nav>\n';
+  // Floating "scroll to top" button — aparece tras scroll > 600px (mobile-first)
+  // Solo visible en mobile (<640px) — en desktop el nav chip "Inicio" cumple la misma función
+  html += '<button class="scroll-top-btn" id="scrollTopBtn" aria-label="Volver arriba">\n';
+  html += '  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>\n';
+  html += '</button>\n';
   html += '<script>\n';
   html += 'var RESTAURANT = ' + JSON.stringify(data) + ';\n';
   html += 'var SHOW_BRANDING = ' + (!!data.branding_text) + ';\n';
@@ -144,7 +149,9 @@ function buildCSS(opts: ThemeOpts): string {
   c += `:root{--accent:#ff6b35;--accent-rgb:255,107,53;--secondary:#1a1a2e;--gold:#d4af37;--bg-0:${bg0};--bg-1:${bg1};--glass:${glass};--glass-strong:${glassStrong};--border:${border};--border-strong:${borderStrong};--text:${text};--text-muted:${textMuted};--text-soft:${textSoft};--font-main:${font},"Inter",sans-serif;--radius:${radius};--radius-sm:${radiusSm};--radius-lg:${radiusLg};--accent-text:${darkMode ? 'var(--accent)' : 'color-mix(in srgb, var(--accent) 78%, #000)'};}`;
   c += '*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}';
   c += 'html{scroll-behavior:smooth;-webkit-text-size-adjust:100%;}';
-  c += `body{font-family:var(--font-main);background:var(--bg-0);color:var(--text);min-height:100vh;padding-bottom:calc(140px + env(safe-area-inset-bottom, 0px));position:relative;overflow-x:hidden;overscroll-behavior-y:contain;-webkit-overflow-scrolling:touch;}`;
+  c += `body{font-family:var(--font-main);background:var(--bg-0);color:var(--text);min-height:100vh;padding-bottom:calc(110px + env(safe-area-inset-bottom, 0px));position:relative;overflow-x:hidden;overscroll-behavior-y:contain;-webkit-overflow-scrolling:touch;}`;
+  // En desktop (>=640px) la bottom-nav está oculta → no necesita padding extra
+  c += '@media(min-width:640px){body{padding-bottom:0;}}';
   if (darkMode) {
     c += 'body::before,body::after{content:"";position:fixed;width:500px;height:500px;border-radius:50%;filter:blur(140px);opacity:0.18;z-index:0;pointer-events:none;}';
     c += 'body::before{background:var(--accent);top:-200px;right:-150px;}';
@@ -197,11 +204,14 @@ function buildCSS(opts: ThemeOpts): string {
   }
 
   // Nav
-  c += '.nav{position:sticky;top:0;background:' + (darkMode ? 'rgba(7,7,11,0.78)' : 'rgba(250,250,250,0.85)') + ';backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);border-bottom:1px solid var(--border);z-index:100;padding:14px 0;overflow-x:auto;scrollbar-width:none;}';
+  c += '.nav{position:sticky;top:0;background:' + (darkMode ? 'rgba(7,7,11,0.78)' : 'rgba(250,250,250,0.85)') + ';backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);border-bottom:1px solid var(--border);z-index:100;padding:12px 0;overflow-x:auto;scrollbar-width:none;}';
   c += '.nav::-webkit-scrollbar{display:none;}';
   c += '.nav-inner{display:flex;gap:8px;padding:0 20px;min-width:max-content;}';
-  c += '.nav-item{white-space:nowrap;padding:8px 18px;background:var(--glass);border:1px solid var(--border);border-radius:24px;color:var(--text-soft);font-size:13.5px;font-weight:500;cursor:pointer;transition:all 0.25s cubic-bezier(0.4,0,0.2,1);display:flex;align-items:center;gap:6px;}';
-  c += '.nav-item:hover{background:var(--glass-strong);color:var(--text);transform:translateY(-1px);}';
+  // Tap target ≥44px (Apple HIG / Material spec) — touch-friendly mobile-first
+  c += '.nav-item{white-space:nowrap;padding:11px 18px;background:var(--glass);border:1px solid var(--border);border-radius:24px;color:var(--text-soft);font-size:13.5px;font-weight:500;cursor:pointer;transition:all 0.25s cubic-bezier(0.4,0,0.2,1);display:flex;align-items:center;gap:6px;min-height:44px;}';
+  // Hover solo en dispositivos con hover real (desktop) — evita sticky hover en mobile
+  c += '@media(hover:hover){.nav-item:hover{background:var(--glass-strong);color:var(--text);transform:translateY(-1px);}}';
+  c += '.nav-item:active{transform:scale(0.96);}';
   c += '.nav-item.active{background:linear-gradient(135deg,var(--accent),rgba(var(--accent-rgb),0.85));color:#fff;border-color:transparent;box-shadow:0 4px 16px rgba(var(--accent-rgb),0.4);}';
   if (showCatIcons) {
     c += '.nav-item-icon{font-size:16px;line-height:1;}';
@@ -209,7 +219,8 @@ function buildCSS(opts: ThemeOpts): string {
 
   // Section
   const sectionMaxW = layout === 'single' ? '640px' : '1100px';
-  c += `.section{padding:24px 20px 8px;max-width:${sectionMaxW};margin:0 auto;width:100%;}`;
+  // scroll-margin-top: compensa el header sticky (.nav ~58px) al hacer click en chip de categoría
+  c += `.section{padding:24px 20px 8px;max-width:${sectionMaxW};margin:0 auto;width:100%;scroll-margin-top:70px;}`;
   // En desktop: single layout usa 2 columnas para aprovechar mejor el espacio
   c += '@media(min-width:880px){.section.single-layout{max-width:920px;}.section.single-layout .dish-grid{grid-template-columns:repeat(2,1fr);gap:18px;}}';
   c += '.section-title{font-size:21px;font-weight:700;margin-bottom:18px;display:flex;align-items:center;gap:12px;letter-spacing:-0.3px;}';
@@ -239,7 +250,8 @@ function buildCSS(opts: ThemeOpts): string {
   // Base dish — columna siempre (imagen arriba, info abajo)
   c += '.dish{background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;cursor:pointer;position:relative;transition:transform 0.3s cubic-bezier(0.4,0,0.2,1),box-shadow 0.3s,border-color 0.3s;opacity:0;transform:translateY(20px);display:flex;flex-direction:column;}';
   c += '.dish.revealed{opacity:1;transform:translateY(0);}';
-  c += '.dish:hover{transform:translateY(-4px);box-shadow:0 14px 32px rgba(0,0,0,0.18);border-color:rgba(var(--accent-rgb),0.35);}';
+  // Hover solo en desktop (hover:hover) — en mobile se queda sticky después del tap
+  c += '@media(hover:hover){.dish:hover{transform:translateY(-4px);box-shadow:0 14px 32px rgba(0,0,0,0.18);border-color:rgba(var(--accent-rgb),0.35);}}';
   c += '.dish:active{transform:translateY(-1px) scale(0.997);}';
 
   // HERO IMAGE WRAPPER (siempre 16/10 aspect, overflow hidden para zoom hover)
@@ -259,8 +271,8 @@ function buildCSS(opts: ThemeOpts): string {
   c += '.dish-desc{font-size:13px;color:var(--text-muted);line-height:1.5;margin:0 0 10px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:39px;}';
   c += '.dish-bottom{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:auto;padding-top:6px;}';
   c += '.dish-price{font-size:19px;font-weight:800;color:var(--accent-text);letter-spacing:-0.5px;line-height:1;}';
-  c += '.add-btn{background:linear-gradient(135deg,var(--accent),rgba(var(--accent-rgb),0.82));color:#fff;border:none;padding:8px 16px;border-radius:24px;font-size:13.5px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;box-shadow:0 4px 14px rgba(var(--accent-rgb),0.35);transition:all 0.22s;line-height:1;flex-shrink:0;}';
-  c += '.add-btn:hover{transform:scale(1.06);box-shadow:0 6px 20px rgba(var(--accent-rgb),0.55);}';
+  c += '.add-btn{background:linear-gradient(135deg,var(--accent),rgba(var(--accent-rgb),0.82));color:#fff;border:none;padding:11px 18px;border-radius:24px;font-size:13.5px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;box-shadow:0 4px 14px rgba(var(--accent-rgb),0.35);transition:all 0.22s;line-height:1;flex-shrink:0;min-height:40px;}';
+  c += '@media(hover:hover){.add-btn:hover{transform:scale(1.06);box-shadow:0 6px 20px rgba(var(--accent-rgb),0.55);}}';
   c += '.add-btn:active{transform:scale(0.96);}';
 
   // Card style variants (afectan padding y borde, mantienen PedidosYa/Rappi layout)
@@ -447,8 +459,20 @@ function buildCSS(opts: ThemeOpts): string {
   // Cart total pill — displayed ABOVE the icon, full price visible (no truncation)
   c += '.mbn-cart-total{position:absolute;top:-14px;left:50%;transform:translateX(-50%);background:var(--accent);color:#fff;font-size:10px;font-weight:800;padding:3px 8px;border-radius:10px;white-space:nowrap;box-shadow:0 3px 8px rgba(var(--accent-rgb),0.5);z-index:2;max-width:90px;overflow:hidden;text-overflow:ellipsis;}';
   c += '.mbn-cart-total:empty{display:none;}';
-  // Add bottom padding so content isn't hidden behind bottom nav
-  c += '@media(max-width:639px){.menu-footer{padding-bottom:calc(30px + 80px + env(safe-area-inset-bottom, 0px));}.app{padding-bottom:calc(80px + env(safe-area-inset-bottom, 0px)) !important;}}';
+  // Add bottom padding so content isn't hidden behind bottom nav (mobile only)
+  // FIX: usar #app (id) no .app (class) — el div es <div id="app">
+  // 110px = nav height (~66px) + safe-area + extra breathing room
+  c += '@media(max-width:639px){#app{padding-bottom:calc(110px + env(safe-area-inset-bottom, 0px));}.menu-footer{padding-bottom:calc(20px + env(safe-area-inset-bottom, 0px));}}';
+  // Hide bottom nav when modal/lightbox/cart-modal is open (UX: el usuario está en un sub-flujo)
+  // Triggers: .dish-lightbox.visible, .modal-overlay.visible (cart modal)
+  c += '@media(max-width:639px){.mobile-bottom-nav{transition:transform 0.3s cubic-bezier(0.32,0.72,0,1),opacity 0.25s;}body:has(.dish-lightbox.visible) .mobile-bottom-nav,body:has(.modal-overlay.visible) .mobile-bottom-nav{transform:translateY(110%);opacity:0;pointer-events:none;}}';
+  // Floating "scroll to top" button — mobile only, aparece tras 600px scroll
+  // Posicionado arriba de la bottom-nav (bottom:84px) para no pisar el nav
+  c += '.scroll-top-btn{position:fixed;right:16px;bottom:calc(84px + env(safe-area-inset-bottom, 0px));width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,var(--accent),rgba(var(--accent-rgb),0.85));color:#fff;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 20px rgba(var(--accent-rgb),0.4),0 2px 8px rgba(0,0,0,0.25);z-index:94;opacity:0;transform:translateY(20px) scale(0.85);pointer-events:none;transition:all 0.3s cubic-bezier(0.32,0.72,0,1);-webkit-tap-highlight-color:transparent;}';
+  c += '.scroll-top-btn svg{width:20px;height:20px;}';
+  c += '.scroll-top-btn.visible{opacity:1;transform:translateY(0) scale(1);pointer-events:auto;}';
+  c += '.scroll-top-btn:active{transform:scale(0.9);}';
+  c += '@media(min-width:640px){.scroll-top-btn{display:none;}}';
 
   return c;
 }
@@ -650,6 +674,14 @@ function buildJS(opts: JSOpts): string {
   s += '  document.getElementById("waBtn").addEventListener("click",sendWhatsApp);\n';
   s += '  document.getElementById("modal").addEventListener("click",function(e){if(e.target===this)closeModal();});\n';
   s += '  window.addEventListener("scroll",updateActiveNav,{passive:true});\n';
+  // Scroll-to-top button: show after 600px scroll, hide when modal is open (via CSS :has)
+  s += '  var scrollTopBtn=document.getElementById("scrollTopBtn");\n';
+  s += '  if(scrollTopBtn){\n';
+  s += '    var updateScrollTop=function(){if(window.pageYOffset>600){scrollTopBtn.classList.add("visible");}else{scrollTopBtn.classList.remove("visible");}};\n';
+  s += '    window.addEventListener("scroll",updateScrollTop,{passive:true});\n';
+  s += '    scrollTopBtn.addEventListener("click",function(){window.scrollTo({top:0,behavior:"smooth"});});\n';
+  s += '    updateScrollTop();\n';
+  s += '  }\n';
   // Dish image error handler — uses event delegation (clean, no nested escapes)
   // Si la imagen del plato falla al cargar, se reemplaza por un placeholder con la letra inicial
   s += '  document.addEventListener("error",function(e){\n';
