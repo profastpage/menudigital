@@ -3,6 +3,8 @@ import { redirect } from 'next/navigation';
 import { PLANS } from '@/lib/plans';
 import { DashboardClient } from './dashboard-client';
 
+export const dynamic = 'force-dynamic';
+
 export default async function DashboardPage() {
   const supabase = await createClient();
   const {
@@ -13,12 +15,28 @@ export default async function DashboardPage() {
     redirect('/login');
   }
 
-  // Obtener profile
+  // Obtener profile (igual que antes)
   const { data: profile } = await supabase
     .from('profiles')
     .select('*')
     .eq('id', user.id)
     .single();
+
+  // ────────────────────────────────────────────────────────────
+  // RED DE SEGURIDAD SERVER-SIDE:
+  //   Si el usuario es super admin y está en /dashboard (raíz, sin subruta),
+  //   forzar redirect a /superadmin. Esto bypassa cualquier problema con
+  //   el middleware o el callback.
+  // ────────────────────────────────────────────────────────────
+  if (profile?.is_super_admin === true && profile?.is_active !== false) {
+    redirect('/superadmin');
+  }
+
+  // Baneado → logout
+  if (profile && profile.is_active === false) {
+    await supabase.auth.signOut();
+    redirect('/login?error=account_banned');
+  }
 
   const plan = PLANS[profile?.plan || 'free'];
 
