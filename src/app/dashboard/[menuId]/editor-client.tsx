@@ -40,6 +40,11 @@ import {
   CheckCircle2,
   Download,
   Palette,
+  Share2,
+  Facebook,
+  Instagram,
+  Youtube,
+  Globe,
 } from 'lucide-react';
 import { COLORS, CURRENCIES, type Plan } from '@/lib/plans';
 import type { MenuData, ProfileData } from '@/lib/menu-utils';
@@ -91,8 +96,20 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount }: Props)
     show_category_icons: (initialMenu as any).theme_show_category_icons !== false,
     rounded_corners: (initialMenu as any).theme_rounded_corners !== false,
     dark_mode: (initialMenu as any).theme_dark_mode !== false,
+    dish_gallery: (initialMenu as any).theme_dish_gallery !== false,
     preset_slug: null as string | null,
   });
+  // Estado de redes sociales
+  const [socials, setSocials] = useState({
+    facebook: (initialMenu as any).social_facebook || '',
+    instagram: (initialMenu as any).social_instagram || '',
+    whatsapp: (initialMenu as any).social_whatsapp || '',
+    tiktok: (initialMenu as any).social_tiktok || '',
+    twitter: (initialMenu as any).social_twitter || '',
+    youtube: (initialMenu as any).social_youtube || '',
+    web: (initialMenu as any).social_web || '',
+  });
+  const [coverUploading, setCoverUploading] = useState(false);
   const [showAppearancePanel, setShowAppearancePanel] = useState(false);
   const [showPreviewMobile, setShowPreviewMobile] = useState(false);
   const [categories, setCategories] = useState<LocalCategory[]>(
@@ -113,14 +130,16 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount }: Props)
   const [publishing, setPublishing] = useState(false);
   const [savedAt, setSavedAt] = useState<Date | null>(null);
   const [previewHtml, setPreviewHtml] = useState('');
+  const [coverDragOver, setCoverDragOver] = useState(false);
   const dirtyRef = useRef(false);
   const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
   const importFileRef = useRef<HTMLInputElement>(null);
+  const coverInputRef = useRef<HTMLInputElement>(null);
 
   // Marcar como dirty cuando cambia algo
   useEffect(() => {
     dirtyRef.current = true;
-  }, [menu, categories, theme]);
+  }, [menu, categories, theme, socials]);
 
   // Auto-guardado cada 3s si hay cambios
   const save = useCallback(async (silent = true) => {
@@ -143,6 +162,15 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount }: Props)
           theme_show_category_icons: theme.show_category_icons,
           theme_rounded_corners: theme.rounded_corners,
           theme_dark_mode: theme.dark_mode,
+          theme_dish_gallery: theme.dish_gallery,
+          // Redes sociales
+          social_facebook: socials.facebook,
+          social_instagram: socials.instagram,
+          social_whatsapp: socials.whatsapp,
+          social_tiktok: socials.tiktok,
+          social_twitter: socials.twitter,
+          social_youtube: socials.youtube,
+          social_web: socials.web,
           categories: categories.map((c) => ({
             name: c.name,
             dishes: c.dishes.map((d) => ({
@@ -167,7 +195,7 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount }: Props)
     } finally {
       setSaving(false);
     }
-  }, [menu, categories, theme, initialMenu.id]);
+  }, [menu, categories, theme, socials, initialMenu.id]);
 
   useEffect(() => {
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
@@ -175,7 +203,7 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount }: Props)
     return () => {
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     };
-  }, [menu, categories, save]);
+  }, [menu, categories, socials, save]);
 
   // Vista previa en vivo (debounced)
   useEffect(() => {
@@ -207,6 +235,15 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount }: Props)
         theme_show_category_icons: theme.show_category_icons,
         theme_rounded_corners: theme.rounded_corners,
         theme_dark_mode: theme.dark_mode,
+        theme_dish_gallery: theme.dish_gallery,
+        // Redes sociales
+        social_facebook: socials.facebook || null,
+        social_instagram: socials.instagram || null,
+        social_whatsapp: socials.whatsapp || null,
+        social_tiktok: socials.tiktok || null,
+        social_twitter: socials.twitter || null,
+        social_youtube: socials.youtube || null,
+        social_web: socials.web || null,
         categories: categories.map((c) => ({
           id: c.id,
           menu_id: initialMenu.id,
@@ -226,7 +263,7 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount }: Props)
       setPreviewHtml(buildMenuHTML(data));
     }, 400);
     return () => clearTimeout(timer);
-  }, [menu, categories, theme, plan, initialMenu.id, initialMenu.slug, profile.id]);
+  }, [menu, categories, theme, socials, plan, initialMenu.id, initialMenu.slug, profile.id]);
 
   async function handlePublish() {
     setPublishing(true);
@@ -266,6 +303,26 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount }: Props)
         body: JSON.stringify({
           ...menu,
           is_published: true,
+          // Tema
+          theme_color_secondary: theme.color_secondary,
+          theme_font: theme.font,
+          theme_layout: theme.layout,
+          theme_image_size: theme.image_size,
+          theme_card_style: theme.card_style,
+          theme_cover_url: theme.cover_url || null,
+          theme_show_search: theme.show_search,
+          theme_show_category_icons: theme.show_category_icons,
+          theme_rounded_corners: theme.rounded_corners,
+          theme_dark_mode: theme.dark_mode,
+          theme_dish_gallery: theme.dish_gallery,
+          // Redes sociales
+          social_facebook: socials.facebook,
+          social_instagram: socials.instagram,
+          social_whatsapp: socials.whatsapp,
+          social_tiktok: socials.tiktok,
+          social_twitter: socials.twitter,
+          social_youtube: socials.youtube,
+          social_web: socials.web,
           categories: categories.map((c) => ({
             name: c.name,
             dishes: c.dishes.map((d) => ({
@@ -346,6 +403,31 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount }: Props)
 
   function handleLogoUploaded(url: string) {
     setMenu((m) => ({ ...m, logo: url }));
+  }
+
+  async function handleCoverFile(file: File) {
+    if (!file.type.startsWith('image/')) {
+      toast.error('Solo se permiten imágenes');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Máximo 5MB por imagen');
+      return;
+    }
+    setCoverUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetch('/api/upload', { method: 'POST', body: formData });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Error');
+      setTheme((t) => ({ ...t, cover_url: data.url }));
+      toast.success('Portada subida');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Error al subir portada');
+    } finally {
+      setCoverUploading(false);
+    }
   }
 
   function handleDishImageUploaded(catId: string, dishId: string, url: string) {
@@ -553,6 +635,157 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount }: Props)
                   shape="circle"
                   size={120}
                 />
+              </div>
+
+              {/* Cover / Portada (opcional) */}
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  Imagen de portada (cover)
+                  <span className="text-[10px] font-normal text-white/40">
+                    — se muestra detrás del perfil
+                  </span>
+                </Label>
+                <div className="space-y-2">
+                  <div
+                    onClick={() => !coverUploading && coverInputRef.current?.click()}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      setCoverDragOver(true);
+                    }}
+                    onDragLeave={() => setCoverDragOver(false)}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      setCoverDragOver(false);
+                      const f = e.dataTransfer.files?.[0];
+                      if (f) handleCoverFile(f);
+                    }}
+                    className={`relative cursor-pointer transition-all rounded-xl overflow-hidden border-2 border-dashed ${
+                      coverDragOver
+                        ? 'border-[#d4af37] bg-[#d4af37]/10 scale-[1.01]'
+                        : 'border-white/15 hover:border-[#d4af37]/60 hover:bg-white/5'
+                    }`}
+                    style={{ aspectRatio: '3 / 1', minHeight: '90px' }}
+                  >
+                    {theme.cover_url ? (
+                      <>
+                        <img
+                          src={theme.cover_url}
+                          alt="Cover"
+                          className="absolute inset-0 w-full h-full object-cover"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setTheme({ ...theme, cover_url: '' });
+                          }}
+                          className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/80 text-white flex items-center justify-center hover:bg-red-500 z-10"
+                          aria-label="Quitar cover"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                        <div className="absolute bottom-2 left-3 text-[10px] text-white/80 font-medium tracking-wide">
+                          Cover activo
+                        </div>
+                      </>
+                    ) : coverUploading ? (
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <Loader2 className="w-5 h-5 text-[#d4af37] animate-spin" />
+                      </div>
+                    ) : (
+                      <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-4">
+                        <Upload className="w-5 h-5 text-white/40 mb-1.5" />
+                        <div className="text-xs text-white/60 font-medium">
+                          Sube una imagen wide (3:1)
+                        </div>
+                        <div className="text-[10px] text-white/40 mt-0.5">
+                          Click o arrastra — se mostrará detrás del perfil
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <input
+                    ref={coverInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) handleCoverFile(f);
+                      if (coverInputRef.current) coverInputRef.current.value = '';
+                    }}
+                  />
+                  <Input
+                    value={theme.cover_url}
+                    onChange={(e) => setTheme({ ...theme, cover_url: e.target.value })}
+                    placeholder="...o pega una URL de imagen"
+                    disabled={plan.id === 'free'}
+                    className="bg-white/5 border-white/10 text-white text-xs h-9 disabled:opacity-40"
+                  />
+                  {plan.id === 'free' && (
+                    <p className="text-xs text-white/40">
+                      Cover personalizado requiere plan Pro.
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Redes sociales */}
+              <div className="space-y-2.5">
+                <Label className="flex items-center gap-2">
+                  <Share2 className="w-3.5 h-3.5 text-[#d4af37]" />
+                  Redes sociales
+                  <span className="text-[10px] font-normal text-white/40">
+                    — se muestran con iconos premium en el menú
+                  </span>
+                </Label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <SocialInput
+                    icon={<Facebook className="w-3.5 h-3.5" />}
+                    placeholder="Facebook (URL o @user)"
+                    value={socials.facebook}
+                    onChange={(v) => setSocials({ ...socials, facebook: v })}
+                  />
+                  <SocialInput
+                    icon={<Instagram className="w-3.5 h-3.5" />}
+                    placeholder="Instagram (URL o @user)"
+                    value={socials.instagram}
+                    onChange={(v) => setSocials({ ...socials, instagram: v })}
+                  />
+                  <SocialInput
+                    icon={<span className="text-[11px] font-bold">WA</span>}
+                    placeholder="WhatsApp (opcional, default = principal)"
+                    value={socials.whatsapp}
+                    onChange={(v) => setSocials({ ...socials, whatsapp: v.replace(/\D/g, '') })}
+                  />
+                  <SocialInput
+                    icon={<span className="text-[11px] font-bold">TT</span>}
+                    placeholder="TikTok (URL o @user)"
+                    value={socials.tiktok}
+                    onChange={(v) => setSocials({ ...socials, tiktok: v })}
+                  />
+                  <SocialInput
+                    icon={<span className="text-[11px] font-bold">X</span>}
+                    placeholder="Twitter/X (URL o @user)"
+                    value={socials.twitter}
+                    onChange={(v) => setSocials({ ...socials, twitter: v })}
+                  />
+                  <SocialInput
+                    icon={<Youtube className="w-3.5 h-3.5" />}
+                    placeholder="YouTube (URL o @user)"
+                    value={socials.youtube}
+                    onChange={(v) => setSocials({ ...socials, youtube: v })}
+                  />
+                  <div className="sm:col-span-2">
+                    <SocialInput
+                      icon={<Globe className="w-3.5 h-3.5" />}
+                      placeholder="Sitio web (https://...)"
+                      value={socials.web}
+                      onChange={(v) => setSocials({ ...socials, web: v })}
+                    />
+                  </div>
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -903,6 +1136,12 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount }: Props)
                     disabled={plan.id === 'free'}
                     onChange={(v) => setTheme({ ...theme, rounded_corners: v })}
                   />
+                  <ToggleRow
+                    label="Lightbox de platos"
+                    desc="Clic en plato abre galería grande con detalle"
+                    value={theme.dish_gallery}
+                    onChange={(v) => setTheme({ ...theme, dish_gallery: v })}
+                  />
                 </div>
 
                 <div className="flex justify-end gap-2 pt-2">
@@ -1193,5 +1432,32 @@ function ToggleRow({
       </div>
       <div className="text-xs text-white/50">{desc}</div>
     </button>
+  );
+}
+
+// ───────── Componente SocialInput para redes sociales ─────────
+function SocialInput({
+  icon,
+  placeholder,
+  value,
+  onChange,
+}: {
+  icon: React.ReactNode;
+  placeholder: string;
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <div className="relative">
+      <div className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center text-white/50">
+        {icon}
+      </div>
+      <Input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="bg-white/5 border-white/10 text-white h-9 pl-10 text-sm"
+      />
+    </div>
   );
 }

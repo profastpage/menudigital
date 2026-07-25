@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: Promise<{ menuId: string }> }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = await createClient();
@@ -13,7 +13,7 @@ export async function POST(
       return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
     }
 
-    const { menuId } = await params;
+    const { id: menuId } = await params;
     const body = await req.json();
     const presetSlug = body.preset_slug as string;
 

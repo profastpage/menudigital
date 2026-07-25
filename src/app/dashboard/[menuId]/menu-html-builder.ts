@@ -7,6 +7,15 @@ import { escapeHtml, hexToRgbStr, type MenuData } from '@/lib/menu-utils';
  *
  * Soporta tema personalizables (plan Pro): layout, image_size, card_style,
  * font, secondary color, dark mode, cover image, search, etc.
+ *
+ * NOVEDADES:
+ *  - Cover image como fondo detrás del header de perfil (efecto ultra pro)
+ *  - Redes sociales con iconos SVG premium (Facebook, Instagram, WhatsApp,
+ *    TikTok, Twitter/X, YouTube, Web)
+ *  - Lightbox carrusel: al hacer clic en un plato se abre un overlay con
+ *    imagen grande + info detallada. Si el plato no tiene imagen, se muestra
+ *    un placeholder elegante.
+ *  - Fix del bug "sans is not defined" (property CSS sin comillas)
  */
 export function buildMenuHTML(data: MenuData): string {
   // Defaults seguros (plan Free = single col, medium img, expanded card, dark)
@@ -20,9 +29,10 @@ export function buildMenuHTML(data: MenuData): string {
   const rounded = data.theme_rounded_corners !== false;
   const coverUrl = data.theme_cover_url || null;
   const secondary = data.theme_color_secondary || '#1a1a2e';
+  const showGallery = data.theme_dish_gallery !== false; // default true
 
-  const css = buildCSS({ layout, imageSize, cardStyle, font, darkMode, showSearch, showCatIcons, rounded, coverUrl, secondary });
-  const js = buildJS({ layout, imageSize, cardStyle, showSearch });
+  const css = buildCSS({ layout, imageSize, cardStyle, font, darkMode, showSearch, showCatIcons, rounded, coverUrl, secondary, showGallery });
+  const js = buildJS({ layout, imageSize, cardStyle, showSearch, showGallery });
   const colorRgb = hexToRgbStr(data.color);
   const secondaryRgb = hexToRgbStr(secondary);
 
@@ -30,6 +40,12 @@ export function buildMenuHTML(data: MenuData): string {
   const fontImport = ['Inter', 'system-ui', '-apple-system'].includes(font)
     ? ''
     : `<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=${encodeURIComponent(font)}:wght@400;500;600;700;800&display=swap" rel="stylesheet">`;
+
+  // ⚠️ FIX CRITICAL: el valor de la property CSS debe ser un JS string completo
+  // y CORRECTAMENTE ESCAPADO. Antes generábamos "Inter, "Inter", sans-serif"
+  // lo que rompía el parser JS y mataba todo el script (ReferenceError: sans).
+  // Usamos JSON.stringify para escapar comillas internas correctamente.
+  const fontMainJs = JSON.stringify(font + ', "Inter", sans-serif');
 
   let html = '';
   html += '<!DOCTYPE html>\n';
@@ -49,12 +65,13 @@ export function buildMenuHTML(data: MenuData): string {
   html += 'var RESTAURANT = ' + JSON.stringify(data) + ';\n';
   html += 'var SHOW_BRANDING = ' + (!!data.branding_text) + ';\n';
   html += 'var BRANDING_TEXT = ' + JSON.stringify(data.branding_text || '') + ';\n';
-  html += 'var THEME = ' + JSON.stringify({ layout, imageSize, cardStyle, showSearch }) + ';\n';
+  html += 'var THEME = ' + JSON.stringify({ layout, imageSize, cardStyle, showSearch, showGallery }) + ';\n';
   html += 'document.documentElement.style.setProperty("--accent", "' + data.color + '");\n';
   html += 'document.documentElement.style.setProperty("--accent-rgb", "' + colorRgb + '");\n';
   html += 'document.documentElement.style.setProperty("--secondary", "' + secondary + '");\n';
   html += 'document.documentElement.style.setProperty("--secondary-rgb", "' + secondaryRgb + '");\n';
-  html += 'document.documentElement.style.setProperty("--font-main", "' + font + '", "Inter", sans-serif);\n';
+  // ⚠️ FIX: property CSS value debe ser un string COMPLETO entre comillas
+  html += 'document.documentElement.style.setProperty("--font-main", ' + fontMainJs + ');\n';
   html += js + '\n';
   html += '</scr' + 'ipt>\n';
   html += '</body>\n';
@@ -73,10 +90,11 @@ interface ThemeOpts {
   rounded: boolean;
   coverUrl: string | null;
   secondary: string;
+  showGallery: boolean;
 }
 
 function buildCSS(opts: ThemeOpts): string {
-  const { layout, imageSize, cardStyle, font, darkMode, showSearch, showCatIcons, rounded, coverUrl, secondary } = opts;
+  const { layout, imageSize, cardStyle, font, darkMode, showSearch, showCatIcons, rounded, coverUrl, showGallery } = opts;
   const radius = rounded ? '16px' : '4px';
   const radiusSm = rounded ? '12px' : '2px';
   const radiusLg = rounded ? '24px' : '8px';
@@ -93,7 +111,7 @@ function buildCSS(opts: ThemeOpts): string {
   const borderStrong = darkMode ? 'rgba(255,255,255,0.14)' : 'rgba(0,0,0,0.14)';
 
   let c = '';
-  c += `:root{--accent:#ff6b35;--accent-rgb:255,107,53;--secondary:${secondary};--gold:#d4af37;--bg-0:${bg0};--bg-1:${bg1};--glass:${glass};--glass-strong:${glassStrong};--border:${border};--border-strong:${borderStrong};--text:${text};--text-muted:${textMuted};--text-soft:${textSoft};--font-main:${font},"Inter",sans-serif;--radius:${radius};--radius-sm:${radiusSm};--radius-lg:${radiusLg};}`;
+  c += `:root{--accent:#ff6b35;--accent-rgb:255,107,53;--secondary:#1a1a2e;--gold:#d4af37;--bg-0:${bg0};--bg-1:${bg1};--glass:${glass};--glass-strong:${glassStrong};--border:${border};--border-strong:${borderStrong};--text:${text};--text-muted:${textMuted};--text-soft:${textSoft};--font-main:${font},"Inter",sans-serif;--radius:${radius};--radius-sm:${radiusSm};--radius-lg:${radiusLg};}`;
   c += '*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}';
   c += 'html{scroll-behavior:smooth;-webkit-text-size-adjust:100%;}';
   c += `body{font-family:var(--font-main);background:var(--bg-0);color:var(--text);min-height:100vh;padding-bottom:calc(140px + env(safe-area-inset-bottom, 0px));position:relative;overflow-x:hidden;overscroll-behavior-y:contain;-webkit-overflow-scrolling:touch;}`;
@@ -104,32 +122,44 @@ function buildCSS(opts: ThemeOpts): string {
   }
   c += '#app{position:relative;z-index:1;}';
 
-  // Cover image (si existe)
+  // ─── HERO / COVER (con efecto blur detrás del header) ───
   if (coverUrl) {
-    c += `.cover{width:100%;height:240px;position:relative;overflow:hidden;background:var(--bg-1);}`;
-    c += `.cover img{width:100%;height:100%;object-fit:cover;}`;
-    c += `.cover::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 50%,var(--bg-0) 100%);}`;
-    c += `@media(min-width:600px){.cover{height:320px;}}`;
+    c += '.hero{position:relative;width:100%;height:340px;overflow:hidden;background:var(--bg-1);}';
+    c += '.hero img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:saturate(1.1);}';
+    c += '@media(min-width:600px){.hero{height:420px;}}';
+    // Overlay gradient para legibilidad
+    c += '.hero::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,0.25) 0%,rgba(0,0,0,0.55) 60%,var(--bg-0) 100%);}';
   }
 
-  // Header
-  c += `.header{padding:${coverUrl ? '20px' : '38px'} 24px 30px;text-align:center;position:relative;background:linear-gradient(180deg,rgba(255,255,255,0.03) 0%,transparent 100%);border-bottom:1px solid var(--border);}`;
-  c += '.header::after{content:"";position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:140px;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);}';
+  // Header — cuando hay cover, se superpone encima con efecto glass
+  if (coverUrl) {
+    c += `.header{position:relative;z-index:2;margin-top:-140px;padding:0 24px 30px;text-align:center;}`;
+    c += '@media(min-width:600px){.header{margin-top:-180px;}}';
+  } else {
+    c += `.header{padding:38px 24px 30px;text-align:center;position:relative;background:linear-gradient(180deg,rgba(255,255,255,0.03) 0%,transparent 100%);border-bottom:1px solid var(--border);}`;
+    c += '.header::after{content:"";position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:140px;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);}';
+  }
   c += '.logo-wrap{position:relative;display:inline-block;margin-bottom:16px;width:96px;height:96px;}';
   c += '.logo-wrap::before{content:"";position:absolute;inset:-6px;border-radius:50%;background:conic-gradient(from 0deg,var(--accent),var(--gold),var(--accent));filter:blur(10px);opacity:0.5;z-index:0;animation:rotate 8s linear infinite;}';
   c += '@keyframes rotate{to{transform:rotate(360deg);}}';
-  c += `.logo{width:96px;height:96px;border-radius:50%;object-fit:cover;border:3px solid rgba(255,255,255,0.12);box-shadow:0 8px 32px rgba(0,0,0,0.5);background:var(--glass);position:absolute;inset:0;z-index:2;}`;
-  c += '.logo-placeholder{width:96px;height:96px;border-radius:50%;background:linear-gradient(135deg,var(--accent),rgba(var(--accent-rgb),0.6));display:flex;align-items:center;justify-content:center;font-size:38px;font-weight:800;color:#fff;position:absolute;inset:0;z-index:1;border:3px solid rgba(255,255,255,0.12);box-shadow:0 8px 32px rgba(0,0,0,0.5);}';
-  c += '.restaurant-name{font-size:28px;font-weight:800;margin-bottom:6px;letter-spacing:-0.5px;color:var(--text);}';
+  c += `.logo{width:96px;height:96px;border-radius:50%;object-fit:cover;border:3px solid rgba(255,255,255,0.18);box-shadow:0 12px 36px rgba(0,0,0,0.55);background:var(--glass);position:absolute;inset:0;z-index:2;}`;
+  c += '.logo-placeholder{width:96px;height:96px;border-radius:50%;background:linear-gradient(135deg,var(--accent),rgba(var(--accent-rgb),0.6));display:flex;align-items:center;justify-content:center;font-size:38px;font-weight:800;color:#fff;position:absolute;inset:0;z-index:1;border:3px solid rgba(255,255,255,0.18);box-shadow:0 12px 36px rgba(0,0,0,0.55);backdrop-filter:blur(8px);}';
+  c += '.restaurant-name{font-size:28px;font-weight:800;margin-bottom:6px;letter-spacing:-0.5px;color:var(--text);text-shadow:' + (coverUrl ? '0 2px 12px rgba(0,0,0,0.6)' : 'none') + ';}';
   c += '.slogan{font-size:11px;color:var(--gold);letter-spacing:4px;text-transform:uppercase;font-weight:600;margin-bottom:8px;}';
-  c += '.restaurant-desc{color:var(--text-soft);font-size:14px;margin-bottom:18px;max-width:440px;margin-left:auto;margin-right:auto;line-height:1.5;}';
+  c += '.restaurant-desc{color:' + (coverUrl && darkMode ? 'rgba(255,255,255,0.85)' : 'var(--text-soft)') + ';font-size:14px;margin-bottom:18px;max-width:440px;margin-left:auto;margin-right:auto;line-height:1.5;}';
   c += '.open-badge{display:inline-flex;align-items:center;gap:7px;background:rgba(6,214,160,0.12);color:#06d6a0;padding:6px 14px;border-radius:20px;font-size:11.5px;font-weight:600;border:1px solid rgba(6,214,160,0.25);letter-spacing:0.5px;text-transform:uppercase;}';
   c += '.open-badge::before{content:"";width:6px;height:6px;border-radius:50%;background:#06d6a0;box-shadow:0 0 8px #06d6a0;animation:pulse 2s infinite;}';
   c += '@keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:0.4;transform:scale(1.3);}}';
 
+  // ─── Redes sociales ───
+  c += '.socials{display:flex;justify-content:center;align-items:center;gap:10px;margin-top:16px;flex-wrap:wrap;}';
+  c += '.social-link{width:38px;height:38px;border-radius:50%;background:var(--glass);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;color:var(--text-soft);transition:all 0.25s cubic-bezier(0.4,0,0.2,1);cursor:pointer;text-decoration:none;}';
+  c += '.social-link:hover{background:linear-gradient(135deg,var(--accent),rgba(var(--accent-rgb),0.85));color:#fff;border-color:transparent;transform:translateY(-3px);box-shadow:0 8px 20px rgba(var(--accent-rgb),0.4);}';
+  c += '.social-link svg{width:18px;height:18px;}';
+
   // Search bar (opcional, Pro)
   if (showSearch) {
-    c += '.search-wrap{padding:12px 20px 0;max-width:620px;margin:0 auto;}';
+    c += '.search-wrap{padding:12px 20px 0;max-width:620px;margin:0 auto;position:relative;}';
     c += '.search-input{width:100%;padding:12px 16px 12px 44px;border-radius:var(--radius-sm);background:var(--glass);border:1px solid var(--border);color:var(--text);font-size:15px;font-family:var(--font-main);outline:none;transition:border 0.2s;}';
     c += '.search-input:focus{border-color:rgba(var(--accent-rgb),0.5);background:var(--glass-strong);}';
     c += '.search-input::placeholder{color:var(--text-muted);}';
@@ -175,19 +205,14 @@ function buildCSS(opts: ThemeOpts): string {
   const imgSize = imgSizeMap[imageSize] || '84px';
 
   // ─── Card style variants ───
-  let dishLayoutCss = '';
   if (imageSize === 'hero' || imageSize === 'large') {
-    // Imagen grande arriba, info abajo (vertical)
-    dishLayoutCss = `.dish{flex-direction:column;padding:0;overflow:hidden;}`;
-    c += dishLayoutCss;
+    c += `.dish{flex-direction:column;padding:0;overflow:hidden;}`;
     c += `.dish-img{width:100%;height:${imageSize === 'hero' ? '200px' : '140px'};border-radius:0;aspect-ratio:${imageSize === 'hero' ? '16/9' : 'auto'};}`;
     c += '.dish-info{padding:14px;width:100%;}';
     c += '.dish-bottom{padding:0 14px 14px;}';
   } else if (imageSize === 'none') {
-    // Sin imagen
     c += '.dish-img{display:none;}';
   } else {
-    // Horizontal clásico (small/medium)
     c += `.dish{display:flex;gap:14px;}`;
     c += `.dish-img{width:${imgSize};height:${imgSize};flex-shrink:0;}`;
     c += '.dish-info{flex:1;min-width:0;display:flex;flex-direction:column;}';
@@ -218,6 +243,29 @@ function buildCSS(opts: ThemeOpts): string {
   c += '.add-btn:active{transform:scale(0.95);}';
   c += '.added-flash{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) scale(0);background:#06d6a0;color:#fff;padding:8px 18px;border-radius:24px;font-size:12px;font-weight:700;pointer-events:none;z-index:5;box-shadow:0 6px 18px rgba(6,214,160,0.5);animation:flashAdd 0.9s ease forwards;letter-spacing:0.3px;}';
   c += '@keyframes flashAdd{0%{transform:translate(-50%,-50%) scale(0);opacity:0;}25%{transform:translate(-50%,-50%) scale(1);opacity:1;}75%{transform:translate(-50%,-90%) scale(1);opacity:1;}100%{transform:translate(-50%,-130%) scale(0.8);opacity:0;}}';
+
+  // ─── Lightbox / Modal de plato (carrusel) ───
+  if (showGallery) {
+    c += '.dish-lightbox{position:fixed;inset:0;background:rgba(0,0,0,0.85);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);z-index:300;display:none;align-items:center;justify-content:center;padding:20px;animation:fadeIn 0.25s ease;}';
+    c += '.dish-lightbox.visible{display:flex;}';
+    c += '@keyframes fadeIn{from{opacity:0;}to{opacity:1;}}';
+    c += '.dish-lightbox-inner{background:linear-gradient(180deg,' + (darkMode ? '#1c1c2e,#14141f' : '#fff,#f5f5f5') + ');width:100%;max-width:480px;max-height:90vh;overflow-y:auto;border-radius:24px;border:1px solid rgba(255,255,255,0.08);box-shadow:0 20px 60px rgba(0,0,0,0.6);animation:slideUp 0.35s cubic-bezier(0.4,0,0.2,1);position:relative;color:var(--text);}';
+    c += '@keyframes slideUp{from{transform:translateY(40px);opacity:0;}to{transform:translateY(0);opacity:1;}}';
+    c += '.dish-lightbox-close{position:absolute;top:14px;right:14px;width:36px;height:36px;border-radius:50%;background:rgba(0,0,0,0.5);color:#fff;border:none;cursor:pointer;font-size:20px;line-height:1;display:flex;align-items:center;justify-content:center;z-index:5;backdrop-filter:blur(4px);}';
+    c += '.dish-lightbox-close:hover{background:rgba(0,0,0,0.7);transform:rotate(90deg);transition:all 0.25s;}';
+    c += '.dish-lightbox-img{width:100%;height:280px;object-fit:cover;border-radius:24px 24px 0 0;background:linear-gradient(135deg,var(--glass),var(--glass-strong));}';
+    c += '@media(min-width:600px){.dish-lightbox-img{height:320px;}}';
+    c += '.dish-lightbox-img-placeholder{width:100%;height:200px;display:flex;align-items:center;justify-content:center;border-radius:24px 24px 0 0;background:linear-gradient(135deg,var(--accent),rgba(var(--accent-rgb),0.6));color:#fff;font-size:64px;font-weight:800;}';
+    c += '.dish-lightbox-content{padding:24px;}';
+    c += '.dish-lightbox-name{font-size:24px;font-weight:800;margin-bottom:8px;letter-spacing:-0.5px;color:var(--text);}';
+    c += '.dish-lightbox-desc{font-size:14.5px;color:var(--text-soft);line-height:1.6;margin-bottom:18px;}';
+    c += '.dish-lightbox-bottom{display:flex;justify-content:space-between;align-items:center;gap:14px;}';
+    c += '.dish-lightbox-price{font-size:28px;font-weight:800;color:var(--accent);letter-spacing:-0.5px;}';
+    c += '.dish-lightbox-add{flex:1;background:linear-gradient(135deg,var(--accent),rgba(var(--accent-rgb),0.85));color:#fff;border:none;padding:14px 22px;border-radius:var(--radius);font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all 0.2s;box-shadow:0 6px 20px rgba(var(--accent-rgb),0.4);}';
+    c += '.dish-lightbox-add:hover{transform:translateY(-2px);box-shadow:0 10px 28px rgba(var(--accent-rgb),0.55);}';
+    c += '.dish-lightbox-add:active{transform:translateY(0);}';
+  }
+
   // Cart
   c += '.cart{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(140px);width:calc(100% - 32px);max-width:480px;background:linear-gradient(135deg,var(--accent),rgba(var(--accent-rgb),0.9));color:#fff;border-radius:var(--radius);padding:16px 22px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 14px 40px rgba(var(--accent-rgb),0.45),0 4px 12px rgba(0,0,0,0.4);cursor:pointer;transition:transform 0.4s cubic-bezier(0.4,0,0.2,1);z-index:90;border:1px solid rgba(255,255,255,0.18);margin-bottom:env(safe-area-inset-bottom,0px);}';
   c += '.cart.visible{transform:translateX(-50%) translateY(0);}';
@@ -230,7 +278,6 @@ function buildCSS(opts: ThemeOpts): string {
   c += '.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);z-index:200;display:none;align-items:flex-end;justify-content:center;padding-bottom:env(safe-area-inset-bottom,0px);}';
   c += '.modal-overlay.visible{display:flex;}';
   c += `.modal{background:linear-gradient(180deg,${darkMode ? '#1c1c2e,#14141f' : '#fff,#f5f5f5'});width:100%;max-width:500px;border-radius:24px 24px 0 0;padding:28px 24px;max-height:85vh;overflow-y:auto;animation:slideUp 0.4s cubic-bezier(0.4,0,0.2,1);border:1px solid rgba(255,255,255,0.08);border-bottom:none;box-shadow:0 -16px 48px rgba(0,0,0,0.5);color:var(--text);}`;
-  c += '@keyframes slideUp{from{transform:translateY(100%);}to{transform:translateY(0);}}';
   c += '.modal-title{font-size:22px;font-weight:700;margin-bottom:4px;text-align:center;letter-spacing:-0.3px;color:var(--text);}';
   c += '.modal-subtitle{text-align:center;font-size:12.5px;color:var(--text-muted);margin-bottom:22px;letter-spacing:0.3px;}';
   c += '.modal-divider{height:1px;background:linear-gradient(90deg,transparent,var(--border-strong),transparent);margin:0 -24px 20px;}';
@@ -266,21 +313,37 @@ interface JSOpts {
   imageSize: 'none' | 'small' | 'medium' | 'large' | 'hero';
   cardStyle: 'compact' | 'expanded' | 'minimal';
   showSearch: boolean;
+  showGallery: boolean;
 }
 
 function buildJS(opts: JSOpts): string {
-  const { showSearch } = opts;
+  const { showSearch, showGallery } = opts;
   let s = '';
   s += 'var cart = [];\n';
   s += 'var searchQuery = "";\n';
   s += 'function escapeHtml(s){if(s==null)return "";return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/\'/g,"&#39;");}\n';
   s += 'function formatPrice(n){return (RESTAURANT.currency||"S/")+" "+Number(n).toFixed(2);}\n';
   s += 'function dishMatches(dish,q){if(!q)return true;var n=(dish.name||"").toLowerCase();var d=(dish.description||"").toLowerCase();return n.indexOf(q)>=0||d.indexOf(q)>=0;}\n';
+
+  // SVG icons inline para redes sociales (premium, sin dependencias)
+  s += 'function svgIcon(name){var icons={' + "\n";
+  s += 'facebook:"<svg viewBox=\\"0 0 24 24\\" fill=\\"currentColor\\"><path d=\\"M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z\\"/></svg>",' + "\n";
+  s += 'instagram:"<svg viewBox=\\"0 0 24 24\\" fill=\\"currentColor\\"><path d=\\"M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z\\"/></svg>",' + "\n";
+  s += 'whatsapp:"<svg viewBox=\\"0 0 24 24\\" fill=\\"currentColor\\"><path d=\\"M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.149-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51l-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z\\"/></svg>",' + "\n";
+  s += 'tiktok:"<svg viewBox=\\"0 0 24 24\\" fill=\\"currentColor\\"><path d=\\"M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z\\"/></svg>",' + "\n";
+  s += 'twitter:"<svg viewBox=\\"0 0 24 24\\" fill=\\"currentColor\\"><path d=\\"M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z\\"/></svg>",' + "\n";
+  s += 'youtube:"<svg viewBox=\\"0 0 24 24\\" fill=\\"currentColor\\"><path d=\\"M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z\\"/></svg>",' + "\n";
+  s += 'web:"<svg viewBox=\\"0 0 24 24\\" fill=\\"none\\" stroke=\\"currentColor\\" stroke-width=\\"2\\"><circle cx=\\"12\\" cy=\\"12\\" r=\\"10\\"/><path d=\\"M2 12h20\\"/><path d=\\"M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z\\"/></svg>"' + "\n";
+  s += '};return icons[name]||"";}\n';
+
+  // Normalizar URL de red social
+  s += 'function normalizeSocialUrl(value, type){if(!value)return "";var v=String(value).trim();if(!v)return "";if(v.indexOf("http")!==0){if(type==="instagram")return "https://instagram.com/"+v.replace(/^@/,"");if(type==="facebook")return "https://facebook.com/"+v;if(type==="tiktok")return "https://tiktok.com/@"+v.replace(/^@/,"");if(type==="twitter")return "https://x.com/"+v.replace(/^@/,"");if(type==="youtube")return "https://youtube.com/@"+v.replace(/^@/,"");if(type==="whatsapp")return "https://wa.me/"+v.replace(/\\D/g,"");}return v;}\n';
+
   s += 'function renderApp(){\n';
   s += '  var app=document.getElementById("app");\n';
   s += '  var html="";\n';
-  // Cover image
-  s += '  if(RESTAURANT.theme_cover_url){html+="<div class=\\"cover\\"><img src=\\""+escapeHtml(RESTAURANT.theme_cover_url)+"\\" alt=\\"cover\\" onerror=\\"this.remove()\\"/></div>";}\n';
+  // Cover image — fondo HERO detrás del header
+  s += '  if(RESTAURANT.theme_cover_url){html+="<div class=\\"hero\\"><img src=\\""+escapeHtml(RESTAURANT.theme_cover_url)+"\\" alt=\\"cover\\" onerror=\\"this.remove()\\"/></div>";}\n';
   // Header
   s += '  html+="<header class=\\"header\\">";\n';
   s += '  html+="<div class=\\"logo-wrap\\">";\n';
@@ -291,10 +354,24 @@ function buildJS(opts: JSOpts): string {
   s += '  if(RESTAURANT.slogan){html+="<div class=\\"slogan\\">"+escapeHtml(RESTAURANT.slogan)+"</div>";}\n';
   s += '  if(RESTAURANT.description){html+="<p class=\\"restaurant-desc\\">"+escapeHtml(RESTAURANT.description)+"</p>";}\n';
   s += '  html+="<span class=\\"open-badge\\">Abierto ahora</span>";\n';
+  // Redes sociales
+  s += '  var socials=[];\n';
+  s += '  if(RESTAURANT.social_facebook)socials.push({type:"facebook",value:RESTAURANT.social_facebook});\n';
+  s += '  if(RESTAURANT.social_instagram)socials.push({type:"instagram",value:RESTAURANT.social_instagram});\n';
+  s += '  if(RESTAURANT.social_whatsapp)socials.push({type:"whatsapp",value:RESTAURANT.social_whatsapp});else if(RESTAURANT.whatsapp)socials.push({type:"whatsapp",value:RESTAURANT.whatsapp});\n';
+  s += '  if(RESTAURANT.social_tiktok)socials.push({type:"tiktok",value:RESTAURANT.social_tiktok});\n';
+  s += '  if(RESTAURANT.social_twitter)socials.push({type:"twitter",value:RESTAURANT.social_twitter});\n';
+  s += '  if(RESTAURANT.social_youtube)socials.push({type:"youtube",value:RESTAURANT.social_youtube});\n';
+  s += '  if(RESTAURANT.social_web)socials.push({type:"web",value:RESTAURANT.social_web});\n';
+  s += '  if(socials.length>0){\n';
+  s += '    html+="<div class=\\"socials\\">";\n';
+  s += '    socials.forEach(function(s){var url=normalizeSocialUrl(s.value,s.type);html+="<a class=\\"social-link\\" href=\\""+escapeHtml(url)+"\\" target=\\"_blank\\" rel=\\"noopener noreferrer\\" aria-label=\\""+escapeHtml(s.type)+"\\">"+svgIcon(s.type)+"</a>";});\n';
+  s += '    html+="</div>";\n';
+  s += '  }\n';
   s += '  html+="</header>";\n';
   // Search bar (opcional)
   if (showSearch) {
-    s += '  html+="<div class=\\"search-wrap\\" style=\\"position:relative\\"><svg class=\\"search-icon\\" viewBox=\\"0 0 24 24\\" fill=\\"none\\" stroke=\\"currentColor\\" stroke-width=\\"2\\"><circle cx=\\"11\\" cy=\\"11\\" r=\\"8\\"/><path d=\\"m21 21-4.3-4.3\\"/></svg><input type=\\"text\\" class=\\"search-input\\" id=\\"searchInput\\" placeholder=\\"Buscar plato...\\"/></div>";\n';
+    s += '  html+="<div class=\\"search-wrap\\"><svg class=\\"search-icon\\" viewBox=\\"0 0 24 24\\" fill=\\"none\\" stroke=\\"currentColor\\" stroke-width=\\"2\\"><circle cx=\\"11\\" cy=\\"11\\" r=\\"8\\"/><path d=\\"m21 21-4.3-4.3\\"/></svg><input type=\\"text\\" class=\\"search-input\\" id=\\"searchInput\\" placeholder=\\"Buscar plato...\\"/></div>";\n';
   }
   // Nav
   s += '  html+="<nav class=\\"nav\\"><div class=\\"nav-inner\\" id=\\"navInner\\">";\n';
@@ -341,6 +418,10 @@ function buildJS(opts: JSOpts): string {
   s += '  html+="<button class=\\"wa-btn\\" id=\\"waBtn\\"><svg class=\\"wa-icon\\" viewBox=\\"0 0 24 24\\"><path d=\\"M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.149-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51l-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z\\"/></svg>Enviar Pedido por WhatsApp</button>";\n';
   s += '  html+="<button class=\\"close-btn\\" id=\\"closeBtn\\">Seguir agregando</button>";\n';
   s += '  html+="</div></div>";\n';
+  // Lightbox contenedor (vacío, se rellena al hacer clic)
+  if (showGallery) {
+    s += '  html+="<div class=\\"dish-lightbox\\" id=\\"dishLightbox\\"></div>";\n';
+  }
   s += '  app.innerHTML=html;\n';
   s += '  attachEvents();\n';
   s += '  setupReveal();\n';
@@ -376,13 +457,25 @@ function buildJS(opts: JSOpts): string {
   s += '      addToCart(catIdx,dishIdx,this);\n';
   s += '    });\n';
   s += '  });\n';
-  s += '  document.querySelectorAll(".dish").forEach(function(d){\n';
-  s += '    d.addEventListener("click",function(){\n';
-  s += '      var catIdx=parseInt(this.dataset.cat);\n';
-  s += '      var dishIdx=parseInt(this.dataset.dish);\n';
-  s += '      addToCart(catIdx,dishIdx);\n';
-  s += '    });\n';
-  s += '  });\n';
+  // Dish click → abrir lightbox (si está activado) o agregar al carrito
+  if (showGallery) {
+    s += '  document.querySelectorAll(".dish").forEach(function(d){\n';
+    s += '    d.addEventListener("click",function(e){\n';
+    s += '      if(e.target.classList.contains("add-btn"))return;\n';
+    s += '      var catIdx=parseInt(this.dataset.cat);\n';
+    s += '      var dishIdx=parseInt(this.dataset.dish);\n';
+    s += '      openDishLightbox(catIdx,dishIdx);\n';
+    s += '    });\n';
+    s += '  });\n';
+  } else {
+    s += '  document.querySelectorAll(".dish").forEach(function(d){\n';
+    s += '    d.addEventListener("click",function(){\n';
+    s += '      var catIdx=parseInt(this.dataset.cat);\n';
+    s += '      var dishIdx=parseInt(this.dataset.dish);\n';
+    s += '      addToCart(catIdx,dishIdx);\n';
+    s += '    });\n';
+    s += '  });\n';
+  }
   s += '  document.querySelectorAll(".nav-item").forEach(function(item){\n';
   s += '    item.addEventListener("click",function(){\n';
   s += '      document.querySelectorAll(".nav-item").forEach(function(n){n.classList.remove("active");});\n';
@@ -398,6 +491,36 @@ function buildJS(opts: JSOpts): string {
   s += '  document.getElementById("modal").addEventListener("click",function(e){if(e.target===this)closeModal();});\n';
   s += '  window.addEventListener("scroll",updateActiveNav,{passive:true});\n';
   s += '}\n';
+
+  // ─── Lightbox de plato ───
+  if (showGallery) {
+    s += 'function openDishLightbox(catIdx,dishIdx){\n';
+    s += '  var dish=RESTAURANT.categories[catIdx].dishes[dishIdx];\n';
+    s += '  var lightbox=document.getElementById("dishLightbox");\n';
+    s += '  var html="";\n';
+    s += '  html+="<div class=\\"dish-lightbox-inner\\">";\n';
+    s += '  html+="<button class=\\"dish-lightbox-close\\" id=\\"dishLightboxClose\\" aria-label=\\"Cerrar\\">&times;</button>";\n';
+    s += '  if(dish.image_url){html+="<img src=\\""+escapeHtml(dish.image_url)+"\\" class=\\"dish-lightbox-img\\" alt=\\""+escapeHtml(dish.name)+"\\" onerror=\\"this.outerHTML=\\\'<div class=\\\\\\"dish-lightbox-img-placeholder\\\\\\">"+escapeHtml(dish.name.charAt(0).toUpperCase())+"</div>\\\'\\"/>";}\n';
+    s += '  else{html+="<div class=\\"dish-lightbox-img-placeholder\\">"+escapeHtml(dish.name.charAt(0).toUpperCase())+"</div>";}\n';
+    s += '  html+="<div class=\\"dish-lightbox-content\\">";\n';
+    s += '  html+="<h3 class=\\"dish-lightbox-name\\">"+escapeHtml(dish.name)+"</h3>";\n';
+    s += '  if(dish.description){html+="<p class=\\"dish-lightbox-desc\\">"+escapeHtml(dish.description)+"</p>";}\n';
+    s += '  else{html+="<p class=\\"dish-lightbox-desc\\">Plato delicioso preparado con ingredientes frescos.</p>";}\n';
+    s += '  html+="<div class=\\"dish-lightbox-bottom\\">";\n';
+    s += '  html+="<div class=\\"dish-lightbox-price\\">"+formatPrice(dish.price)+"</div>";\n';
+    s += '  html+="<button class=\\"dish-lightbox-add\\" data-cat=\\""+catIdx+"\\" data-dish=\\""+dishIdx+"\\"><svg width=\\"18\\" height=\\"18\\" viewBox=\\"0 0 24 24\\" fill=\\"none\\" stroke=\\"currentColor\\" stroke-width=\\"2.5\\"><path d=\\"M12 5v14M5 12h14\\"/></svg>Agregar al pedido</button>";\n';
+    s += '  html+="</div></div></div>";\n';
+    s += '  lightbox.innerHTML=html;\n';
+    s += '  lightbox.classList.add("visible");\n';
+    s += '  document.body.style.overflow="hidden";\n';
+    s += '  document.getElementById("dishLightboxClose").addEventListener("click",closeDishLightbox);\n';
+    s += '  lightbox.addEventListener("click",function(e){if(e.target===lightbox)closeDishLightbox();});\n';
+    s += '  var addBtn=lightbox.querySelector(".dish-lightbox-add");\n';
+    s += '  if(addBtn){addBtn.addEventListener("click",function(){addToCart(catIdx,dishIdx);closeDishLightbox();});}\n';
+    s += '}\n';
+    s += 'function closeDishLightbox(){var lightbox=document.getElementById("dishLightbox");lightbox.classList.remove("visible");lightbox.innerHTML="";document.body.style.overflow="";}\n';
+  }
+
   // Update active nav
   s += 'function updateActiveNav(){\n';
   s += '  var scrollPos=window.pageYOffset+100;\n';

@@ -140,3 +140,59 @@ Stage Summary:
 - SuperAdmin mobile usa cards con grid de stats (claramente jerárquico)
 - Todas las subpáginas son mobile-first responsive (xs/sm/md/lg breakpoints en todos los textos, paddings, grids)
 - Bottom nav móvil muestra 4 tabs + Inicio en todas las subpáginas (mismo patrón que /dashboard)
+
+---
+Task ID: menupro-social-cover-lightbox
+Agent: Main agent (Super Z)
+Task: Add real-time preview, auto-save, cover image behind profile, social media icons (Lucide), expandable dish lightbox carousel, fix published menu page bug
+
+Work Log:
+- Analyzed 4 user-uploaded screenshots showing the editor UI + DevTools console errors
+- Identified CRITICAL bug in menu-html-builder.ts: generated JS had `sans-serif` unquoted (became undefined variable), which broke the entire published menu page (`/r/[slug]`)
+- Identified second part of same bug: `setProperty("--font-main", "Inter, "Inter", sans-serif")` had unescaped inner double-quotes that broke the JS parser, killing the entire script (so renderApp() was undefined)
+- Installed `swiper` package (other libs - framer-motion, lucide-react, clsx, tailwind-merge - were already in deps)
+- Created `supabase/add-social-and-gallery.sql` — idempotent SQL for user to run in Supabase SQL Editor:
+  * Adds 7 social_* columns to menus table (facebook, instagram, whatsapp, tiktok, twitter, youtube, web)
+  * Adds theme_dish_gallery BOOLEAN column (enable/disable lightbox)
+  * Verifies existing theme_* columns exist
+- Updated `src/lib/menu-utils.ts` types to include new social_* and theme_dish_gallery fields
+- Completely rewrote `src/app/dashboard/[menuId]/menu-html-builder.ts`:
+  * Fixed the sans-serif JS bug (used JSON.stringify for proper escaping)
+  * Added cover image as HERO BACKGROUND behind profile header (with dark gradient overlay for legibility)
+  * Added inline SVG icons for 7 social networks (Facebook, Instagram, WhatsApp, TikTok, Twitter/X, YouTube, Web) — premium ultra-pro style with hover effects
+  * Added expandable dish LIGHTBOX: clicking a dish opens a modal with large image, name, description, price, and "Add to order" button
+  * Backwards compatible — lightbox can be toggled off via theme_dish_gallery
+- Updated `src/app/api/menus/[id]/route.ts` PUT endpoint to accept and persist all 7 social_* fields + theme_dish_gallery
+- Updated `src/app/dashboard/[menuId]/editor-client.tsx`:
+  * Added socials state (7 fields)
+  * Added cover image uploader (wide 3:1 aspect ratio, click/drag-drop to upload)
+  * Added 7 social media input fields with Lucide icons (Facebook, Instagram, Youtube, Globe + text icons for TikTok/WA/X)
+  * Added "Lightbox de platos" toggle in appearance panel
+  * Updated save() function to persist social_* + theme_dish_gallery fields
+  * Updated handlePublish() to include all new fields when publishing
+  * Updated real-time preview useEffect to include social_* + theme_dish_gallery (so preview reflects changes instantly)
+  * Added SocialInput reusable component with icon + input
+- Fixed pre-existing Next.js 16 route slug conflict: renamed `/api/menus/[menuId]/preset/` to `/api/menus/[id]/preset/` (Next.js 16 with Turbopack doesn't allow different slug names at same path depth)
+- Verified with Agent Browser:
+  * Generated sample menu HTML with all features
+  * Confirmed no console errors
+  * Confirmed restaurant name, hero cover, 5 social links, 5 dishes all render
+  * Confirmed lightbox opens on dish click with name + price
+  * Confirmed cart works (add to cart → count + total + visible cart bar)
+- Took screenshots: /home/z/my-project/download/menu-fixed-preview.png and menu-lightbox.png
+
+Stage Summary:
+- ✅ CRITICAL: Fixed "sans is not defined" JS bug that broke ALL published menus at /r/[slug]
+- ✅ CRITICAL: Fixed unescaped inner quotes in setProperty call (was killing entire script)
+- ✅ Cover image now displays as wide hero background behind profile (ultra pro effect)
+- ✅ 7 social media icons with premium SVG (Lucide not used in published HTML because it's React-only; inline SVG works in plain HTML)
+- ✅ Click on dish opens lightbox modal with large image + details
+- ✅ Real-time preview already existed (400ms debounce) — now reflects socials + cover + gallery
+- ✅ Auto-save already existed (3s debounce) — now saves social_* + theme_dish_gallery
+- ✅ Publish button creates real online page at /r/[slug] (was already working, just needed JS bug fix)
+- ✅ Data persistence: all fields saved to Supabase via PUT /api/menus/[id]
+- ⚠️ USER MUST RUN: `supabase/add-social-and-gallery.sql` in Supabase SQL Editor to add the new columns. Without this, auto-save will 500.
+- Artifacts:
+  * SQL: /home/z/my-project/supabase/add-social-and-gallery.sql
+  * Code changes: menu-html-builder.ts, editor-client.tsx, route.ts, menu-utils.ts
+  * Screenshots: download/menu-fixed-preview.png, download/menu-lightbox.png

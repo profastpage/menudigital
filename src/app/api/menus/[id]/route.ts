@@ -98,6 +98,15 @@ export async function PUT(
     theme_show_category_icons,
     theme_rounded_corners,
     theme_dark_mode,
+    theme_dish_gallery,
+    // Redes sociales
+    social_facebook,
+    social_instagram,
+    social_whatsapp,
+    social_tiktok,
+    social_twitter,
+    social_youtube,
+    social_web,
   } = body;
 
   // Construir objeto de update solo con campos presentes
@@ -120,11 +129,21 @@ export async function PUT(
   if (theme_layout !== undefined) updateData.theme_layout = theme_layout;
   if (theme_image_size !== undefined) updateData.theme_image_size = theme_image_size;
   if (theme_card_style !== undefined) updateData.theme_card_style = theme_card_style;
-  if (theme_cover_url !== undefined) updateData.theme_cover_url = theme_cover_url;
+  if (theme_cover_url !== undefined) updateData.theme_cover_url = theme_cover_url || null;
   if (theme_show_search !== undefined) updateData.theme_show_search = theme_show_search;
   if (theme_show_category_icons !== undefined) updateData.theme_show_category_icons = theme_show_category_icons;
   if (theme_rounded_corners !== undefined) updateData.theme_rounded_corners = theme_rounded_corners;
   if (theme_dark_mode !== undefined) updateData.theme_dark_mode = theme_dark_mode;
+  if (theme_dish_gallery !== undefined) updateData.theme_dish_gallery = theme_dish_gallery;
+
+  // Redes sociales (todas opcionales, se guardan como null si vienen vacías)
+  if (social_facebook !== undefined) updateData.social_facebook = social_facebook?.trim() || null;
+  if (social_instagram !== undefined) updateData.social_instagram = social_instagram?.trim() || null;
+  if (social_whatsapp !== undefined) updateData.social_whatsapp = social_whatsapp?.trim() || null;
+  if (social_tiktok !== undefined) updateData.social_tiktok = social_tiktok?.trim() || null;
+  if (social_twitter !== undefined) updateData.social_twitter = social_twitter?.trim() || null;
+  if (social_youtube !== undefined) updateData.social_youtube = social_youtube?.trim() || null;
+  if (social_web !== undefined) updateData.social_web = social_web?.trim() || null;
 
   // Actualizar menu
   const { error: menuErr } = await supabase

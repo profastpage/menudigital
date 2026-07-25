@@ -26,7 +26,16 @@ export interface MenuData {
   theme_show_category_icons?: boolean;
   theme_rounded_corners?: boolean;
   theme_dark_mode?: boolean;
+  theme_dish_gallery?: boolean;
   theme_preset_id?: string | null;
+  // Redes sociales
+  social_facebook?: string | null;
+  social_instagram?: string | null;
+  social_whatsapp?: string | null;
+  social_tiktok?: string | null;
+  social_twitter?: string | null;
+  social_youtube?: string | null;
+  social_web?: string | null;
   categories?: CategoryData[];
 }
 

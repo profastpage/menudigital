@@ -1,0 +1,1198 @@
+     1→'use client';
+     2→
+     3→import { useState, useEffect, useCallback, useRef } from 'react';
+     4→import { useRouter } from 'next/navigation';
+     5→import { Button } from '@/components/ui/button';
+     6→import { Input } from '@/components/ui/input';
+     7→import { Textarea } from '@/components/ui/textarea';
+     8→import { Label } from '@/components/ui/label';
+     9→import {
+    10→  Select,
+    11→  SelectContent,
+    12→  SelectItem,
+    13→  SelectTrigger,
+    14→  SelectValue,
+    15→} from '@/components/ui/select';
+    16→import {
+    17→  DropdownMenu,
+    18→  DropdownMenuContent,
+    19→  DropdownMenuItem,
+    20→  DropdownMenuTrigger,
+    21→} from '@/components/ui/dropdown-menu';
+    22→import {
+    23→  Dialog,
+    24→  DialogContent,
+    25→  DialogHeader,
+    26→  DialogTitle,
+    27→} from '@/components/ui/dialog';
+    28→import { toast } from 'sonner';
+    29→import {
+    30→  ArrowLeft,
+    31→  Plus,
+    32→  Trash2,
+    33→  Save,
+    34→  Eye,
+    35→  ExternalLink,
+    36→  Upload,
+    37→  X,
+    38→  Loader2,
+    39→  Image as ImageIcon,
+    40→  CheckCircle2,
+    41→  Download,
+    42→  Palette,
+    43→} from 'lucide-react';
+    44→import { COLORS, CURRENCIES, type Plan } from '@/lib/plans';
+    45→import type { MenuData, ProfileData } from '@/lib/menu-utils';
+    46→import { buildMenuHTML } from './menu-html-builder';
+    47→import { ImageUploader } from './image-uploader';
+    48→
+    49→interface Props {
+    50→  initialMenu: MenuData;
+    51→  plan: Plan;
+    52→  profile: ProfileData;
+    53→  imagesCount: number;
+    54→}
+    55→
+    56→interface LocalCategory {
+    57→  id: string;
+    58→  name: string;
+    59→  dishes: LocalDish[];
+    60→}
+    61→
+    62→interface LocalDish {
+    63→  id: string;
+    64→  name: string;
+    65→  description: string;
+    66→  price: string;
+    67→  image: string;
+    68→}
+    69→
+    70→export function EditorClient({ initialMenu, plan, profile, imagesCount }: Props) {
+    71→  const router = useRouter();
+    72→  const [menu, setMenu] = useState({
+    73→    name: initialMenu.name || '',
+    74→    slogan: initialMenu.slogan || '',
+    75→    description: initialMenu.description || '',
+    76→    whatsapp: initialMenu.whatsapp || '',
+    77→    logo: initialMenu.logo_url || '',
+    78→    color: initialMenu.color || '#ff6b35',
+    79→    currency: initialMenu.currency || 'S/',
+    80→    is_published: initialMenu.is_published || false,
+    81→  });
+    82→  // Estado de tema (plan Pro desbloquea todo; Free solo color)
+    83→  const [theme, setTheme] = useState({
+    84→    color_secondary: (initialMenu as any).theme_color_secondary || '#1a1a2e',
+    85→    font: (initialMenu as any).theme_font || 'Inter',
+    86→    layout: (initialMenu as any).theme_layout || 'single',
+    87→    image_size: (initialMenu as any).theme_image_size || 'medium',
+    88→    card_style: (initialMenu as any).theme_card_style || 'expanded',
+    89→    cover_url: (initialMenu as any).theme_cover_url || '',
+    90→    show_search: (initialMenu as any).theme_show_search !== false,
+    91→    show_category_icons: (initialMenu as any).theme_show_category_icons !== false,
+    92→    rounded_corners: (initialMenu as any).theme_rounded_corners !== false,
+    93→    dark_mode: (initialMenu as any).theme_dark_mode !== false,
+    94→    preset_slug: null as string | null,
+    95→  });
+    96→  const [showAppearancePanel, setShowAppearancePanel] = useState(false);
+    97→  const [showPreviewMobile, setShowPreviewMobile] = useState(false);
+    98→  const [categories, setCategories] = useState<LocalCategory[]>(
+    99→    initialMenu.categories?.map((c) => ({
+   100→      id: c.id,
+   101→      name: c.name,
+   102→      dishes: c.dishes?.map((d) => ({
+   103→        id: d.id,
+   104→        name: d.name,
+   105→        description: d.description || '',
+   106→        price: String(d.price),
+   107→        image: d.image_url || '',
+   108→      })) || [],
+   109→    })) || [{ id: 'new-1', name: '', dishes: [{ id: 'd-1', name: '', description: '', price: '', image: '' }] }]
+   110→  );
+   111→  const [saving, setSaving] = useState(false);
+   112→  const [importing, setImporting] = useState(false);
+   113→  const [publishing, setPublishing] = useState(false);
+   114→  const [savedAt, setSavedAt] = useState<Date | null>(null);
+   115→  const [previewHtml, setPreviewHtml] = useState('');
+   116→  const dirtyRef = useRef(false);
+   117→  const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
+   118→  const importFileRef = useRef<HTMLInputElement>(null);
+   119→
+   120→  // Marcar como dirty cuando cambia algo
+   121→  useEffect(() => {
+   122→    dirtyRef.current = true;
+   123→  }, [menu, categories, theme]);
+   124→
+   125→  // Auto-guardado cada 3s si hay cambios
+   126→  const save = useCallback(async (silent = true) => {
+   127→    if (!dirtyRef.current) return;
+   128→    setSaving(true);
+   129→    try {
+   130→      const res = await fetch(`/api/menus/${initialMenu.id}`, {
+   131→        method: 'PUT',
+   132→        headers: { 'Content-Type': 'application/json' },
+   133→        body: JSON.stringify({
+   134→          ...menu,
+   135→          // Campos de tema (todos opcionales, se persisten si están presentes)
+   136→          theme_color_secondary: theme.color_secondary,
+   137→          theme_font: theme.font,
+   138→          theme_layout: theme.layout,
+   139→          theme_image_size: theme.image_size,
+   140→          theme_card_style: theme.card_style,
+   141→          theme_cover_url: theme.cover_url || null,
+   142→          theme_show_search: theme.show_search,
+   143→          theme_show_category_icons: theme.show_category_icons,
+   144→          theme_rounded_corners: theme.rounded_corners,
+   145→          theme_dark_mode: theme.dark_mode,
+   146→          categories: categories.map((c) => ({
+   147→            name: c.name,
+   148→            dishes: c.dishes.map((d) => ({
+   149→              name: d.name,
+   150→              description: d.description,
+   151→              price: d.price,
+   152→              image_url: d.image,
+   153→            })),
+   154→          })),
+   155→        }),
+   156→      });
+   157→      if (!res.ok) {
+   158→        const data = await res.json();
+   159→        throw new Error(data.error || 'Error');
+   160→      }
+   161→      dirtyRef.current = false;
+   162→      setSavedAt(new Date());
+   163→    } catch (err) {
+   164→      if (!silent) {
+   165→        toast.error(err instanceof Error ? err.message : 'Error al guardar');
+   166→      }
+   167→    } finally {
+   168→      setSaving(false);
+   169→    }
+   170→  }, [menu, categories, theme, initialMenu.id]);
+   171→
+   172→  useEffect(() => {
+   173→    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+   174→    saveTimerRef.current = setTimeout(() => save(true), 3000);
+   175→    return () => {
+   176→      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+   177→    };
+   178→  }, [menu, categories, save]);
+   179→
+   180→  // Vista previa en vivo (debounced)
+   181→  useEffect(() => {
+   182→    const timer = setTimeout(() => {
+   183→      const data = {
+   184→        id: initialMenu.id,
+   185→        user_id: profile.id,
+   186→        name: menu.name || 'Mi Restaurante',
+   187→        slug: initialMenu.slug,
+   188→        slogan: menu.slogan || null,
+   189→        description: menu.description || null,
+   190→        whatsapp: menu.whatsapp || '0000000000',
+   191→        logo_url: menu.logo || null,
+   192→        color: menu.color,
+   193→        currency: menu.currency,
+   194→        branding_text: plan.limits.hasBranding ? 'Creado con MenuPro' : null,
+   195→        is_published: menu.is_published,
+   196→        views_count: 0,
+   197→        created_at: '',
+   198→        updated_at: '',
+   199→        // Tema para preview en vivo
+   200→        theme_color_secondary: theme.color_secondary,
+   201→        theme_font: theme.font,
+   202→        theme_layout: theme.layout as any,
+   203→        theme_image_size: theme.image_size as any,
+   204→        theme_card_style: theme.card_style as any,
+   205→        theme_cover_url: theme.cover_url || null,
+   206→        theme_show_search: theme.show_search,
+   207→        theme_show_category_icons: theme.show_category_icons,
+   208→        theme_rounded_corners: theme.rounded_corners,
+   209→        theme_dark_mode: theme.dark_mode,
+   210→        categories: categories.map((c) => ({
+   211→          id: c.id,
+   212→          menu_id: initialMenu.id,
+   213→          name: c.name || 'Sin nombre',
+   214→          sort_order: 0,
+   215→          dishes: c.dishes.map((d) => ({
+   216→            id: d.id,
+   217→            category_id: c.id,
+   218→            name: d.name || 'Plato',
+   219→            description: d.description || null,
+   220→            price: Number(d.price) || 0,
+   221→            image_url: d.image || null,
+   222→            sort_order: 0,
+   223→          })),
+   224→        })),
+   225→      };
+   226→      setPreviewHtml(buildMenuHTML(data));
+   227→    }, 400);
+   228→    return () => clearTimeout(timer);
+   229→  }, [menu, categories, theme, plan, initialMenu.id, initialMenu.slug, profile.id]);
+   230→
+   231→  async function handlePublish() {
+   232→    setPublishing(true);
+   233→    try {
+   234→      // Validaciones
+   235→      if (!menu.name.trim()) {
+   236→        toast.error('Ingresa el nombre del restaurante');
+   237→        return;
+   238→      }
+   239→      if (!menu.whatsapp.trim() || !/^\d{8,15}$/.test(menu.whatsapp)) {
+   240→        toast.error('WhatsApp inválido. 8-15 dígitos sin + ni espacios');
+   241→        return;
+   242→      }
+   243→      const validCats = categories.filter((c) => c.name.trim());
+   244→      if (validCats.length === 0) {
+   245→        toast.error('Agrega al menos una categoría con nombre');
+   246→        return;
+   247→      }
+   248→      for (const c of validCats) {
+   249→        const validDishes = c.dishes.filter((d) => d.name.trim());
+   250→        if (validDishes.length === 0) {
+   251→          toast.error(`La categoría "${c.name}" necesita al menos un plato`);
+   252→          return;
+   253→        }
+   254→        for (const d of validDishes) {
+   255→          if (!d.price || isNaN(Number(d.price)) || Number(d.price) < 0) {
+   256→            toast.error(`Precio inválido en: ${d.name}`);
+   257→            return;
+   258→          }
+   259→        }
+   260→      }
+   261→
+   262→      // Guardar primero
+   263→      const res = await fetch(`/api/menus/${initialMenu.id}`, {
+   264→        method: 'PUT',
+   265→        headers: { 'Content-Type': 'application/json' },
+   266→        body: JSON.stringify({
+   267→          ...menu,
+   268→          is_published: true,
+   269→          categories: categories.map((c) => ({
+   270→            name: c.name,
+   271→            dishes: c.dishes.map((d) => ({
+   272→              name: d.name,
+   273→              description: d.description,
+   274→              price: d.price,
+   275→              image_url: d.image,
+   276→            })),
+   277→          })),
+   278→        }),
+   279→      });
+   280→      if (!res.ok) {
+   281→        const data = await res.json();
+   282→        throw new Error(data.error || 'Error');
+   283→      }
+   284→      setMenu((m) => ({ ...m, is_published: true }));
+   285→      dirtyRef.current = false;
+   286→      toast.success('¡Menú publicado! Ya es visible públicamente.');
+   287→      window.open(`/r/${initialMenu.slug}`, '_blank');
+   288→    } catch (err) {
+   289→      toast.error(err instanceof Error ? err.message : 'Error');
+   290→    } finally {
+   291→      setPublishing(false);
+   292→    }
+   293→  }
+   294→
+   295→  function addCategory() {
+   296→    setCategories((cs) => [
+   297→      ...cs,
+   298→      {
+   299→        id: `new-${Date.now()}`,
+   300→        name: '',
+   301→        dishes: [{ id: `d-${Date.now()}`, name: '', description: '', price: '', image: '' }],
+   302→      },
+   303→    ]);
+   304→  }
+   305→
+   306→  function addDish(catId: string) {
+   307→    setCategories((cs) =>
+   308→      cs.map((c) =>
+   309→        c.id === catId
+   310→          ? {
+   311→              ...c,
+   312→              dishes: [...c.dishes, { id: `d-${Date.now()}`, name: '', description: '', price: '', image: '' }],
+   313→            }
+   314→          : c
+   315→      )
+   316→    );
+   317→  }
+   318→
+   319→  function removeCategory(catId: string) {
+   320→    setCategories((cs) => cs.filter((c) => c.id !== catId));
+   321→  }
+   322→
+   323→  function removeDish(catId: string, dishId: string) {
+   324→    setCategories((cs) =>
+   325→      cs.map((c) =>
+   326→        c.id === catId
+   327→          ? { ...c, dishes: c.dishes.filter((d) => d.id !== dishId) }
+   328→          : c
+   329→      )
+   330→    );
+   331→  }
+   332→
+   333→  function updateCategory(catId: string, name: string) {
+   334→    setCategories((cs) => cs.map((c) => (c.id === catId ? { ...c, name } : c)));
+   335→  }
+   336→
+   337→  function updateDish(catId: string, dishId: string, field: keyof LocalDish, value: string) {
+   338→    setCategories((cs) =>
+   339→      cs.map((c) =>
+   340→        c.id === catId
+   341→          ? { ...c, dishes: c.dishes.map((d) => (d.id === dishId ? { ...d, [field]: value } : d)) }
+   342→          : c
+   343→      )
+   344→    );
+   345→  }
+   346→
+   347→  function handleLogoUploaded(url: string) {
+   348→    setMenu((m) => ({ ...m, logo: url }));
+   349→  }
+   350→
+   351→  function handleDishImageUploaded(catId: string, dishId: string, url: string) {
+   352→    updateDish(catId, dishId, 'image', url);
+   353→  }
+   354→
+   355→  async function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
+   356→    const file = e.target.files?.[0];
+   357→    if (!file) return;
+   358→    setImporting(true);
+   359→    try {
+   360→      const formData = new FormData();
+   361→      formData.append('file', file);
+   362→      const res = await fetch(`/api/menus/${initialMenu.id}/import`, {
+   363→        method: 'POST',
+   364→        body: formData,
+   365→      });
+   366→      const data = await res.json();
+   367→      if (!res.ok) throw new Error(data.error || 'Error importando');
+   368→      toast.success(data.message || `Importados: ${data.imported?.categories} categorías, ${data.imported?.dishes} platos`);
+   369→      router.refresh();
+   370→      // Reload menu data from server
+   371→      const menuRes = await fetch(`/api/menus/${initialMenu.id}`);
+   372→      const menuData = await menuRes.json();
+   373→      if (menuData.menu) {
+   374→        const m = menuData.menu;
+   375→        setMenu({
+   376→          name: m.name || '',
+   377→          slogan: m.slogan || '',
+   378→          description: m.description || '',
+   379→          whatsapp: m.whatsapp || '',
+   380→          logo: m.logo_url || '',
+   381→          color: m.color || '#ff6b35',
+   382→          currency: m.currency || 'S/',
+   383→          is_published: m.is_published || false,
+   384→        });
+   385→        setCategories(
+   386→          (m.categories || []).map((c: { id: string; name: string; dishes?: Array<{ id: string; name: string; description: string; price: number; image_url: string }> }) => ({
+   387→            id: c.id,
+   388→            name: c.name,
+   389→            dishes: (c.dishes || []).map((d) => ({
+   390→              id: d.id,
+   391→              name: d.name,
+   392→              description: d.description || '',
+   393→              price: String(d.price),
+   394→              image: d.image_url || '',
+   395→            })),
+   396→          }))
+   397→        );
+   398→      }
+   399→    } catch (err) {
+   400→      toast.error(err instanceof Error ? err.message : 'Error al importar');
+   401→    } finally {
+   402→      setImporting(false);
+   403→      if (importFileRef.current) importFileRef.current.value = '';
+   404→    }
+   405→  }
+   406→
+   407→  async function handleExportMenu(format: string) {
+   408→    try {
+   409→      const res = await fetch(`/api/menus/${initialMenu.id}/export?format=${format}`);
+   410→      if (!res.ok) throw new Error('Error exportando');
+   411→      const blob = await res.blob();
+   412→      const ext = format === 'excel' ? 'xls' : format === 'word' ? 'doc' : format;
+   413→      const url = URL.createObjectURL(blob);
+   414→      const a = document.createElement('a');
+   415→      a.href = url;
+   416→      const safeName = (menu.name || 'menu').replace(/[^a-zA-Z0-9áéíóúñÁÉÍÓÚÑ ]/g, '').replace(/\s+/g, '-');
+   417→      a.download = `${safeName}.${ext}`;
+   418→      document.body.appendChild(a);
+   419→      a.click();
+   420→      document.body.removeChild(a);
+   421→      URL.revokeObjectURL(url);
+   422→      toast.success(`Exportado como .${ext}`);
+   423→    } catch {
+   424→      toast.error('Error al exportar');
+   425→    }
+   426→  }
+   427→
+   428→  return (
+   429→    <div className="min-h-screen bg-[#07070b] text-white">
+   430→      {/* Top bar — mobile responsive */}
+   431→      <header className="border-b border-white/10 bg-[#0a0a14] backdrop-blur sticky top-0 z-40 safe-top">
+   432→        <div className="px-3 sm:px-6 py-2.5 sm:py-3 flex items-center justify-between gap-2 sm:gap-4">
+   433→          <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+   434→            <a href="/dashboard" className="text-white/60 hover:text-white flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-lg hover:bg-white/5">
+   435→              <ArrowLeft className="w-5 h-5" />
+   436→            </a>
+   437→            <div className="min-w-0 flex-1">
+   438→              <div className="font-semibold truncate text-sm sm:text-base">{menu.name || 'Sin nombre'}</div>
+   439→              <div className="flex items-center gap-2 text-[10px] sm:text-xs text-white/40">
+   440→                {saving ? (
+   441→                  <><Loader2 className="w-3 h-3 animate-spin" /> Guardando...</>
+   442→                ) : savedAt ? (
+   443→                  <><CheckCircle2 className="w-3 h-3 text-emerald-500" /> {savedAt.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}</>
+   444→                ) : (
+   445→                  'Auto-guardado'
+   446→                )}
+   447→                {menu.is_published && (
+   448→                  <span className="text-emerald-400">· Publicado</span>
+   449→                )}
+   450→              </div>
+   451→            </div>
+   452→          </div>
+   453→          <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+   454→            <Button
+   455→              variant="ghost"
+   456→              size="sm"
+   457→              onClick={() => save(false)}
+   458→              disabled={saving}
+   459→              className="text-white/70 hover:text-white hover:bg-white/5 h-9 px-2 sm:px-3"
+   460→            >
+   461→              <Save className="w-4 h-4" />
+   462→              <span className="hidden md:inline ml-1">Guardar</span>
+   463→            </Button>
+   464→            {menu.is_published && (
+   465→              <Button
+   466→                variant="ghost"
+   467→                size="sm"
+   468→                asChild
+   469→                className="text-white/70 hover:text-white hover:bg-white/5 h-9 px-2 sm:px-3"
+   470→              >
+   471→                <a href={`/r/${initialMenu.slug}`} target="_blank" rel="noreferrer">
+   472→                  <ExternalLink className="w-4 h-4" />
+   473→                  <span className="hidden md:inline ml-1">Ver público</span>
+   474→                </a>
+   475→              </Button>
+   476→            )}
+   477→            <Button
+   478→              onClick={handlePublish}
+   479→              disabled={publishing}
+   480→              className="bg-gradient-to-r from-[#d4af37] to-[#f4d35e] text-[#1a1a2e] hover:opacity-90 h-9 px-3 sm:px-4 text-xs sm:text-sm"
+   481→            >
+   482→              {publishing ? <Loader2 className="w-4 h-4 mr-1 sm:mr-2 animate-spin" /> : null}
+   483→              {menu.is_published ? 'Actualizar' : 'Publicar'}
+   484→            </Button>
+   485→          </div>
+   486→        </div>
+   487→      </header>
+   488→
+   489→      <main className="grid grid-cols-1 lg:grid-cols-[1fr_420px] gap-0 max-w-[1600px] mx-auto">
+   490→        {/* Form pane — mobile: full width with padding */}
+   491→        <section className="p-4 sm:p-6 space-y-4 sm:space-y-6 lg:max-h-[calc(100vh-65px)] lg:overflow-y-auto pb-32 lg:pb-6">
+   492→          {/* Info card */}
+   493→          <div className="bg-white/[0.03] border border-white/10 rounded-xl sm:rounded-2xl p-4 sm:p-6">
+   494→            <div className="flex items-center gap-3 mb-4 sm:mb-5">
+   495→              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#d4af37] to-[#f4d35e] flex items-center justify-center text-sm font-bold text-[#1a1a2e]">
+   496→                1
+   497→              </div>
+   498→              <h2 className="font-semibold text-sm sm:text-base">Información del restaurante</h2>
+   499→            </div>
+   500→
+   501→            <div className="space-y-4">
+   502→              <div className="space-y-2">
+   503→                <Label>Nombre del restaurante *</Label>
+   504→                <Input
+   505→                  value={menu.name}
+   506→                  onChange={(e) => setMenu({ ...menu, name: e.target.value })}
+   507→                  placeholder="Ej: La Parrilla del Chef"
+   508→                  className="bg-white/5 border-white/10 text-white"
+   509→                />
+   510→              </div>
+   511→
+   512→              <div className="space-y-2">
+   513→                <Label>Slogan</Label>
+   514→                <Input
+   515→                  value={menu.slogan}
+   516→                  onChange={(e) => setMenu({ ...menu, slogan: e.target.value })}
+   517→                  placeholder="Ej: Cocina de autor desde 1998"
+   518→                  maxLength={60}
+   519→                  className="bg-white/5 border-white/10 text-white"
+   520→                />
+   521→              </div>
+   522→
+   523→              <div className="space-y-2">
+   524→                <Label>Descripción</Label>
+   525→                <Textarea
+   526→                  value={menu.description}
+   527→                  onChange={(e) => setMenu({ ...menu, description: e.target.value })}
+   528→                  placeholder="Ej: Auténtica cocina peruana con ingredientes frescos"
+   529→                  className="bg-white/5 border-white/10 text-white min-h-[80px]"
+   530→                />
+   531→              </div>
+   532→
+   533→              <div className="space-y-2">
+   534→                <Label>WhatsApp con código de país *</Label>
+   535→                <Input
+   536→                  value={menu.whatsapp}
+   537→                  onChange={(e) => setMenu({ ...menu, whatsapp: e.target.value.replace(/\D/g, '') })}
+   538→                  placeholder="51987654321"
+   539→                  className="bg-white/5 border-white/10 text-white"
+   540→                />
+   541→                <p className="text-xs text-white/40">
+   542→                  Solo dígitos. 51=Perú, 52=México, 57=Colombia, 54=Argentina
+   543→                </p>
+   544→              </div>
+   545→
+   546→              <div className="space-y-2">
+   547→                <Label>Logo del restaurante</Label>
+   548→                <ImageUploader
+   549→                  initialUrl={menu.logo}
+   550→                  onUploaded={handleLogoUploaded}
+   551→                  plan={plan}
+   552→                  imagesCount={imagesCount}
+   553→                  shape="circle"
+   554→                  size={120}
+   555→                />
+   556→              </div>
+   557→
+   558→              <div className="grid grid-cols-2 gap-3">
+   559→                <div className="space-y-2">
+   560→                  <Label>Moneda</Label>
+   561→                  <Select
+   562→                    value={menu.currency}
+   563→                    onValueChange={(v) => setMenu({ ...menu, currency: v })}
+   564→                  >
+   565→                    <SelectTrigger className="bg-white/5 border-white/10 text-white">
+   566→                      <SelectValue />
+   567→                    </SelectTrigger>
+   568→                    <SelectContent className="bg-[#15152a] border-white/10">
+   569→                      {CURRENCIES.map((c) => (
+   570→                        <SelectItem key={c.value} value={c.value} className="text-white">
+   571→                          {c.label}
+   572→                        </SelectItem>
+   573→                      ))}
+   574→                    </SelectContent>
+   575→                  </Select>
+   576→                </div>
+   577→
+   578→                <div className="space-y-2">
+   579→                  <Label>Color principal</Label>
+   580→                  <div className="grid grid-cols-6 gap-1.5">
+   581→                    {COLORS.map((c) => (
+   582→                      <button
+   583→                        key={c.hex}
+   584→                        type="button"
+   585→                        onClick={() => setMenu({ ...menu, color: c.hex })}
+   586→                        className={`aspect-square rounded-lg transition-all ${
+   587→                          menu.color === c.hex
+   588→                            ? 'ring-2 ring-white ring-offset-2 ring-offset-[#07070b] scale-105'
+   589→                            : 'hover:scale-110'
+   590→                        }`}
+   591→                        style={{ background: c.hex }}
+   592→                        title={c.name}
+   593→                      />
+   594→                    ))}
+   595→                  </div>
+   596→                </div>
+   597→
+   598→                {/* Botón Apariencia (Pro) */}
+   599→                <div className="space-y-2 sm:col-span-2">
+   600→                  <Label className="flex items-center gap-2">
+   601→                    Apariencia avanzada
+   602→                    {plan.id === 'free' && (
+   603→                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-[#d4af37]/20 text-[#d4af37] text-[10px] font-semibold">
+   604→                        PRO
+   605→                      </span>
+   606→                    )}
+   607→                  </Label>
+   608→                  <Button
+   609→                    type="button"
+   610→                    variant="outline"
+   611→                    onClick={() => setShowAppearancePanel(true)}
+   612→                    className="w-full bg-white/5 border-white/10 text-white hover:bg-white/10 justify-start"
+   613→                  >
+   614→                    <Palette className="w-4 h-4 mr-2" />
+   615→                    Tema, layout, imágenes y más
+   616→                  </Button>
+   617→                </div>
+   618→              </div>
+   619→            </div>
+   620→          </div>
+   621→
+   622→          {/* ───────── Panel de Apariencia (Dialog) ───────── */}
+   623→          <Dialog open={showAppearancePanel} onOpenChange={setShowAppearancePanel}>
+   624→            <DialogContent className="bg-[#15152a] border-white/10 text-white max-w-2xl max-h-[90vh] overflow-y-auto">
+   625→              <DialogHeader>
+   626→                <DialogTitle className="flex items-center gap-2">
+   627→                  <Palette className="w-5 h-5 text-[#d4af37]" />
+   628→                  Apariencia avanzada
+   629→                  {plan.id === 'free' && (
+   630→                    <span className="text-xs font-normal text-white/50">
+   631→                      (Algunas opciones requieren Pro)
+   632→                    </span>
+   633→                  )}
+   634→                </DialogTitle>
+   635→              </DialogHeader>
+   636→
+   637→              <div className="space-y-5 py-4">
+   638→                {/* Theme presets — Pro highlight feature */}
+   639→                <div className="space-y-2">
+   640→                  <Label className="flex items-center gap-2">
+   641→                    Temas pre-diseñados (Pro)
+   642→                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-[#d4af37]/20 text-[#d4af37] text-[10px] font-semibold">
+   643→                      PREMIUM
+   644→                    </span>
+   645→                  </Label>
+   646→                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+   647→                    {[
+   648→                      { slug: 'elegante-oscuro', name: 'Elegante Oscuro', color: '#d4af37', dark: true },
+   649→                      { slug: 'moderno-claro', name: 'Moderno Claro', color: '#f5f5f0', dark: false },
+   650→                      { slug: 'picante-mexicano', name: 'Picante', color: '#ff6b35', dark: true },
+   651→                      { slug: 'fresco-verde', name: 'Fresco', color: '#06d6a0', dark: false },
+   652→                      { slug: 'premium-gold', name: 'Premium Gold', color: '#d4af37', dark: true },
+   653→                      { slug: 'grid-completo', name: 'Grid', color: '#9d4edd', dark: true },
+   654→                      { slug: 'parrilla-rustica', name: 'Parrilla', color: '#c0392b', dark: true },
+   655→                      { slug: 'libre-pro', name: 'Libre', color: '#ffffff', dark: true },
+   656→                    ].map((p) => {
+   657→                      const isActive = theme.preset_slug === p.slug;
+   658→                      const locked = plan.id === 'free';
+   659→                      return (
+   660→                        <button
+   661→                          key={p.slug}
+   662→                          type="button"
+   663→                          disabled={locked}
+   664→                          onClick={async () => {
+   665→                            if (locked) return;
+   666→                            // Aplicar preset via RPC
+   667→                            try {
+   668→                              const res = await fetch(`/api/menus/${initialMenu.id}/preset`, {
+   669→                                method: 'POST',
+   670→                                headers: { 'Content-Type': 'application/json' },
+   671→                                body: JSON.stringify({ preset_slug: p.slug }),
+   672→                              });
+   673→                              const data = await res.json();
+   674→                              if (!res.ok) throw new Error(data.error || 'Error');
+   675→                              // Recargar tema desde data
+   676→                              if (data.theme) {
+   677→                                setTheme({
+   678→                                  color_secondary: data.theme.theme_color_secondary || '#1a1a2e',
+   679→                                  font: data.theme.theme_font || 'Inter',
+   680→                                  layout: data.theme.theme_layout || 'single',
+   681→                                  image_size: data.theme.theme_image_size || 'medium',
+   682→                                  card_style: data.theme.theme_card_style || 'expanded',
+   683→                                  cover_url: data.theme.theme_cover_url || '',
+   684→                                  show_search: data.theme.theme_show_search !== false,
+   685→                                  show_category_icons: data.theme.theme_show_category_icons !== false,
+   686→                                  rounded_corners: data.theme.theme_rounded_corners !== false,
+   687→                                  dark_mode: data.theme.theme_dark_mode !== false,
+   688→                                  preset_slug: p.slug,
+   689→                                } as any);
+   690→                              }
+   691→                              toast.success(`Tema "${p.name}" aplicado`);
+   692→                            } catch (err) {
+   693→                              toast.error(err instanceof Error ? err.message : 'Error al aplicar tema');
+   694→                            }
+   695→                          }}
+   696→                          className={`relative p-2 rounded-lg border text-xs transition overflow-hidden ${
+   697→                            isActive
+   698→                              ? 'border-[#d4af37] ring-2 ring-[#d4af37]/40'
+   699→                              : 'border-white/10 hover:border-white/20'
+   700→                          } disabled:opacity-40 disabled:cursor-not-allowed`}
+   701→                          style={{
+   702→                            background: p.dark
+   703→                              ? `linear-gradient(135deg, ${p.color}33, #0a0a14)`
+   704→                              : `linear-gradient(135deg, ${p.color}, #ffffff)`,
+   705→                            color: p.dark ? '#fff' : '#1a1a2e',
+   706→                          }}
+   707→                        >
+   708→                          <div className="font-medium truncate">{p.name}</div>
+   709→                          <div
+   710→                            className="w-full h-1.5 rounded-full mt-1.5"
+   711→                            style={{ background: p.color }}
+   712→                          />
+   713→                          {locked && (
+   714→                            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+   715→                              <span className="text-[9px] font-bold text-[#d4af37]">PRO</span>
+   716→                            </div>
+   717→                          )}
+   718→                        </button>
+   719→                      );
+   720→                    })}
+   721→                  </div>
+   722→                  {plan.id === 'free' && (
+   723→                    <p className="text-xs text-white/40">
+   724→                      Upgrade a Pro para aplicar temas pre-diseñados con 1 clic.
+   725→                    </p>
+   726→                  )}
+   727→                </div>
+   728→
+   729→                {/* Divider */}
+   730→                <div className="border-t border-white/10 pt-5">
+   731→                  <div className="text-xs uppercase tracking-wider text-white/40 mb-3">Personalización manual</div>
+   732→                </div>
+   733→
+   734→                {/* Layout */}
+   735→                <div className="space-y-2">
+   736→                  <Label>Layout de platos</Label>
+   737→                  <div className="grid grid-cols-3 gap-2">
+   738→                    {[
+   739→                      { v: 'single', label: '1 columna', icon: '▮' },
+   740→                      { v: 'double', label: '2 columnas', icon: '▮▮' },
+   741→                      { v: 'grid', label: 'Grid 3 col', icon: '▮▮▮' },
+   742→                    ].map((opt) => (
+   743→                      <button
+   744→                        key={opt.v}
+   745→                        type="button"
+   746→                        disabled={plan.id === 'free' && opt.v !== 'single'}
+   747→                        onClick={() => setTheme({ ...theme, layout: opt.v as any })}
+   748→                        className={`p-3 rounded-lg border text-sm transition ${
+   749→                          theme.layout === opt.v
+   750→                            ? 'border-[#d4af37] bg-[#d4af37]/10 text-[#d4af37]'
+   751→                            : 'border-white/10 bg-white/5 text-white/70 hover:bg-white/10'
+   752→                        } disabled:opacity-40 disabled:cursor-not-allowed`}
+   753→                      >
+   754→                        <div className="text-base mb-1">{opt.icon}</div>
+   755→                        {opt.label}
+   756→                      </button>
+   757→                    ))}
+   758→                  </div>
+   759→                  {plan.id === 'free' && (
+   760→                    <p className="text-xs text-white/40">2 columnas y grid requieren plan Pro.</p>
+   761→                  )}
+   762→                </div>
+   763→
+   764→                {/* Tamaño de imagen */}
+   765→                <div className="space-y-2">
+   766→                  <Label>Tamaño de imagen del plato</Label>
+   767→                  <div className="grid grid-cols-5 gap-2">
+   768→                    {[
+   769→                      { v: 'none', label: 'Sin img' },
+   770→                      { v: 'small', label: 'Pequeña' },
+   771→                      { v: 'medium', label: 'Media' },
+   772→                      { v: 'large', label: 'Grande' },
+   773→                      { v: 'hero', label: 'Hero' },
+   774→                    ].map((opt) => (
+   775→                      <button
+   776→                        key={opt.v}
+   777→                        type="button"
+   778→                        disabled={plan.id === 'free' && opt.v !== 'medium'}
+   779→                        onClick={() => setTheme({ ...theme, image_size: opt.v as any })}
+   780→                        className={`p-2 rounded-lg border text-xs transition ${
+   781→                          theme.image_size === opt.v
+   782→                            ? 'border-[#d4af37] bg-[#d4af37]/10 text-[#d4af37]'
+   783→                            : 'border-white/10 bg-white/5 text-white/70 hover:bg-white/10'
+   784→                        } disabled:opacity-40 disabled:cursor-not-allowed`}
+   785→                      >
+   786→                        {opt.label}
+   787→                      </button>
+   788→                    ))}
+   789→                  </div>
+   790→                </div>
+   791→
+   792→                {/* Estilo de tarjeta */}
+   793→                <div className="space-y-2">
+   794→                  <Label>Estilo de tarjeta</Label>
+   795→                  <div className="grid grid-cols-3 gap-2">
+   796→                    {[
+   797→                      { v: 'compact', label: 'Compacta' },
+   798→                      { v: 'expanded', label: 'Expandida' },
+   799→                      { v: 'minimal', label: 'Minimal' },
+   800→                    ].map((opt) => (
+   801→                      <button
+   802→                        key={opt.v}
+   803→                        type="button"
+   804→                        disabled={plan.id === 'free' && opt.v !== 'expanded'}
+   805→                        onClick={() => setTheme({ ...theme, card_style: opt.v as any })}
+   806→                        className={`p-2 rounded-lg border text-xs transition ${
+   807→                          theme.card_style === opt.v
+   808→                            ? 'border-[#d4af37] bg-[#d4af37]/10 text-[#d4af37]'
+   809→                            : 'border-white/10 bg-white/5 text-white/70 hover:bg-white/10'
+   810→                        } disabled:opacity-40 disabled:cursor-not-allowed`}
+   811→                      >
+   812→                        {opt.label}
+   813→                      </button>
+   814→                    ))}
+   815→                  </div>
+   816→                </div>
+   817→
+   818→                {/* Fuente */}
+   819→                <div className="space-y-2">
+   820→                  <Label>Fuente tipográfica</Label>
+   821→                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+   822→                    {['Inter', 'Poppins', 'Montserrat', 'Playfair Display', 'Lora', 'Roboto', 'Open Sans', 'Nunito'].map((font) => (
+   823→                      <button
+   824→                        key={font}
+   825→                        type="button"
+   826→                        disabled={plan.id === 'free' && font !== 'Inter'}
+   827→                        onClick={() => setTheme({ ...theme, font })}
+   828→                        style={{ fontFamily: font }}
+   829→                        className={`p-2 rounded-lg border text-sm transition ${
+   830→                          theme.font === font
+   831→                            ? 'border-[#d4af37] bg-[#d4af37]/10 text-[#d4af37]'
+   832→                            : 'border-white/10 bg-white/5 text-white/70 hover:bg-white/10'
+   833→                        } disabled:opacity-40 disabled:cursor-not-allowed`}
+   834→                      >
+   835→                        {font}
+   836→                      </button>
+   837→                    ))}
+   838→                  </div>
+   839→                </div>
+   840→
+   841→                {/* Color secundario */}
+   842→                <div className="space-y-2">
+   843→                  <Label>Color secundario (fondo)</Label>
+   844→                  <div className="flex items-center gap-3">
+   845→                    <input
+   846→                      type="color"
+   847→                      value={theme.color_secondary}
+   848→                      onChange={(e) => setTheme({ ...theme, color_secondary: e.target.value })}
+   849→                      disabled={plan.id === 'free'}
+   850→                      className="w-12 h-10 rounded cursor-pointer disabled:opacity-40"
+   851→                    />
+   852→                    <Input
+   853→                      value={theme.color_secondary}
+   854→                      onChange={(e) => setTheme({ ...theme, color_secondary: e.target.value })}
+   855→                      disabled={plan.id === 'free'}
+   856→                      className="bg-white/5 border-white/10 text-white disabled:opacity-40"
+   857→                    />
+   858→                  </div>
+   859→                </div>
+   860→
+   861→                {/* URL Cover */}
+   862→                <div className="space-y-2">
+   863→                  <Label>Imagen de portada (cover)</Label>
+   864→                  <Input
+   865→                    value={theme.cover_url}
+   866→                    onChange={(e) => setTheme({ ...theme, cover_url: e.target.value })}
+   867→                    placeholder="https://..."
+   868→                    disabled={plan.id === 'free'}
+   869→                    className="bg-white/5 border-white/10 text-white disabled:opacity-40"
+   870→                  />
+   871→                  {plan.id === 'free' && (
+   872→                    <p className="text-xs text-white/40">Cover personalizado requiere Pro.</p>
+   873→                  )}
+   874→                </div>
+   875→
+   876→                {/* Toggles */}
+   877→                <div className="grid grid-cols-2 gap-3">
+   878→                  <ToggleRow
+   879→                    label="Modo claro"
+   880→                    desc="Cambia fondo oscuro a claro"
+   881→                    value={!theme.dark_mode}
+   882→                    disabled={plan.id === 'free'}
+   883→                    onChange={(v) => setTheme({ ...theme, dark_mode: !v })}
+   884→                  />
+   885→                  <ToggleRow
+   886→                    label="Buscar platos"
+   887→                    desc="Barra de búsqueda en el menú"
+   888→                    value={theme.show_search}
+   889→                    disabled={plan.id === 'free'}
+   890→                    onChange={(v) => setTheme({ ...theme, show_search: v })}
+   891→                  />
+   892→                  <ToggleRow
+   893→                    label="Iconos de categoría"
+   894→                    desc="Emojis automáticos por categoría"
+   895→                    value={theme.show_category_icons}
+   896→                    disabled={plan.id === 'free'}
+   897→                    onChange={(v) => setTheme({ ...theme, show_category_icons: v })}
+   898→                  />
+   899→                  <ToggleRow
+   900→                    label="Esquinas redondeadas"
+   901→                    desc="Cards y botones con border-radius"
+   902→                    value={theme.rounded_corners}
+   903→                    disabled={plan.id === 'free'}
+   904→                    onChange={(v) => setTheme({ ...theme, rounded_corners: v })}
+   905→                  />
+   906→                </div>
+   907→
+   908→                <div className="flex justify-end gap-2 pt-2">
+   909→                  <Button
+   910→                    type="button"
+   911→                    variant="ghost"
+   912→                    onClick={() => setShowAppearancePanel(false)}
+   913→                    className="text-white/60 hover:text-white"
+   914→                  >
+   915→                    Cancelar
+   916→                  </Button>
+   917→                  <Button
+   918→                    type="button"
+   919→                    onClick={() => {
+   920→                      // Forzar guardado con tema
+   921→                      dirtyRef.current = true;
+   922→                      save(false).then(() => {
+   923→                        setShowAppearancePanel(false);
+   924→                        toast.success('Apariencia guardada');
+   925→                      });
+   926→                    }}
+   927→                    className="bg-gradient-to-r from-[#d4af37] to-[#f4d35e] text-[#1a1a2e]"
+   928→                  >
+   929→                    Guardar cambios
+   930→                  </Button>
+   931→                </div>
+   932→              </div>
+   933→            </DialogContent>
+   934→          </Dialog>
+   935→
+   936→          {/* Categories card */}
+   937→          <div className="bg-white/[0.03] border border-white/10 rounded-xl sm:rounded-2xl p-4 sm:p-6">
+   938→            <div className="flex items-center gap-3 mb-4 sm:mb-5 flex-wrap">
+   939→              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#d4af37] to-[#f4d35e] flex items-center justify-center text-sm font-bold text-[#1a1a2e]">
+   940→                2
+   941→              </div>
+   942→              <h2 className="font-semibold text-sm sm:text-base flex-1 min-w-0">Categorías y platos</h2>
+   943→              <div className="ml-auto flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+   944→                <input ref={importFileRef} type="file" accept=".json,.csv,.xls,.xlsx" className="hidden" onChange={handleImport} />
+   945→                <Button
+   946→                  variant="ghost"
+   947→                  size="sm"
+   948→                  onClick={() => importFileRef.current?.click()}
+   949→                  disabled={importing}
+   950→                  className="text-white/60 hover:text-white hover:bg-white/5 text-xs h-9 px-2 sm:px-3"
+   951→                >
+   952→                  {importing ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <Upload className="w-3.5 h-3.5 mr-1" />}
+   953→                  <span className="hidden sm:inline">Importar</span>
+   954→                </Button>
+   955→                <DropdownMenu>
+   956→                  <DropdownMenuTrigger asChild>
+   957→                    <Button variant="ghost" size="sm" className="text-white/60 hover:text-white hover:bg-white/5 text-xs h-9 px-2 sm:px-3">
+   958→                      <Download className="w-3.5 h-3.5 mr-1" />
+   959→                      <span className="hidden sm:inline">Exportar</span>
+   960→                    </Button>
+   961→                  </DropdownMenuTrigger>
+   962→                  <DropdownMenuContent className="bg-[#15152a] border-white/10">
+   963→                    <DropdownMenuItem onClick={() => handleExportMenu('json')} className="text-white focus:bg-white/5">JSON</DropdownMenuItem>
+   964→                    <DropdownMenuItem onClick={() => handleExportMenu('csv')} className="text-white focus:bg-white/5">CSV</DropdownMenuItem>
+   965→                    <DropdownMenuItem onClick={() => handleExportMenu('excel')} className="text-white focus:bg-white/5">Excel (.xls)</DropdownMenuItem>
+   966→                    <DropdownMenuItem onClick={() => handleExportMenu('word')} className="text-white focus:bg-white/5">Word (.doc)</DropdownMenuItem>
+   967→                  </DropdownMenuContent>
+   968→                </DropdownMenu>
+   969→              </div>
+   970→            </div>
+   971→
+   972→            {importing && (
+   973→              <div className="flex items-center gap-2 p-3 rounded-xl bg-[#d4af37]/10 border border-[#d4af37]/30 text-sm text-[#d4af37]">
+   974→                <Loader2 className="w-4 h-4 animate-spin" />
+   975→                Importando platos desde archivo...
+   976→              </div>
+   977→            )}
+   978→
+   979→            <div className="space-y-4">
+   980→              {categories.map((cat, ci) => (
+   981→                <div
+   982→                  key={cat.id}
+   983→                  className="bg-white/[0.02] border border-white/10 rounded-xl p-4"
+   984→                >
+   985→                  <div className="flex items-center gap-2 mb-3">
+   986→                    <Input
+   987→                      value={cat.name}
+   988→                      onChange={(e) => updateCategory(cat.id, e.target.value)}
+   989→                      placeholder={`Categoría ${ci + 1} (Ej: Entradas)`}
+   990→                      className="bg-white/5 border-white/10 text-white font-semibold"
+   991→                    />
+   992→                    <Button
+   993→                      variant="ghost"
+   994→                      size="icon"
+   995→                      onClick={() => removeCategory(cat.id)}
+   996→                      className="text-white/40 hover:text-red-400 hover:bg-red-500/10 flex-shrink-0"
+   997→                    >
+   998→                      <Trash2 className="w-4 h-4" />
+   999→                    </Button>
+  1000→                  </div>
+  1001→
+  1002→                  <div className="space-y-2">
+  1003→                    {cat.dishes.map((dish) => (
+  1004→                      <div
+  1005→                        key={dish.id}
+  1006→                        className="flex flex-col sm:grid sm:grid-cols-[64px_1fr] gap-3 p-3 bg-white/[0.02] border border-white/10 rounded-lg"
+  1007→                      >
+  1008→                        <div className="flex items-start gap-3 sm:block">
+  1009→                          <ImageUploader
+  1010→                            initialUrl={dish.image}
+  1011→                            onUploaded={(url) => handleDishImageUploaded(cat.id, dish.id, url)}
+  1012→                            plan={plan}
+  1013→                            imagesCount={imagesCount}
+  1014→                            shape="square"
+  1015→                            size={64}
+  1016→                          />
+  1017→                        </div>
+  1018→                        <div className="space-y-2 min-w-0 flex-1">
+  1019→                          <Input
+  1020→                            value={dish.name}
+  1021→                            onChange={(e) => updateDish(cat.id, dish.id, 'name', e.target.value)}
+  1022→                            placeholder="Nombre del plato"
+  1023→                            className="bg-white/5 border-white/10 text-white h-9"
+  1024→                          />
+  1025→                          <Input
+  1026→                            value={dish.description}
+  1027→                            onChange={(e) => updateDish(cat.id, dish.id, 'description', e.target.value)}
+  1028→                            placeholder="Descripción (opcional)"
+  1029→                            className="bg-white/5 border-white/10 text-white h-9"
+  1030→                          />
+  1031→                          <div className="flex gap-2">
+  1032→                            <div className="relative flex-1">
+  1033→                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-white/40 font-semibold">
+  1034→                                {menu.currency}
+  1035→                              </span>
+  1036→                              <Input
+  1037→                                type="number"
+  1038→                                step="0.10"
+  1039→                                min="0"
+  1040→                                value={dish.price}
+  1041→                                onChange={(e) => updateDish(cat.id, dish.id, 'price', e.target.value)}
+  1042→                                placeholder="0.00"
+  1043→                                className="bg-white/5 border-white/10 text-white h-9 pl-10"
+  1044→                              />
+  1045→                            </div>
+  1046→                            <Button
+  1047→                              variant="ghost"
+  1048→                              size="icon"
+  1049→                              onClick={() => removeDish(cat.id, dish.id)}
+  1050→                              className="text-white/40 hover:text-red-400 hover:bg-red-500/10 h-9 w-9"
+  1051→                            >
+  1052→                              <X className="w-4 h-4" />
+  1053→                            </Button>
+  1054→                          </div>
+  1055→                        </div>
+  1056→                      </div>
+  1057→                    ))}
+  1058→                    <Button
+  1059→                      variant="ghost"
+  1060→                      size="sm"
+  1061→                      onClick={() => addDish(cat.id)}
+  1062→                      className="w-full text-[#d4af37] hover:text-[#d4af37] hover:bg-[#d4af37]/10 border border-dashed border-[#d4af37]/40"
+  1063→                    >
+  1064→                      <Plus className="w-3.5 h-3.5" />
+  1065→                      Agregar plato
+  1066→                    </Button>
+  1067→                  </div>
+  1068→                </div>
+  1069→              ))}
+  1070→
+  1071→              <Button
+  1072→                variant="ghost"
+  1073→                size="sm"
+  1074→                onClick={addCategory}
+  1075→                className="w-full text-[#d4af37] hover:text-[#d4af37] hover:bg-[#d4af37]/10 border border-dashed border-[#d4af37]/40"
+  1076→              >
+  1077→                <Plus className="w-3.5 h-3.5" />
+  1078→                Agregar categoría
+  1079→              </Button>
+  1080→            </div>
+  1081→          </div>
+  1082→        </section>
+  1083→
+  1084→        {/* Preview pane — desktop: sidebar, mobile: collapsible floating button */}
+  1085→        <aside className="border-l border-white/10 bg-[#0a0a14] lg:sticky lg:top-[65px] lg:h-[calc(100vh-65px)] p-4 flex-col hidden lg:flex">
+  1086→          <div className="flex items-center justify-between mb-3 px-2">
+  1087→            <div className="flex items-center gap-2 text-sm">
+  1088→              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+  1089→              <span className="text-white/70">Vista previa</span>
+  1090→            </div>
+  1091→            <span className="text-xs text-white/40">Mobile</span>
+  1092→          </div>
+  1093→          <div className="flex-1 bg-black rounded-2xl overflow-hidden border border-white/10 relative">
+  1094→            <iframe
+  1095→              srcDoc={previewHtml}
+  1096→              title="Preview"
+  1097→              className="w-full h-full border-0"
+  1098→              sandbox="allow-scripts allow-same-origin"
+  1099→            />
+  1100→          </div>
+  1101→          {plan.limits.hasBranding && (
+  1102→            <div className="mt-3 px-3 py-2 rounded-lg bg-[#d4af37]/10 border border-[#d4af37]/30 text-xs text-[#d4af37] text-center">
+  1103→              Visible con marca "Creado con MenuPro" · Upgrade a Pro para quitarla
+  1104→            </div>
+  1105→          )}
+  1106→        </aside>
+  1107→      </main>
+  1108→
+  1109→      {/* Mobile preview FAB + bottom sheet */}
+  1110→      <button
+  1111→        onClick={() => setShowPreviewMobile(!showPreviewMobile)}
+  1112→        className="lg:hidden fixed bottom-4 right-4 z-30 w-14 h-14 rounded-full bg-gradient-to-br from-[#d4af37] to-[#f4d35e] text-[#1a1a2e] shadow-2xl shadow-[#d4af37]/40 flex items-center justify-center font-bold text-xs safe-bottom"
+  1113→        aria-label="Ver preview"
+  1114→      >
+  1115→        {showPreviewMobile ? <X className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+  1116→      </button>
+  1117→
+  1118→      {showPreviewMobile && (
+  1119→        <div
+  1120→          className="lg:hidden fixed inset-0 z-40 bg-black/80 backdrop-blur-sm flex items-end"
+  1121→          onClick={() => setShowPreviewMobile(false)}
+  1122→        >
+  1123→          <div
+  1124→            className="bg-[#0a0a14] border-t border-white/10 rounded-t-3xl w-full h-[85vh] flex flex-col"
+  1125→            onClick={(e) => e.stopPropagation()}
+  1126→          >
+  1127→            <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
+  1128→              <div className="flex items-center gap-2 text-sm">
+  1129→                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+  1130→                <span className="text-white/70 font-medium">Vista previa mobile</span>
+  1131→              </div>
+  1132→              <button
+  1133→                onClick={() => setShowPreviewMobile(false)}
+  1134→                className="w-9 h-9 flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 rounded-lg"
+  1135→                aria-label="Cerrar preview"
+  1136→              >
+  1137→                <X className="w-5 h-5" />
+  1138→              </button>
+  1139→            </div>
+  1140→            <div className="flex-1 bg-black overflow-hidden p-2">
+  1141→              <iframe
+  1142→                srcDoc={previewHtml}
+  1143→                title="Preview mobile"
+  1144→                className="w-full h-full border-0 rounded-xl"
+  1145→                sandbox="allow-scripts allow-same-origin"
+  1146→              />
+  1147→            </div>
+  1148→          </div>
+  1149→        </div>
+  1150→      )}
+  1151→    </div>
+  1152→  );
+  1153→}
+  1154→
+  1155→// ───────── Componente ToggleRow para el panel de Apariencia ─────────
+  1156→function ToggleRow({
+  1157→  label,
+  1158→  desc,
+  1159→  value,
+  1160→  onChange,
+  1161→  disabled,
+  1162→}: {
+  1163→  label: string;
+  1164→  desc: string;
+  1165→  value: boolean;
+  1166→  onChange: (v: boolean) => void;
+  1167→  disabled?: boolean;
+  1168→}) {
+  1169→  return (
+  1170→    <button
+  1171→      type="button"
+  1172→      disabled={disabled}
+  1173→      onClick={() => onChange(!value)}
+  1174→      className={`text-left p-3 rounded-lg border transition ${
+  1175→        value
+  1176→          ? 'border-[#d4af37]/40 bg-[#d4af37]/5'
+  1177→          : 'border-white/10 bg-white/5'
+  1178→      } disabled:opacity-40 disabled:cursor-not-allowed`}
+  1179→    >
+  1180→      <div className="flex items-center justify-between mb-1">
+  1181→        <span className="text-sm font-medium">{label}</span>
+  1182→        <span
+  1183→          className={`w-8 h-4 rounded-full relative transition ${
+  1184→            value ? 'bg-[#d4af37]' : 'bg-white/15'
+  1185→          }`}
+  1186→        >
+  1187→          <span
+  1188→            className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all ${
+  1189→              value ? 'left-4' : 'left-0.5'
+  1190→            }`}
+  1191→          />
+  1192→        </span>
+  1193→      </div>
+  1194→      <div className="text-xs text-white/50">{desc}</div>
+  1195→    </button>
+  1196→  );
+  1197→}
+  1198→
