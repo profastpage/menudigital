@@ -61,4 +61,5 @@ db/*.db-journal
 
 # Stray dev artifacts
 /upload/
-/3210
+/3210--viewport
+tool-results/
