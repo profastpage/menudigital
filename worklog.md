@@ -93,3 +93,20 @@ Stage Summary:
 - Commit `43770d8` pushed a origin/main
 - SQL entregado en `supabase/themes-presets-and-persistence.sql` y `download/themes-presets-and-persistence.sql` para copiar a Supabase SQL Editor
 - Pendiente usuario: ejecutar SQL en Supabase SQL Editor
+
+---
+Task ID: redeploy-after-sql-upload
+Agent: main (Super Z)
+Task: Usuario confirmó que ya subió el SQL a Supabase. Solicitó hacer redeploy.
+
+Work Log:
+- Verificado git status: working tree limpio, 1 commit local ahead de origin/main
+- Commit pendiente: c79a219 (worklog update)
+- Commit previo ya pushed: 43770d8 feat(ux): mobile-first responsive + theme presets + fast nav
+- Push exitoso: `git push origin main` → origin/main ahora en c79a219
+- Vercel auto-deploy disparado por webhook de GitHub push
+
+Stage Summary:
+- Código con mobile-first responsive, temas personalizables Pro, navegación rápida y fixes de admin ya está en GitHub
+- Vercel desplegará automáticamente en 1-2 minutos en https://menudigital-pro.vercel.app/
+- Usuario debe ejecutar SQL en Supabase SQL Editor para tablas nuevas (menu_themes, etc.)
