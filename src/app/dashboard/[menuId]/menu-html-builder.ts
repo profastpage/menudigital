@@ -57,10 +57,34 @@ export function buildMenuHTML(data: MenuData): string {
   html += '<meta name="description" content="' + escapeHtml(data.description || data.name) + '">\n';
   html += '<title>' + escapeHtml(data.name) + '</title>\n';
   html += fontImport + '\n';
+  // Swiper carousel CDN (para galería multi-imagen de platos)
+  html += '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" referrerpolicy="no-referrer">\n';
   html += '<style>' + css + '</style>\n';
   html += '</head>\n';
   html += '<body>\n';
   html += '<div id="app"></div>\n';
+  // Mobile bottom nav (Inicio/Buscar/Favoritos/Carrito) — solo visible en mobile via CSS
+  html += '<nav class="mobile-bottom-nav" id="mobileBottomNav" aria-label="Navegación móvil">\n';
+  html += '  <button class="mbn-item active" data-action="home" aria-label="Inicio">\n';
+  html += '    <span class="mbn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></span>\n';
+  html += '    <span>Inicio</span>\n';
+  html += '  </button>\n';
+  html += '  <button class="mbn-item" data-action="search" aria-label="Buscar">\n';
+  html += '    <span class="mbn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></span>\n';
+  html += '    <span>Buscar</span>\n';
+  html += '  </button>\n';
+  html += '  <button class="mbn-item" data-action="favorites" aria-label="Favoritos">\n';
+  html += '    <span class="mbn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></span>\n';
+  html += '    <span class="mbn-badge" id="mbnFavCount" style="display:none;">0</span>\n';
+  html += '    <span>Favoritos</span>\n';
+  html += '  </button>\n';
+  html += '  <button class="mbn-item" data-action="cart" aria-label="Carrito">\n';
+  html += '    <span class="mbn-cart-total" id="mbnCartTotal"></span>\n';
+  html += '    <span class="mbn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg></span>\n';
+  html += '    <span class="mbn-badge" id="mbnCartCount" style="display:none;">0</span>\n';
+  html += '    <span>Pedido</span>\n';
+  html += '  </button>\n';
+  html += '</nav>\n';
   html += '<script>\n';
   html += 'var RESTAURANT = ' + JSON.stringify(data) + ';\n';
   html += 'var SHOW_BRANDING = ' + (!!data.branding_text) + ';\n';
@@ -74,6 +98,8 @@ export function buildMenuHTML(data: MenuData): string {
   html += 'document.documentElement.style.setProperty("--font-main", ' + fontMainJs + ');\n';
   html += js + '\n';
   html += '</scr' + 'ipt>\n';
+  // Swiper JS bundle (carga async para no bloquear el render del menú)
+  html += '<script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js" referrerpolicy="no-referrer" defer></scr' + 'ipt>\n';
   html += '</body>\n';
   html += '</html>';
   return html;
@@ -257,7 +283,8 @@ function buildCSS(opts: ThemeOpts): string {
     c += '@keyframes dlbFadeIn{from{opacity:0;}to{opacity:1;}}';
     c += '@media(min-width:640px){.dish-lightbox{align-items:center;padding:24px;}}';
     // Inner: full-screen bottom-sheet en mobile, card centrada en desktop
-    c += '.dish-lightbox-inner{background:' + (darkMode ? '#14141f' : '#ffffff') + ';width:100%;max-width:560px;max-height:100vh;overflow-y:auto;position:relative;color:var(--text);border-radius:24px 24px 0 0;animation:dlbSlideUp 0.32s cubic-bezier(0.32,0.72,0,1);box-shadow:0 -10px 40px rgba(0,0,0,0.5);display:flex;flex-direction:column;}';
+    // overflow:hidden on inner, content area scrolls, CTA sticky at bottom
+    c += '.dish-lightbox-inner{background:' + (darkMode ? '#14141f' : '#ffffff') + ';width:100%;max-width:560px;max-height:100vh;overflow:hidden;position:relative;color:var(--text);border-radius:24px 24px 0 0;animation:dlbSlideUp 0.32s cubic-bezier(0.32,0.72,0,1);box-shadow:0 -10px 40px rgba(0,0,0,0.5);display:flex;flex-direction:column;}';
     c += '@media(min-width:640px){.dish-lightbox-inner{border-radius:28px;max-height:92vh;animation:dlbZoomIn 0.3s cubic-bezier(0.32,0.72,0,1);box-shadow:0 30px 80px rgba(0,0,0,0.6);}}';
     c += '@keyframes dlbSlideUp{from{transform:translateY(100%);}to{transform:translateY(0);}}';
     c += '@keyframes dlbZoomIn{from{transform:scale(0.95);opacity:0;}to{transform:scale(1);opacity:1;}}';
@@ -269,7 +296,8 @@ function buildCSS(opts: ThemeOpts): string {
     c += '.dish-lightbox-close:hover{background:rgba(0,0,0,0.78);transform:scale(1.05);}';
     c += '.dish-lightbox-close:active{transform:scale(0.95);}';
     // HERO IMAGE — wide hero on mobile (top of bottom-sheet), 16/9 on desktop
-    c += '.dish-lightbox-hero{position:relative;width:100%;aspect-ratio:4/3;max-height:42vh;overflow:hidden;background:linear-gradient(135deg,var(--glass),var(--glass-strong));flex-shrink:0;}';
+    // Background gradient fills any transparent area (e.g. PNG logos) — no more "black gap"
+    c += '.dish-lightbox-hero{position:relative;width:100%;aspect-ratio:4/3;max-height:42vh;overflow:hidden;background:linear-gradient(135deg,rgba(var(--accent-rgb),0.85) 0%,var(--accent) 50%,rgba(var(--accent-rgb),0.85) 100%);flex-shrink:0;}';
     c += '@media(min-width:640px){.dish-lightbox-hero{aspect-ratio:16/9;border-radius:28px 28px 0 0;max-height:50vh;}}';
     c += '.dish-lightbox-img{width:100%;height:100%;object-fit:cover;display:block;}';
     // Gradient overlay para legibilidad del close button
@@ -279,9 +307,9 @@ function buildCSS(opts: ThemeOpts): string {
     c += '.dish-lightbox-img-placeholder .ph-letter{font-size:120px;font-weight:900;line-height:1;text-shadow:0 4px 16px rgba(0,0,0,0.25);}';
     c += '@media(min-width:640px){.dish-lightbox-img-placeholder .ph-letter{font-size:140px;}}';
     c += '.dish-lightbox-img-placeholder .ph-label{font-size:13px;opacity:0.9;font-weight:600;letter-spacing:0.5px;text-transform:uppercase;}';
-    // Content area — padding generoso, mobile-first
-    c += '.dish-lightbox-content{padding:20px 20px 24px;flex:1 1 auto;}';
-    c += '@media(min-width:640px){.dish-lightbox-content{padding:28px 32px 32px;}}';
+    // Content area — padding generoso, mobile-first, scrolls if content too long
+    c += '.dish-lightbox-content{padding:20px 20px 16px;flex:1 1 auto;overflow-y:auto;-webkit-overflow-scrolling:touch;}';
+    c += '@media(min-width:640px){.dish-lightbox-content{padding:28px 32px 20px;}}';
     // Category badge (pequeño, encima del título)
     c += '.dish-lightbox-cat{display:inline-block;font-size:11px;font-weight:700;color:var(--accent);background:rgba(var(--accent-rgb),0.12);padding:4px 10px;border-radius:20px;letter-spacing:0.5px;text-transform:uppercase;margin-bottom:10px;}';
     // Title — grande, bold
@@ -296,8 +324,8 @@ function buildCSS(opts: ThemeOpts): string {
     c += '.dish-lightbox-desc-label{font-size:11px;font-weight:700;color:var(--text-soft);opacity:0.6;letter-spacing:0.8px;text-transform:uppercase;margin:0 0 6px;}';
     c += '.dish-lightbox-desc{font-size:15px;color:var(--text-soft);line-height:1.6;margin:0 0 22px;}';
     c += '@media(min-width:640px){.dish-lightbox-desc{font-size:16px;line-height:1.65;}}';
-    // Sticky CTA bar — siempre visible en la parte inferior
-    c += '.dish-lightbox-cta{position:sticky;bottom:0;left:0;right:0;padding:14px 20px 20px;background:linear-gradient(180deg,rgba(20,20,31,0) 0%,' + (darkMode ? '#14141f 35%' : '#ffffff 35%') + ');}';
+    // Sticky CTA bar — siempre visible en la parte inferior del modal (no se mueve con scroll)
+    c += '.dish-lightbox-cta{flex-shrink:0;padding:14px 20px calc(18px + env(safe-area-inset-bottom, 0px));background:' + (darkMode ? '#14141f' : '#ffffff') + ';border-top:1px solid var(--border);box-shadow:0 -4px 16px rgba(0,0,0,0.15);}';
     c += '.dish-lightbox-add{width:100%;background:linear-gradient(135deg,var(--accent),rgba(var(--accent-rgb),0.85));color:#fff;border:none;padding:16px 22px;border-radius:var(--radius);font-size:16px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;transition:all 0.2s;box-shadow:0 8px 24px rgba(var(--accent-rgb),0.45);-webkit-tap-highlight-color:transparent;}';
     c += '.dish-lightbox-add:hover{transform:translateY(-2px);box-shadow:0 12px 32px rgba(var(--accent-rgb),0.6);}';
     c += '.dish-lightbox-add:active{transform:translateY(0);}';
@@ -323,6 +351,7 @@ function buildCSS(opts: ThemeOpts): string {
   c += '@keyframes itemIn{from{opacity:0;transform:translateX(-10px);}to{opacity:1;transform:translateX(0);}}';
   c += '.cart-item-info{flex:1;min-width:0;}';
   c += '.cart-item-name{font-weight:600;font-size:15px;margin-bottom:2px;color:var(--text);}';
+  c += '.cart-item-extras{color:var(--accent);font-size:11.5px;font-weight:500;margin-bottom:2px;opacity:0.85;line-height:1.3;}';
   c += '.cart-item-price{color:var(--text-muted);font-size:12.5px;}';
   c += '.qty-control{display:flex;align-items:center;gap:10px;background:var(--glass);padding:4px;border-radius:24px;border:1px solid var(--border);}';
   c += '.qty-btn{width:28px;height:28px;border-radius:50%;background:var(--glass-strong);color:var(--text);border:none;cursor:pointer;font-size:16px;line-height:1;transition:all 0.2s;display:flex;align-items:center;justify-content:center;}';
@@ -343,6 +372,65 @@ function buildCSS(opts: ThemeOpts): string {
   c += '.menu-footer{text-align:center;padding:30px 20px;color:var(--text-muted);font-size:11.5px;border-top:1px solid var(--border);margin-top:20px;padding-bottom:calc(30px + env(safe-area-inset-bottom, 0px));}';
   c += '.menu-footer a{color:var(--gold);text-decoration:none;font-weight:600;letter-spacing:1px;}';
   c += '.no-results{text-align:center;padding:40px 20px;color:var(--text-muted);font-size:14px;}';
+
+  // ─── Swiper carousel (galería multi-imagen en lightbox) ───
+  if (showGallery) {
+    c += '.dish-swiper{width:100%;height:100%;}';
+    c += '.dish-swiper .swiper-slide{width:100%;height:100%;display:flex;align-items:center;justify-content:center;overflow:hidden;}';
+    c += '.dish-swiper .swiper-slide img{width:100%;height:100%;object-fit:cover;display:block;}';
+    c += '.dish-swiper .swiper-slide .dish-lightbox-img-placeholder{width:100%;height:100%;}';
+    c += '.dish-swiper .swiper-pagination-bullet{background:#fff;opacity:0.5;}';
+    c += '.dish-swiper .swiper-pagination-bullet-active{background:#fff;opacity:1;width:20px;border-radius:4px;transition:all 0.2s;}';
+    c += '.dish-swiper .swiper-button-next,.dish-swiper .swiper-button-prev{background:rgba(0,0,0,0.45);color:#fff;width:38px;height:38px;border-radius:50%;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);box-shadow:0 4px 12px rgba(0,0,0,0.3);}';
+    c += '.dish-swiper .swiper-button-next:after,.dish-swiper .swiper-button-prev:after{font-size:18px;font-weight:700;}';
+    c += '.dish-img-count{position:absolute;bottom:12px;right:12px;background:rgba(0,0,0,0.55);color:#fff;font-size:11px;font-weight:600;padding:4px 10px;border-radius:12px;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);z-index:5;pointer-events:none;}';
+    // Gradient overlay encima del hero (para legibilidad del close button)
+    c += '.dish-lightbox-hero.has-gallery::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,0.35) 0%,rgba(0,0,0,0) 30%,rgba(0,0,0,0) 70%,rgba(0,0,0,0.25) 100%);pointer-events:none;z-index:5;}';
+  }
+
+  // ─── Product options (extras/salsas/personalizaciones) ───
+  if (showGallery) {
+    c += '.dish-options{margin:0 0 22px;padding:0;}';
+    c += '.dish-option-group{margin:0 0 18px;padding:14px;background:' + (darkMode ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.025)') + ';border:1px solid var(--border);border-radius:14px;}';
+    c += '.dish-option-group-title{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}';
+    c += '.dish-option-group-name{font-size:14px;font-weight:700;color:var(--text);letter-spacing:-0.2px;}';
+    c += '.dish-option-group-hint{font-size:11px;color:var(--text-soft);opacity:0.7;font-weight:500;}';
+    c += '.dish-option-group-hint.required{color:var(--accent);font-weight:600;}';
+    c += '.dish-option-items{display:flex;flex-direction:column;gap:6px;}';
+    c += '.dish-option-item{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:' + (darkMode ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)') + ';border:1px solid var(--border);border-radius:10px;transition:all 0.15s;cursor:pointer;}';
+    c += '.dish-option-item:hover{border-color:var(--accent);background:rgba(var(--accent-rgb),0.06);}';
+    c += '.dish-option-item.selected{border-color:var(--accent);background:rgba(var(--accent-rgb),0.12);}';
+    c += '.dish-option-item-info{display:flex;align-items:center;gap:10px;flex:1;min-width:0;}';
+    c += '.dish-option-name{font-size:13.5px;color:var(--text);font-weight:500;}';
+    c += '.dish-option-price{font-size:12.5px;color:var(--accent);font-weight:700;margin-left:auto;margin-right:10px;}';
+    c += '.dish-option-price.free{color:var(--text-soft);opacity:0.6;}';
+    // Single choice radio circle
+    c += '.dish-option-radio{width:20px;height:20px;border:2px solid var(--border-strong);border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all 0.15s;}';
+    c += '.dish-option-radio.checked{border-color:var(--accent);}';
+    c += '.dish-option-radio.checked::after{content:"";width:10px;height:10px;border-radius:50%;background:var(--accent);}';
+    // Multiple choice +/- counter
+    c += '.dish-option-counter{display:flex;align-items:center;gap:8px;background:' + (darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)') + ';border-radius:18px;padding:3px;flex-shrink:0;}';
+    c += '.dish-option-counter button{width:26px;height:26px;border-radius:50%;background:var(--glass-strong);color:var(--text);border:none;cursor:pointer;font-size:16px;line-height:1;display:flex;align-items:center;justify-content:center;transition:all 0.15s;-webkit-tap-highlight-color:transparent;}';
+    c += '.dish-option-counter button:hover{background:var(--accent);color:#fff;}';
+    c += '.dish-option-counter button:disabled{opacity:0.4;cursor:not-allowed;background:var(--glass-strong);color:var(--text-soft);}';
+    c += '.dish-option-counter .count{min-width:22px;text-align:center;font-size:13px;font-weight:700;color:var(--text);}';
+  }
+
+  // ─── Mobile bottom navigation bar (Inicio/Buscar/Favoritos/Carrito) ───
+  c += '.mobile-bottom-nav{position:fixed;bottom:0;left:0;right:0;background:' + (darkMode ? 'rgba(20,20,31,0.96)' : 'rgba(255,255,255,0.96)') + ';backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:1px solid var(--border);display:flex;justify-content:space-around;align-items:center;padding:8px 4px calc(8px + env(safe-area-inset-bottom, 0px));z-index:95;box-shadow:0 -8px 24px rgba(0,0,0,0.15);transform:translateY(110%);transition:transform 0.35s cubic-bezier(0.32,0.72,0,1);}';
+  c += '.mobile-bottom-nav.visible{transform:translateY(0);}';
+  c += '@media(min-width:640px){.mobile-bottom-nav{display:none;}}';
+  c += '.mbn-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:6px 4px;background:transparent;border:none;color:var(--text-soft);cursor:pointer;font-size:10px;font-weight:600;letter-spacing:0.2px;position:relative;transition:all 0.2s;-webkit-tap-highlight-color:transparent;border-radius:10px;}';
+  c += '.mbn-item.active{color:var(--accent);}';
+  c += '.mbn-item:active{transform:scale(0.92);}';
+  c += '.mbn-icon{width:22px;height:22px;display:flex;align-items:center;justify-content:center;}';
+  c += '.mbn-icon svg{width:22px;height:22px;}';
+  c += '.mbn-badge{position:absolute;top:2px;right:calc(50% - 18px);min-width:16px;height:16px;border-radius:8px;background:var(--accent);color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 4px;box-shadow:0 2px 6px rgba(var(--accent-rgb),0.5);}';
+  c += '.mbn-cart-total{position:absolute;top:-2px;left:50%;transform:translateX(-50%);background:var(--accent);color:#fff;font-size:9.5px;font-weight:800;padding:2px 7px;border-radius:8px;white-space:nowrap;box-shadow:0 3px 8px rgba(var(--accent-rgb),0.5);}';
+  c += '.mbn-cart-total:empty{display:none;}';
+  // Add bottom padding so content isn't hidden behind bottom nav
+  c += '@media(max-width:639px){.menu-footer{padding-bottom:calc(30px + 80px + env(safe-area-inset-bottom, 0px));}.app{padding-bottom:calc(80px + env(safe-area-inset-bottom, 0px)) !important;}}';
+
   return c;
 }
 
@@ -471,6 +559,11 @@ function buildJS(opts: JSOpts): string {
   s += '  app.innerHTML=html;\n';
   s += '  attachEvents();\n';
   s += '  setupReveal();\n';
+  s += '  setupMobileBottomNav();\n';
+  s += '  loadFavorites();\n';
+  s += '  updateFavBadge();\n';
+  s += '  showMobileNavOnMobile();\n';
+  s += '  if(typeof restoreDishFromURL==="function"){restoreDishFromURL();}\n';
 
   // Helper getCategoryIcon
   s += 'function getCategoryIcon(name){var n=(name||"").toLowerCase();if(n.indexOf("entr")>=0||n.indexOf("aperit")>=0)return "🥗";if(n.indexOf("sopa")>=0||n.indexOf("caldo")>=0)return "🍜";if(n.indexOf("pasta")>=0)return "🍝";if(n.indexOf("parrilla")>=0||n.indexOf("grill")>=0||n.indexOf("carne")>=0)return "🥩";if(n.indexOf("pollo")>=0)return "🍗";if(n.indexOf("pesca")>=0||n.indexOf("maris")>=0)return "🐟";if(n.indexOf("postre")>=0)return "🍰";if(n.indexOf("bebida")>=0||n.indexOf("drink")>=0)return "🥤";if(n.indexOf("trago")>=0||n.indexOf("cocktail")>=0||n.indexOf("bar")>=0)return "🍸";if(n.indexOf("desay")>=0)return "🍳";if(n.indexOf("pizza")>=0)return "🍕";if(n.indexOf("burger")>=0||n.indexOf("hambur")>=0)return "🍔";if(n.indexOf("ensal")>=0)return "🥗";if(n.indexOf("sushi")>=0)return "🍣";if(n.indexOf("taco")>=0||n.indexOf("mexic")>=0)return "🌮";if(n.indexOf(" asia")>=0||n.indexOf("chino")>=0||n.indexOf("wok")>=0)return "🥡";if(n.indexOf("vegan")>=0||n.indexOf("veggie")>=0)return "🌱";if(n.indexOf("cafe")>=0||n.indexOf("coffee")>=0)return "☕";return "🍴";}\n';
@@ -552,56 +645,117 @@ function buildJS(opts: JSOpts): string {
 
   // ─── Lightbox de plato (estilo PedidosYa/Rappi — clean rewrite sin nested escapes) ───
   if (showGallery) {
-    // Helper: genera placeholder HTML como string seguro (sin onerror anidado)
-    s += 'function buildDishHeroHTML(dish,catName){\n';
-    s += '  if(dish.image_url){\n';
-    s += '    var ph="<div class=\\"dish-lightbox-img-placeholder\\"><div class=\\"ph-letter\\">"+escapeHtml((dish.name||"P").charAt(0).toUpperCase())+"</div><div class=\\"ph-label\\">"+escapeHtml(catName)+"</div></div>";\n';
-    s += '    var img=document.createElement("img");\n';
-    s += '    img.className="dish-lightbox-img";\n';
-    s += '    img.alt=escapeHtml(dish.name||"Plato");\n';
-    s += '    img.src=dish.image_url;\n';
-    s += '    img.onerror=function(){var h=document.createElement("div");h.innerHTML=ph;img.replaceWith(h.firstChild);};\n';
-    s += '    return img;\n';
-    s += '  }\n';
-    s += '  var div=document.createElement("div");\n';
-    s += '  div.className="dish-lightbox-img-placeholder";\n';
-    s += '  div.innerHTML="<div class=\\"ph-letter\\">"+escapeHtml((dish.name||"P").charAt(0).toUpperCase())+"</div><div class=\\"ph-label\\">"+escapeHtml(catName)+"</div>";\n';
-    s += '  return div;\n';
+    // Helper: genera placeholder (letra inicial + cat name) como elemento DOM
+    s += 'function buildPlaceholderEl(letter,catName){var div=document.createElement("div");div.className="dish-lightbox-img-placeholder";div.innerHTML="<div class=\\"ph-letter\\">"+escapeHtml(letter)+"</div><div class=\\"ph-label\\">"+escapeHtml(catName)+"</div>";return div;}\n';
+    s += 'function buildImgEl(src,name){var img=document.createElement("img");img.className="dish-lightbox-img";img.alt=escapeHtml(name||"Plato");img.src=src;return img;}\n';
+    // Construye el hero: Swiper si gallery>1, img simple si solo 1
+    s += 'function buildDishHero(dish,catName){\n';
+    s += '  var hero=document.createElement("div");hero.className="dish-lightbox-hero";\n';
+    s += '  var imgs=[];\n';
+    s += '  if(dish.image_url)imgs.push(dish.image_url);\n';
+    s += '  if(dish.gallery&&Array.isArray(dish.gallery)){dish.gallery.forEach(function(g){if(g&&imgs.indexOf(g)<0)imgs.push(g);});}\n';
+    s += '  var letter=(dish.name||"P").charAt(0).toUpperCase();\n';
+    s += '  if(imgs.length===0){hero.appendChild(buildPlaceholderEl(letter,catName));return hero;}\n';
+    s += '  if(imgs.length===1){hero.appendChild(buildImgEl(imgs[0],dish.name));return hero;}\n';
+    s += '  hero.classList.add("has-gallery");\n';
+    s += '  var swiperDiv=document.createElement("div");swiperDiv.className="swiper dish-swiper";\n';
+    s += '  var wrapper=document.createElement("div");wrapper.className="swiper-wrapper";\n';
+    s += '  imgs.forEach(function(src){var slide=document.createElement("div");slide.className="swiper-slide";slide.appendChild(buildImgEl(src,dish.name));wrapper.appendChild(slide);});\n';
+    s += '  swiperDiv.appendChild(wrapper);\n';
+    s += '  var pag=document.createElement("div");pag.className="swiper-pagination";swiperDiv.appendChild(pag);\n';
+    s += '  var next=document.createElement("div");next.className="swiper-button-next";swiperDiv.appendChild(next);\n';
+    s += '  var prev=document.createElement("div");prev.className="swiper-button-prev";swiperDiv.appendChild(prev);\n';
+    s += '  hero.appendChild(swiperDiv);\n';
+    s += '  var count=document.createElement("div");count.className="dish-img-count";count.textContent="1 / "+imgs.length;hero.appendChild(count);\n';
+    s += '  setTimeout(function(){if(window.Swiper){new Swiper(swiperDiv,{pagination:{el:pag,clickable:true},navigation:{nextEl:next,prevEl:prev},loop:true,on:{slideChange:function(){count.textContent=(this.realIndex+1)+" / "+imgs.length;}}});}},50);\n';
+    s += '  return hero;\n';
     s += '}\n';
+    // Construye las opciones (extras/salsas) del plato
+    s += 'var currentDishOptionsState={};\n';
+    s += 'function buildDishOptions(dish){\n';
+    s += '  if(!dish.options||!Array.isArray(dish.options)||dish.options.length===0)return null;\n';
+    s += '  var wrap=document.createElement("div");wrap.className="dish-options";\n';
+    s += '  currentDishOptionsState={};\n';
+    s += '  dish.options.forEach(function(grp){\n';
+    s += '    var g=document.createElement("div");g.className="dish-option-group";\n';
+    s += '    var title=document.createElement("div");title.className="dish-option-group-title";\n';
+    s += '    var nameEl=document.createElement("div");nameEl.className="dish-option-group-name";nameEl.textContent=grp.name||"";\n';
+    s += '    var hint=document.createElement("div");hint.className="dish-option-group-hint"+(grp.required?" required":"");\n';
+    s += '    hint.textContent=grp.required?"Obligatorio":(grp.type==="single"?"Elige 1":"Elige hasta "+(grp.max||5));\n';
+    s += '    title.appendChild(nameEl);title.appendChild(hint);g.appendChild(title);\n';
+    s += '    var items=document.createElement("div");items.className="dish-option-items";\n';
+    s += '    currentDishOptionsState[grp.id]={type:grp.type,items:{}};\n';
+    s += '    grp.items.forEach(function(it){\n';
+    s += '      var row=document.createElement("div");row.className="dish-option-item";\n';
+    s += '      var info=document.createElement("div");info.className="dish-option-item-info";\n';
+    s += '      var nm=document.createElement("div");nm.className="dish-option-name";nm.textContent=it.name;\n';
+    s += '      var pr=document.createElement("div");pr.className="dish-option-price"+(it.price>0?"":" free");pr.textContent=it.price>0?"+"+formatPrice(it.price):"Gratis";\n';
+    s += '      info.appendChild(nm);info.appendChild(pr);\n';
+    s += '      if(grp.type==="single"){\n';
+    s += '        var radio=document.createElement("div");radio.className="dish-option-radio";info.appendChild(radio);\n';
+    s += '        row.addEventListener("click",function(){items.querySelectorAll(".dish-option-item").forEach(function(r){r.classList.remove("selected");r.querySelector(".dish-option-radio").classList.remove("checked");});row.classList.add("selected");radio.classList.add("checked");currentDishOptionsState[grp.id].items={};currentDishOptionsState[grp.id].items[it.id]={name:it.name,price:it.price,qty:1};updateDishTotal();});\n';
+    s += '      } else {\n';
+    s += '        var counter=document.createElement("div");counter.className="dish-option-counter";\n';
+    s += '        var decBtn=document.createElement("button");decBtn.innerHTML="&minus;";decBtn.disabled=true;\n';
+    s += '        var countSpan=document.createElement("span");countSpan.className="count";countSpan.textContent="0";\n';
+    s += '        var incBtn=document.createElement("button");incBtn.innerHTML="&plus;";\n';
+    s += '        counter.appendChild(decBtn);counter.appendChild(countSpan);counter.appendChild(incBtn);\n';
+    s += '        decBtn.addEventListener("click",function(e){e.stopPropagation();var cur=currentDishOptionsState[grp.id].items[it.id]||{qty:0};if(cur.qty>0){cur.qty--;countSpan.textContent=cur.qty;if(cur.qty===0){delete currentDishOptionsState[grp.id].items[it.id];row.classList.remove("selected");decBtn.disabled=true;}else{currentDishOptionsState[grp.id].items[it.id]={name:it.name,price:it.price,qty:cur.qty};}updateDishTotal();}});\n';
+    s += '        incBtn.addEventListener("click",function(e){e.stopPropagation();var cur=currentDishOptionsState[grp.id].items[it.id]||{qty:0};var max=grp.max||5;var count=0;for(var k in currentDishOptionsState[grp.id].items){count+=currentDishOptionsState[grp.id].items[k].qty;}if(count>=max){return;}cur.qty++;countSpan.textContent=cur.qty;decBtn.disabled=false;row.classList.add("selected");currentDishOptionsState[grp.id].items[it.id]={name:it.name,price:it.price,qty:cur.qty};updateDishTotal();});\n';
+    s += '        row.appendChild(info);row.appendChild(counter);\n';
+    s += '      }\n';
+    s += '      if(grp.type==="single"){row.appendChild(info);}\n';
+    s += '      items.appendChild(row);\n';
+    s += '    });\n';
+    s += '    g.appendChild(items);wrap.appendChild(g);\n';
+    s += '  });\n';
+    s += '  return wrap;\n';
+    s += '}\n';
+    // Calcula el total dinámico del plato (base + extras seleccionados)
+    s += 'function getDishCurrentTotal(dish){var total=dish.price||0;for(var gid in currentDishOptionsState){for(var iid in currentDishOptionsState[gid].items){var it=currentDishOptionsState[gid].items[iid];total+=(it.price||0)*it.qty;}}return total;}\n';
+    s += 'function updateDishTotal(){var priceEl=document.getElementById("dishLightboxPrice");if(!priceEl)return;var dish=window.__currentDish;var total=getDishCurrentTotal(dish);priceEl.textContent=formatPrice(total);}\n';
+    // Abre el lightbox
     s += 'function openDishLightbox(catIdx,dishIdx){\n';
     s += '  var dish=RESTAURANT.categories[catIdx].dishes[dishIdx];\n';
     s += '  var catName=RESTAURANT.categories[catIdx].name||"Plato";\n';
+    s += '  window.__currentDish=dish;\n';
+    s += '  window.__currentCatIdx=catIdx;window.__currentDishIdx=dishIdx;\n';
     s += '  var lightbox=document.getElementById("dishLightbox");\n';
     s += '  lightbox.innerHTML="";\n';
-    s += '  var inner=document.createElement("div");\n';
-    s += '  inner.className="dish-lightbox-inner";\n';
+    s += '  var inner=document.createElement("div");inner.className="dish-lightbox-inner";\n';
     s += '  var handle=document.createElement("div");handle.className="dish-lightbox-handle";inner.appendChild(handle);\n';
     s += '  var closeBtn=document.createElement("button");closeBtn.className="dish-lightbox-close";closeBtn.id="dishLightboxClose";closeBtn.setAttribute("aria-label","Cerrar");closeBtn.innerHTML="&times;";inner.appendChild(closeBtn);\n';
-    s += '  var hero=document.createElement("div");hero.className="dish-lightbox-hero";\n';
-    s += '  hero.appendChild(buildDishHeroHTML(dish,catName));\n';
-    s += '  inner.appendChild(hero);\n';
+    s += '  inner.appendChild(buildDishHero(dish,catName));\n';
     s += '  var content=document.createElement("div");content.className="dish-lightbox-content";\n';
     s += '  var cat=document.createElement("span");cat.className="dish-lightbox-cat";cat.textContent=catName;content.appendChild(cat);\n';
     s += '  var name=document.createElement("h3");name.className="dish-lightbox-name";name.textContent=dish.name||"Plato";content.appendChild(name);\n';
     s += '  var priceRow=document.createElement("div");priceRow.className="dish-lightbox-price-row";\n';
-    s += '  var price=document.createElement("span");price.className="dish-lightbox-price";price.textContent=formatPrice(dish.price);priceRow.appendChild(price);\n';
+    s += '  var price=document.createElement("span");price.className="dish-lightbox-price";price.id="dishLightboxPrice";price.textContent=formatPrice(dish.price);priceRow.appendChild(price);\n';
     s += '  content.appendChild(priceRow);\n';
     s += '  var descLabel=document.createElement("div");descLabel.className="dish-lightbox-desc-label";descLabel.textContent="Descripción";content.appendChild(descLabel);\n';
     s += '  var desc=document.createElement("p");desc.className="dish-lightbox-desc";desc.textContent=dish.description||"Plato delicioso preparado con ingredientes frescos y de la mejor calidad. Pídelo ahora mismo por WhatsApp.";content.appendChild(desc);\n';
-    s += '  var cta=document.createElement("div");cta.className="dish-lightbox-cta";\n';
-    s += '  var addBtn=document.createElement("button");addBtn.className="dish-lightbox-add";addBtn.setAttribute("data-cat",catIdx);addBtn.setAttribute("data-dish",dishIdx);\n';
-    s += '  addBtn.innerHTML="<svg width=\\"20\\" height=\\"20\\" viewBox=\\"0 0 24 24\\" fill=\\"none\\" stroke=\\"currentColor\\" stroke-width=\\"2.5\\" stroke-linecap=\\"round\\" stroke-linejoin=\\"round\\"><path d=\\"M12 5v14M5 12h14\\"/></svg>Agregar al pedido";\n';
-    s += '  addBtn.addEventListener("click",function(){addToCart(catIdx,dishIdx);addBtn.classList.add("added");addBtn.innerHTML="<svg width=\\\"20\\\" height=\\\"20\\\" viewBox=\\\"0 0 24 24\\\" fill=\\\"none\\\" stroke=\\\"currentColor\\\" stroke-width=\\\"3\\\" stroke-linecap=\\\"round\\\" stroke-linejoin=\\\"round\\\"><polyline points=\\\"20 6 9 17 4 12\\\"/></svg> Agregado";setTimeout(closeDishLightbox,900);});\n';
-    s += '  cta.appendChild(addBtn);\n';
-    s += '  content.appendChild(cta);\n';
+    s += '  var opts=buildDishOptions(dish);if(opts)content.appendChild(opts);\n';
     s += '  inner.appendChild(content);\n';
+    s += '  var cta=document.createElement("div");cta.className="dish-lightbox-cta";\n';
+    s += '  var addBtn=document.createElement("button");addBtn.className="dish-lightbox-add";\n';
+    s += '  addBtn.innerHTML="<svg width=\\"20\\" height=\\"20\\" viewBox=\\"0 0 24 24\\" fill=\\"none\\" stroke=\\"currentColor\\" stroke-width=\\"2.5\\" stroke-linecap=\\"round\\" stroke-linejoin=\\"round\\"><path d=\\"M12 5v14M5 12h14\\"/></svg>Agregar al pedido";\n';
+    s += '  addBtn.addEventListener("click",function(){var opts=getSelectedOptionsSnapshot();addToCart(catIdx,dishIdx,null,opts);addBtn.classList.add("added");addBtn.innerHTML="<svg width=\\\"20\\\" height=\\\"20\\\" viewBox=\\\"0 0 24 24\\\" fill=\\\"none\\\" stroke=\\\"currentColor\\\" stroke-width=\\\"3\\\" stroke-linecap=\\\"round\\\" stroke-linejoin=\\\"round\\\"><polyline points=\\\"20 6 9 17 4 12\\\"/></svg> Agregado";setTimeout(closeDishLightbox,900);});\n';
+    s += '  cta.appendChild(addBtn);\n';
+    s += '  inner.appendChild(cta);\n';
     s += '  lightbox.appendChild(inner);\n';
     s += '  lightbox.classList.add("visible");\n';
     s += '  document.body.style.overflow="hidden";\n';
     s += '  closeBtn.addEventListener("click",closeDishLightbox);\n';
     s += '  lightbox.addEventListener("click",function(e){if(e.target===lightbox)closeDishLightbox();});\n';
+    s += '  syncDishURL(catIdx,dishIdx);\n';
     s += '}\n';
-    s += 'function closeDishLightbox(){var lightbox=document.getElementById("dishLightbox");if(lightbox){lightbox.classList.remove("visible");lightbox.innerHTML="";document.body.style.overflow="";}}\n';
+    // Snapshot de opciones seleccionadas (deep clone del estado)
+    s += 'function getSelectedOptionsSnapshot(){var out=[];for(var gid in currentDishOptionsState){var grp=currentDishOptionsState[gid];for(var iid in grp.items){var it=grp.items[iid];out.push({groupId:gid,itemId:iid,name:it.name,price:it.price,qty:it.qty});}}return out;}\n';
+    // URL sync via History API
+    s += 'function syncDishURL(catIdx,dishIdx){try{var slug=RESTAURANT.slug||"";var newURL=slug?("/r/"+slug+"/p/"+catIdx+"-"+dishIdx):("/p/"+catIdx+"-"+dishIdx);window.history.pushState({dishLightbox:true,catIdx:catIdx,dishIdx:dishIdx},"",newURL);}catch(e){}}\n';
+    s += 'function restoreDishFromURL(){try{var m=window.location.pathname.match(/\\/p\\/(\\d+)-(\\d+)$/);if(m){var ci=parseInt(m[1]);var di=parseInt(m[2]);if(RESTAURANT.categories[ci]&&RESTAURANT.categories[ci].dishes[di]){openDishLightbox(ci,di);}}}catch(e){}}\n';
+    s += 'window.addEventListener("popstate",function(e){if(!e.state||!e.state.dishLightbox){var lb=document.getElementById("dishLightbox");if(lb&&lb.classList.contains("visible")){closeDishLightbox(true);}}});\n';
+    s += 'function closeDishLightbox(skipHistory){var lightbox=document.getElementById("dishLightbox");if(lightbox){lightbox.classList.remove("visible");lightbox.innerHTML="";document.body.style.overflow="";}if(!skipHistory&&window.location.pathname.match(/\\/p\\/\\d+-\\d+$/)){window.history.back();}}\n';
   }
 
   // Update active nav
@@ -613,12 +767,16 @@ function buildJS(opts: JSOpts): string {
   s += '  document.querySelectorAll(".nav-item").forEach(function(n,i){n.classList.toggle("active",i===activeIdx);});\n';
   s += '}\n';
   // Add to cart
-  s += 'function addToCart(catIdx,dishIdx,btn){\n';
+  s += 'function addToCart(catIdx,dishIdx,btn,options){\n';
   s += '  var dish=RESTAURANT.categories[catIdx].dishes[dishIdx];\n';
+  s += '  options=options||[];\n';
+  s += '  var extrasTotal=0;options.forEach(function(o){extrasTotal+=(o.price||0)*o.qty;});\n';
+  s += '  var unitPrice=dish.price+extrasTotal;\n';
+  s += '  var signature=catIdx+"-"+dishIdx+"-"+JSON.stringify(options);\n';
   s += '  var existing=null;\n';
-  s += '  for(var i=0;i<cart.length;i++){if(cart[i].catIdx===catIdx&&cart[i].dishIdx===dishIdx){existing=cart[i];break;}}\n';
+  s += '  for(var i=0;i<cart.length;i++){if(cart[i].signature===signature){existing=cart[i];break;}}\n';
   s += '  if(existing){existing.qty++;}\n';
-  s += '  else{cart.push({catIdx:catIdx,dishIdx:dishIdx,name:dish.name,price:dish.price,qty:1});}\n';
+  s += '  else{cart.push({catIdx:catIdx,dishIdx:dishIdx,signature:signature,name:dish.name,price:unitPrice,basePrice:dish.price,extrasPrice:extrasTotal,options:options,qty:1});}\n';
   s += '  if(btn){showAddedFlash(btn.closest(".dish"));}\n';
   s += '  updateCart(true);\n';
   s += '}\n';
@@ -641,8 +799,40 @@ function buildJS(opts: JSOpts): string {
   s += '  var cartBar=document.getElementById("cartBar");\n';
   s += '  if(count>0){cartBar.classList.add("visible");}else{cartBar.classList.remove("visible");}\n';
   s += '  if(pulse){countEl.classList.remove("pulse");void countEl.offsetWidth;countEl.classList.add("pulse");}\n';
+  s += '  updateMobileBottomNav(count,total);\n';
   s += '  renderCartItems();\n';
   s += '}\n';
+  // Update mobile bottom nav cart badge + total
+  s += 'function updateMobileBottomNav(count,total){\n';
+  s += '  var badge=document.getElementById("mbnCartCount");\n';
+  s += '  var totalEl=document.getElementById("mbnCartTotal");\n';
+  s += '  var nav=document.getElementById("mobileBottomNav");\n';
+  s += '  if(!badge||!totalEl||!nav)return;\n';
+  s += '  if(count>0){badge.style.display="flex";badge.textContent=count;nav.classList.add("visible");}else{badge.style.display="none";nav.classList.remove("visible");}\n';
+  s += '  totalEl.textContent=count>0?formatPrice(total):"";\n';
+  s += '}\n';
+  // Show mobile bottom nav after small scroll on mobile
+  s += 'function showMobileNavOnMobile(){if(window.innerWidth<640){var nav=document.getElementById("mobileBottomNav");if(nav)nav.classList.add("visible");}}\n';
+  // Mobile bottom nav actions
+  s += 'function setupMobileBottomNav(){\n';
+  s += '  document.querySelectorAll(".mbn-item").forEach(function(btn){\n';
+  s += '    btn.addEventListener("click",function(){\n';
+  s += '      var action=this.dataset.action;\n';
+  s += '      document.querySelectorAll(".mbn-item").forEach(function(b){b.classList.remove("active");});this.classList.add("active");\n';
+  s += '      if(action==="home"){window.scrollTo({top:0,behavior:"smooth"});}\n';
+  s += '      else if(action==="search"){var si=document.getElementById("searchInput");if(si){si.focus();si.scrollIntoView({behavior:"smooth",block:"center"});}}\n';
+  s += '      else if(action==="cart"){openModal();}\n';
+  s += '      else if(action==="favorites"){toggleFavoritesModal();}\n';
+  s += '    });\n';
+  s += '  });\n';
+  s += '}\n';
+  // Favorites (saved in localStorage)
+  s += 'var favorites=[];\n';
+  s += 'function loadFavorites(){try{favorites=JSON.parse(localStorage.getItem("mp_favs")||"[]");}catch(e){favorites=[];}}\n';
+  s += 'function saveFavorites(){try{localStorage.setItem("mp_favs",JSON.stringify(favorites));}catch(e){}}\n';
+  s += 'function toggleFav(catIdx,dishIdx){var k=catIdx+"-"+dishIdx;var i=favorites.indexOf(k);if(i>=0){favorites.splice(i,1);}else{favorites.push(k);}saveFavorites();updateFavBadge();}\n';
+  s += 'function updateFavBadge(){var b=document.getElementById("mbnFavCount");if(!b)return;if(favorites.length>0){b.style.display="flex";b.textContent=favorites.length;}else{b.style.display="none";}}\n';
+  s += 'function toggleFavoritesModal(){alert("Favoritos: "+favorites.length+" plato(s) guardado(s). Próximamente vista de favoritos dedicada.");}\n';
   // Render cart items
   s += 'function renderCartItems(){\n';
   s += '  var container=document.getElementById("cartItems");\n';
@@ -657,6 +847,7 @@ function buildJS(opts: JSOpts): string {
   s += '    html+="<div class=\\"cart-item\\">";\n';
   s += '    html+="<div class=\\"cart-item-info\\">";\n';
   s += '    html+="<div class=\\"cart-item-name\\">"+escapeHtml(item.name)+"</div>";\n';
+  s += '    if(item.options&&item.options.length>0){html+="<div class=\\"cart-item-extras\\">"+item.options.map(function(o){return "+"+escapeHtml(o.name)+(o.qty>1?" x"+o.qty:"");}).join(", ")+"</div>";}\n';
   s += '    html+="<div class=\\"cart-item-price\\">"+formatPrice(item.price)+" c/u</div>";\n';
   s += '    html+="</div>";\n';
   s += '    html+="<div class=\\"qty-control\\">";\n';

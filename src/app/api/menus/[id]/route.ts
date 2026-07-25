@@ -194,6 +194,8 @@ export async function PUT(
               description: dish.description || null,
               price: Number(dish.price) || 0,
               image_url: dish.image_url || null,
+              gallery: Array.isArray(dish.gallery) ? dish.gallery.filter(Boolean).slice(0, 5) : [],
+              options: Array.isArray(dish.options) ? dish.options : [],
               sort_order: j,
             });
           if (dishErr) {

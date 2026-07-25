@@ -37,6 +37,8 @@ import {
   X,
   Loader2,
   Image as ImageIcon,
+  Images,
+  Settings2,
   CheckCircle2,
   Download,
   Palette,
@@ -64,12 +66,29 @@ interface LocalCategory {
   dishes: LocalDish[];
 }
 
+interface LocalOptionItem {
+  id: string;
+  name: string;
+  price: string;
+}
+
+interface LocalOptionGroup {
+  id: string;
+  name: string;
+  type: 'single' | 'multiple';
+  required: boolean;
+  max: number;
+  items: LocalOptionItem[];
+}
+
 interface LocalDish {
   id: string;
   name: string;
   description: string;
   price: string;
   image: string;
+  gallery: string[];
+  options: LocalOptionGroup[];
 }
 
 export function EditorClient({ initialMenu, plan, profile, imagesCount }: Props) {
@@ -122,8 +141,21 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount }: Props)
         description: d.description || '',
         price: String(d.price),
         image: d.image_url || '',
+        gallery: Array.isArray((d as any).gallery) ? (d as any).gallery.filter(Boolean) : [],
+        options: Array.isArray((d as any).options) ? (d as any).options.map((g: any) => ({
+          id: g.id || `og-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          name: g.name || '',
+          type: g.type === 'single' ? 'single' : 'multiple',
+          required: !!g.required,
+          max: Number(g.max) || 5,
+          items: Array.isArray(g.items) ? g.items.map((it: any) => ({
+            id: it.id || `oi-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+            name: it.name || '',
+            price: String(it.price || '0'),
+          })) : [],
+        })) : [],
       })) || [],
-    })) || [{ id: 'new-1', name: '', dishes: [{ id: 'd-1', name: '', description: '', price: '', image: '' }] }]
+    })) || [{ id: 'new-1', name: '', dishes: [{ id: 'd-1', name: '', description: '', price: '', image: '', gallery: [], options: [] }] }]
   );
   const [saving, setSaving] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -186,6 +218,15 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount }: Props)
               description: d.description,
               price: d.price,
               image_url: d.image,
+              gallery: (d.gallery || []).filter(Boolean).slice(0, 5),
+              options: (d.options || []).map((g) => ({
+                id: g.id,
+                name: g.name,
+                type: g.type,
+                required: g.required,
+                max: g.max,
+                items: (g.items || []).map((it) => ({ id: it.id, name: it.name, price: Number(it.price) || 0 })),
+              })),
             })),
           })),
         }),
@@ -264,6 +305,15 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount }: Props)
             description: d.description || null,
             price: Number(d.price) || 0,
             image_url: d.image || null,
+            gallery: (d.gallery || []).filter(Boolean).slice(0, 5),
+            options: (d.options || []).map((g) => ({
+              id: g.id,
+              name: g.name,
+              type: g.type,
+              required: g.required,
+              max: g.max,
+              items: (g.items || []).map((it) => ({ id: it.id, name: it.name, price: Number(it.price) || 0 })),
+            })),
             sort_order: 0,
           })),
         })),
@@ -345,6 +395,15 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount }: Props)
               description: d.description,
               price: d.price,
               image_url: d.image,
+              gallery: (d.gallery || []).filter(Boolean).slice(0, 5),
+              options: (d.options || []).map((g) => ({
+                id: g.id,
+                name: g.name,
+                type: g.type,
+                required: g.required,
+                max: g.max,
+                items: (g.items || []).map((it) => ({ id: it.id, name: it.name, price: Number(it.price) || 0 })),
+              })),
             })),
           })),
         }),
@@ -370,7 +429,7 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount }: Props)
       {
         id: `new-${Date.now()}`,
         name: '',
-        dishes: [{ id: `d-${Date.now()}`, name: '', description: '', price: '', image: '' }],
+        dishes: [{ id: `d-${Date.now()}`, name: '', description: '', price: '', image: '', gallery: [], options: [] }],
       },
     ]);
   }
@@ -381,7 +440,7 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount }: Props)
         c.id === catId
           ? {
               ...c,
-              dishes: [...c.dishes, { id: `d-${Date.now()}`, name: '', description: '', price: '', image: '' }],
+              dishes: [...c.dishes, { id: `d-${Date.now()}`, name: '', description: '', price: '', image: '', gallery: [], options: [] }],
             }
           : c
       )
@@ -411,6 +470,190 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount }: Props)
       cs.map((c) =>
         c.id === catId
           ? { ...c, dishes: c.dishes.map((d) => (d.id === dishId ? { ...d, [field]: value } : d)) }
+          : c
+      )
+    );
+  }
+
+  // Helpers para gallery (hasta 5 imágenes) y options (extras/salsas)
+  function addDishGalleryImage(catId: string, dishId: string, url: string) {
+    setCategories((cs) =>
+      cs.map((c) =>
+        c.id === catId
+          ? {
+              ...c,
+              dishes: c.dishes.map((d) => {
+                if (d.id !== dishId) return d;
+                const gallery = [...(d.gallery || [])];
+                if (gallery.length >= 5) return d; // máx 5
+                // Si la primera imagen no está seteada, también la guardamos como image_url principal
+                if (!d.image && gallery.length === 0) {
+                  return { ...d, image: url, gallery: [url] };
+                }
+                return { ...d, gallery: [...gallery, url] };
+              }),
+            }
+          : c
+      )
+    );
+  }
+
+  function removeDishGalleryImage(catId: string, dishId: string, index: number) {
+    setCategories((cs) =>
+      cs.map((c) =>
+        c.id === catId
+          ? {
+              ...c,
+              dishes: c.dishes.map((d) => {
+                if (d.id !== dishId) return d;
+                const gallery = [...(d.gallery || [])];
+                gallery.splice(index, 1);
+                // Si se elimina la primera, actualizar image_url
+                const newImage = gallery[0] || '';
+                return { ...d, image: newImage, gallery };
+              }),
+            }
+          : c
+      )
+    );
+  }
+
+  function addOptionGroup(catId: string, dishId: string) {
+    setCategories((cs) =>
+      cs.map((c) =>
+        c.id === catId
+          ? {
+              ...c,
+              dishes: c.dishes.map((d) => {
+                if (d.id !== dishId) return d;
+                return {
+                  ...d,
+                  options: [
+                    ...(d.options || []),
+                    {
+                      id: `og-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+                      name: '',
+                      type: 'multiple' as const,
+                      required: false,
+                      max: 5,
+                      items: [],
+                    },
+                  ],
+                };
+              }),
+            }
+          : c
+      )
+    );
+  }
+
+  function updateOptionGroup(catId: string, dishId: string, groupId: string, field: keyof LocalOptionGroup, value: string | boolean | number) {
+    setCategories((cs) =>
+      cs.map((c) =>
+        c.id === catId
+          ? {
+              ...c,
+              dishes: c.dishes.map((d) => {
+                if (d.id !== dishId) return d;
+                return {
+                  ...d,
+                  options: (d.options || []).map((g) => (g.id === groupId ? { ...g, [field]: value } : g)),
+                };
+              }),
+            }
+          : c
+      )
+    );
+  }
+
+  function removeOptionGroup(catId: string, dishId: string, groupId: string) {
+    setCategories((cs) =>
+      cs.map((c) =>
+        c.id === catId
+          ? {
+              ...c,
+              dishes: c.dishes.map((d) => {
+                if (d.id !== dishId) return d;
+                return { ...d, options: (d.options || []).filter((g) => g.id !== groupId) };
+              }),
+            }
+          : c
+      )
+    );
+  }
+
+  function addOptionItem(catId: string, dishId: string, groupId: string) {
+    setCategories((cs) =>
+      cs.map((c) =>
+        c.id === catId
+          ? {
+              ...c,
+              dishes: c.dishes.map((d) => {
+                if (d.id !== dishId) return d;
+                return {
+                  ...d,
+                  options: (d.options || []).map((g) =>
+                    g.id === groupId
+                      ? {
+                          ...g,
+                          items: [
+                            ...g.items,
+                            {
+                              id: `oi-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+                              name: '',
+                              price: '0',
+                            },
+                          ],
+                        }
+                      : g
+                  ),
+                };
+              }),
+            }
+          : c
+      )
+    );
+  }
+
+  function updateOptionItem(catId: string, dishId: string, groupId: string, itemId: string, field: keyof LocalOptionItem, value: string) {
+    setCategories((cs) =>
+      cs.map((c) =>
+        c.id === catId
+          ? {
+              ...c,
+              dishes: c.dishes.map((d) => {
+                if (d.id !== dishId) return d;
+                return {
+                  ...d,
+                  options: (d.options || []).map((g) =>
+                    g.id === groupId
+                      ? { ...g, items: g.items.map((it) => (it.id === itemId ? { ...it, [field]: value } : it)) }
+                      : g
+                  ),
+                };
+              }),
+            }
+          : c
+      )
+    );
+  }
+
+  function removeOptionItem(catId: string, dishId: string, groupId: string, itemId: string) {
+    setCategories((cs) =>
+      cs.map((c) =>
+        c.id === catId
+          ? {
+              ...c,
+              dishes: c.dishes.map((d) => {
+                if (d.id !== dishId) return d;
+                return {
+                  ...d,
+                  options: (d.options || []).map((g) =>
+                    g.id === groupId ? { ...g, items: g.items.filter((it) => it.id !== itemId) } : g
+                  ),
+                };
+              }),
+            }
           : c
       )
     );
@@ -489,6 +732,19 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount }: Props)
               description: d.description || '',
               price: String(d.price),
               image: d.image_url || '',
+              gallery: Array.isArray((d as any).gallery) ? (d as any).gallery.filter(Boolean) : [],
+              options: Array.isArray((d as any).options) ? (d as any).options.map((g: any) => ({
+                id: g.id || `og-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+                name: g.name || '',
+                type: g.type === 'single' ? 'single' : 'multiple',
+                required: !!g.required,
+                max: Number(g.max) || 5,
+                items: Array.isArray(g.items) ? g.items.map((it: any) => ({
+                  id: it.id || `oi-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+                  name: it.name || '',
+                  price: String(it.price || '0'),
+                })) : [],
+              })) : [],
             })),
           }))
         );
@@ -1306,6 +1562,162 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount }: Props)
                               <X className="w-4 h-4" />
                             </Button>
                           </div>
+
+                          {/* Galería — hasta 5 imágenes adicionales (carrusel tipo Instagram) */}
+                          <details className="bg-white/[0.02] border border-white/10 rounded-md p-2">
+                            <summary className="text-xs font-semibold text-white/70 cursor-pointer hover:text-white flex items-center gap-1.5 select-none">
+                              <Images className="w-3.5 h-3.5" />
+                              Galería ({(dish.gallery || []).length}/5)
+                              <span className="text-white/40 font-normal">· carrusel en la carta</span>
+                            </summary>
+                            <div className="mt-2 space-y-2">
+                              <div className="flex flex-wrap gap-2">
+                                {(dish.gallery || []).map((img, idx) => (
+                                  <div key={idx} className="relative group">
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img
+                                      src={img}
+                                      alt={`Imagen ${idx + 1}`}
+                                      className="w-14 h-14 object-cover rounded-md border border-white/10"
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={() => removeDishGalleryImage(cat.id, dish.id, idx)}
+                                      className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white rounded-full text-[10px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                    >
+                                      ×
+                                    </button>
+                                  </div>
+                                ))}
+                                {(dish.gallery || []).length < 5 && (
+                                  <ImageUploader
+                                    initialUrl=""
+                                    onUploaded={(url) => addDishGalleryImage(cat.id, dish.id, url)}
+                                    plan={plan}
+                                    imagesCount={imagesCount}
+                                    shape="square"
+                                    size={56}
+                                  />
+                                )}
+                              </div>
+                              <p className="text-[10px] text-white/40 leading-relaxed">
+                                La primera imagen es la principal. Agrega hasta 5 para que los clientes deslicen el carrusel.
+                              </p>
+                            </div>
+                          </details>
+
+                          {/* Opciones / Extras / Salsas — personalización del cliente */}
+                          <details className="bg-white/[0.02] border border-white/10 rounded-md p-2">
+                            <summary className="text-xs font-semibold text-white/70 cursor-pointer hover:text-white flex items-center gap-1.5 select-none">
+                              <Settings2 className="w-3.5 h-3.5" />
+                              Opciones y extras ({(dish.options || []).length})
+                              <span className="text-white/40 font-normal">· salsas, toppings, extras</span>
+                            </summary>
+                            <div className="mt-2 space-y-2">
+                              {(dish.options || []).map((grp) => (
+                                <div key={grp.id} className="bg-white/[0.02] border border-white/10 rounded-md p-2 space-y-2">
+                                  <div className="flex gap-1.5 items-center">
+                                    <Input
+                                      value={grp.name}
+                                      onChange={(e) => updateOptionGroup(cat.id, dish.id, grp.id, 'name', e.target.value)}
+                                      placeholder="Nombre del grupo (ej: Salsas, Extras)"
+                                      className="bg-white/5 border-white/10 text-white h-8 text-xs flex-1"
+                                    />
+                                    <select
+                                      value={grp.type}
+                                      onChange={(e) => updateOptionGroup(cat.id, dish.id, grp.id, 'type', e.target.value)}
+                                      className="bg-white/5 border border-white/10 text-white h-8 text-xs rounded-md px-1.5"
+                                    >
+                                      <option value="single">Elige 1</option>
+                                      <option value="multiple">Múltiple</option>
+                                    </select>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() => removeOptionGroup(cat.id, dish.id, grp.id)}
+                                      className="text-white/40 hover:text-red-400 hover:bg-red-500/10 h-8 w-8 shrink-0"
+                                    >
+                                      <X className="w-3.5 h-3.5" />
+                                    </Button>
+                                  </div>
+                                  <div className="flex gap-2 items-center text-[11px] text-white/50 pl-1">
+                                    <label className="flex items-center gap-1 cursor-pointer">
+                                      <input
+                                        type="checkbox"
+                                        checked={grp.required}
+                                        onChange={(e) => updateOptionGroup(cat.id, dish.id, grp.id, 'required', e.target.checked)}
+                                        className="accent-[#d4af37]"
+                                      />
+                                      Obligatorio
+                                    </label>
+                                    {grp.type === 'multiple' && (
+                                      <label className="flex items-center gap-1">
+                                        Máx:
+                                        <input
+                                          type="number"
+                                          min="1"
+                                          max="20"
+                                          value={grp.max}
+                                          onChange={(e) => updateOptionGroup(cat.id, dish.id, grp.id, 'max', Number(e.target.value))}
+                                          className="bg-white/5 border border-white/10 text-white w-12 h-6 rounded text-center"
+                                        />
+                                      </label>
+                                    )}
+                                  </div>
+                                  <div className="space-y-1">
+                                    {grp.items.map((it) => (
+                                      <div key={it.id} className="flex gap-1.5 items-center">
+                                        <Input
+                                          value={it.name}
+                                          onChange={(e) => updateOptionItem(cat.id, dish.id, grp.id, it.id, 'name', e.target.value)}
+                                          placeholder="Nombre (ej: Ají, Papas extra)"
+                                          className="bg-white/5 border-white/10 text-white h-7 text-xs flex-1"
+                                        />
+                                        <div className="relative w-20">
+                                          <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-white/40 font-semibold">
+                                            {menu.currency}
+                                          </span>
+                                          <Input
+                                            type="number"
+                                            step="0.10"
+                                            min="0"
+                                            value={it.price}
+                                            onChange={(e) => updateOptionItem(cat.id, dish.id, grp.id, it.id, 'price', e.target.value)}
+                                            placeholder="0.00"
+                                            className="bg-white/5 border-white/10 text-white h-7 text-xs pl-7"
+                                          />
+                                        </div>
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          onClick={() => removeOptionItem(cat.id, dish.id, grp.id, it.id)}
+                                          className="text-white/40 hover:text-red-400 hover:bg-red-500/10 h-7 w-7 shrink-0"
+                                        >
+                                          <X className="w-3 h-3" />
+                                        </Button>
+                                      </div>
+                                    ))}
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => addOptionItem(cat.id, dish.id, grp.id)}
+                                      className="h-7 text-[11px] text-white/60 hover:text-white hover:bg-white/5"
+                                    >
+                                      <Plus className="w-3 h-3" /> Agregar opción
+                                    </Button>
+                                  </div>
+                                </div>
+                              ))}
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => addOptionGroup(cat.id, dish.id)}
+                                className="w-full h-7 text-[11px] text-[#d4af37] hover:text-[#d4af37] hover:bg-[#d4af37]/10 border border-dashed border-[#d4af37]/40"
+                              >
+                                <Plus className="w-3 h-3" /> Agregar grupo de opciones
+                              </Button>
+                            </div>
+                          </details>
                         </div>
                       </div>
                     ))}

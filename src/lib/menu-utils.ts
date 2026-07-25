@@ -47,6 +47,21 @@ export interface CategoryData {
   dishes?: DishData[];
 }
 
+export interface DishOptionItem {
+  id: string;
+  name: string;
+  price: number;
+}
+
+export interface DishOptionGroup {
+  id: string;
+  name: string;
+  type: 'single' | 'multiple';
+  required: boolean;
+  max?: number;
+  items: DishOptionItem[];
+}
+
 export interface DishData {
   id: string;
   category_id: string;
@@ -54,6 +69,8 @@ export interface DishData {
   description: string | null;
   price: number;
   image_url: string | null;
+  gallery?: string[] | null;
+  options?: DishOptionGroup[] | null;
   sort_order: number;
 }
 
