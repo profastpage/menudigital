@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
+import { PLANS } from '@/lib/plans';
 import { BillingClient } from './billing-client';
 
 export default async function BillingPage({
@@ -34,8 +35,13 @@ export default async function BillingPage({
 
   const params = await searchParams;
 
+  const plan = PLANS[profile?.plan || 'free'];
+
   return (
     <BillingClient
+      user={{ email: user.email || '', name: profile?.full_name || user.email?.split('@')[0] || '' }}
+      plan={plan}
+      isSuperAdmin={profile?.is_super_admin === true}
       profile={{
         plan: profile?.plan || 'free',
         email: profile?.email || user.email || '',

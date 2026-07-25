@@ -26,12 +26,11 @@ import {
   UserCheck,
   DollarSign,
   Activity,
-  AlertTriangle,
   X,
   ExternalLink,
-  ImageIcon,
   Phone,
   Hash,
+  Home,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
@@ -113,7 +112,6 @@ export function SuperAdminClient({ admin }: { admin: AdminInfo }) {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [expandedUser, setExpandedUser] = useState<string | null>(null);
   const [userDetail, setUserDetail] = useState<UserDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
@@ -222,7 +220,7 @@ export function SuperAdminClient({ admin }: { admin: AdminInfo }) {
 
   return (
     <div className="min-h-screen bg-[#050507] text-white">
-      {/* TOP NAV — Mobile-first responsive */}
+      {/* TOP NAV */}
       <header className="border-b border-amber-500/20 bg-gradient-to-r from-[#0a0a14] via-[#0f0a1a] to-[#0a0a14] sticky top-0 z-40 safe-top">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
@@ -258,6 +256,14 @@ export function SuperAdminClient({ admin }: { admin: AdminInfo }) {
             >
               <span className="hidden sm:inline">Ver dashboard</span>
               <span className="sm:hidden">Dash</span>
+            </a>
+            <a
+              href="/"
+              className="text-[11px] sm:text-xs text-white/60 hover:text-white px-2 sm:px-3 py-1.5 rounded-lg border border-white/10 hover:bg-white/5 transition whitespace-nowrap"
+              title="Volver a inicio"
+            >
+              <Home className="w-3.5 h-3.5 sm:mr-1.5 inline" />
+              <span className="hidden sm:inline">Inicio</span>
             </a>
             <Button
               variant="ghost"
@@ -305,7 +311,6 @@ export function SuperAdminClient({ admin }: { admin: AdminInfo }) {
             </div>
           ) : stats ? (
             <>
-              {/* Top stat cards */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
                 {statCards.map((card) => (
                   <div
@@ -322,7 +327,6 @@ export function SuperAdminClient({ admin }: { admin: AdminInfo }) {
                 ))}
               </div>
 
-              {/* Revenue block */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 mb-6 sm:mb-8">
                 <div className="bg-gradient-to-br from-amber-500/10 to-transparent border border-amber-500/30 rounded-xl sm:rounded-2xl p-4 sm:p-6">
                   <h3 className="font-semibold mb-3 flex items-center gap-2 text-sm sm:text-base">
@@ -362,7 +366,6 @@ export function SuperAdminClient({ admin }: { admin: AdminInfo }) {
                 </div>
               </div>
 
-              {/* Top menus by views */}
               <div className="bg-white/[0.03] border border-white/10 rounded-xl sm:rounded-2xl p-4 sm:p-6">
                 <h3 className="font-semibold mb-4 flex items-center gap-2 text-sm sm:text-base">
                   <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400" />
@@ -410,7 +413,7 @@ export function SuperAdminClient({ admin }: { admin: AdminInfo }) {
           ) : null
         )}
 
-        {/* USERS TAB */}
+        {/* USERS TAB — Desktop table + Mobile cards */}
         {activeTab === 'users' && (
           <>
             <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6 flex-wrap">
@@ -450,195 +453,332 @@ export function SuperAdminClient({ admin }: { admin: AdminInfo }) {
               </div>
             ) : (
               <>
-                <div className="space-y-2">
+                {/* ───────── DESKTOP TABLE ───────── */}
+                <div className="hidden lg:block bg-white/[0.02] border border-white/10 rounded-2xl overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead className="bg-white/[0.03] border-b border-white/10">
+                      <tr className="text-left text-xs text-white/50 uppercase tracking-wider">
+                        <th className="px-5 py-3 font-medium">Usuario</th>
+                        <th className="px-5 py-3 font-medium">Plan</th>
+                        <th className="px-5 py-3 font-medium text-center">Menús</th>
+                        <th className="px-5 py-3 font-medium text-center">Vistas</th>
+                        <th className="px-5 py-3 font-medium">Estado</th>
+                        <th className="px-5 py-3 font-medium">Registro</th>
+                        <th className="px-5 py-3 font-medium text-right">Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {users.map((u) => (
+                        <tr
+                          key={u.id}
+                          className={`border-b border-white/5 hover:bg-white/[0.02] transition-colors ${
+                            u.is_active === false ? 'bg-red-500/[0.03]' : ''
+                          }`}
+                        >
+                          {/* User cell */}
+                          <td className="px-5 py-3">
+                            <div className="flex items-center gap-3 min-w-0">
+                              <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${
+                                u.is_super_admin
+                                  ? 'bg-gradient-to-br from-amber-500 to-amber-700 text-black'
+                                  : u.avatar_url ? '' : 'bg-white/10 text-white/60'
+                              }`}>
+                                {u.avatar_url ? (
+                                  <img src={u.avatar_url} alt="" className="w-9 h-9 rounded-full object-cover" />
+                                ) : (
+                                  (u.full_name || u.email)[0].toUpperCase()
+                                )}
+                              </div>
+                              <div className="min-w-0">
+                                <div className="font-medium text-sm truncate flex items-center gap-2">
+                                  <span className="truncate">{u.full_name || 'Sin nombre'}</span>
+                                  {u.is_super_admin && (
+                                    <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 text-[9px] font-bold border border-amber-500/30 flex-shrink-0">
+                                      SUPER ADMIN
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="text-xs text-white/40 truncate">{u.email}</div>
+                              </div>
+                            </div>
+                          </td>
+
+                          {/* Plan */}
+                          <td className="px-5 py-3">
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                              u.plan === 'pro'
+                                ? 'bg-emerald-500/20 text-emerald-400'
+                                : 'bg-white/10 text-white/60'
+                            }`}>
+                              {u.plan?.toUpperCase()}
+                            </span>
+                          </td>
+
+                          {/* Menus */}
+                          <td className="px-5 py-3 text-center">
+                            <span className="font-semibold">{u.menus_count}</span>
+                            <span className="text-xs text-white/40 ml-1">({u.published_menus} pub.)</span>
+                          </td>
+
+                          {/* Views */}
+                          <td className="px-5 py-3 text-center">
+                            <span className="font-semibold">{u.views_total}</span>
+                          </td>
+
+                          {/* Estado */}
+                          <td className="px-5 py-3">
+                            {u.is_active === false ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-500/20 text-red-400 text-[10px] font-bold">
+                                <Ban className="w-3 h-3" /> BANEADO
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-[10px] font-bold">
+                                <CheckCircle2 className="w-3 h-3" /> ACTIVO
+                              </span>
+                            )}
+                          </td>
+
+                          {/* Fecha */}
+                          <td className="px-5 py-3 text-white/50 text-xs">
+                            {new Date(u.created_at).toLocaleDateString('es-PE')}
+                          </td>
+
+                          {/* Acciones */}
+                          <td className="px-5 py-3">
+                            <div className="flex items-center justify-end gap-1.5">
+                              <button
+                                onClick={() => handleViewUserDetail(u.id)}
+                                className="p-1.5 rounded-lg text-blue-400 hover:bg-blue-500/10 transition"
+                                title="Ver detalle"
+                                aria-label="Ver detalle"
+                              >
+                                <Eye className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => handleAction('toggle_plan', u.id)}
+                                disabled={actionLoading === `toggle_plan-${u.id}`}
+                                className={`p-1.5 rounded-lg text-amber-400 hover:bg-amber-500/10 transition disabled:opacity-50 ${
+                                  u.plan === 'pro' ? 'bg-amber-500/10' : ''
+                                }`}
+                                title={u.plan === 'pro' ? 'Quitar Pro' : 'Dar Pro'}
+                                aria-label={u.plan === 'pro' ? 'Quitar Pro' : 'Dar Pro'}
+                              >
+                                {actionLoading === `toggle_plan-${u.id}` ? (
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                  <Crown className="w-4 h-4" />
+                                )}
+                              </button>
+                              {!u.is_super_admin && (
+                                <button
+                                  onClick={() => handleAction('toggle_super_admin', u.id)}
+                                  disabled={actionLoading === `toggle_super_admin-${u.id}`}
+                                  className="p-1.5 rounded-lg text-purple-400 hover:bg-purple-500/10 transition disabled:opacity-50"
+                                  title="Hacer Super Admin"
+                                  aria-label="Hacer Super Admin"
+                                >
+                                  {actionLoading === `toggle_super_admin-${u.id}` ? (
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                  ) : (
+                                    <UserCog className="w-4 h-4" />
+                                  )}
+                                </button>
+                              )}
+                              {!u.is_super_admin && (
+                                <button
+                                  onClick={() => handleAction('toggle_active', u.id, u.is_active === false ? undefined : { reason: 'Desactivado por admin' })}
+                                  disabled={actionLoading === `toggle_active-${u.id}`}
+                                  className={`p-1.5 rounded-lg transition disabled:opacity-50 ${
+                                    u.is_active === false
+                                      ? 'text-emerald-400 hover:bg-emerald-500/10'
+                                      : 'text-orange-400 hover:bg-orange-500/10'
+                                  }`}
+                                  title={u.is_active === false ? 'Reactivar' : 'Banear'}
+                                  aria-label={u.is_active === false ? 'Reactivar' : 'Banear'}
+                                >
+                                  {actionLoading === `toggle_active-${u.id}` ? (
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                  ) : u.is_active === false ? (
+                                    <UserCheck className="w-4 h-4" />
+                                  ) : (
+                                    <Ban className="w-4 h-4" />
+                                  )}
+                                </button>
+                              )}
+                              {!u.is_super_admin && (
+                                <button
+                                  onClick={() => handleDeleteUser(u.id, u.email)}
+                                  disabled={actionLoading === `delete_user-${u.id}`}
+                                  className="p-1.5 rounded-lg text-red-400 hover:bg-red-500/10 transition disabled:opacity-50"
+                                  title="Eliminar usuario"
+                                  aria-label="Eliminar usuario"
+                                >
+                                  {actionLoading === `delete_user-${u.id}` ? (
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                  ) : (
+                                    <Trash2 className="w-4 h-4" />
+                                  )}
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* ───────── MOBILE CARDS ───────── */}
+                <div className="lg:hidden space-y-3">
                   {users.map((u) => (
                     <div
                       key={u.id}
-                      className={`bg-white/[0.03] border rounded-xl overflow-hidden transition-colors ${
-                        u.is_active === false
-                          ? 'border-red-500/40 bg-red-500/[0.03]'
-                          : 'border-white/10'
+                      className={`bg-white/[0.03] border rounded-2xl p-4 ${
+                        u.is_active === false ? 'border-red-500/40' : 'border-white/10'
                       }`}
                     >
-                      <div
-                        className="flex items-center justify-between p-4 cursor-pointer hover:bg-white/[0.02]"
-                        onClick={() => setExpandedUser(expandedUser === u.id ? null : u.id)}
-                      >
-                        <div className="flex items-center gap-3 min-w-0">
-                          <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${
-                            u.is_super_admin
-                              ? 'bg-gradient-to-br from-amber-500 to-amber-700 text-black'
-                              : u.avatar_url
-                              ? ''
-                              : 'bg-white/10 text-white/60'
-                          }`}>
-                            {u.avatar_url ? (
-                              <img src={u.avatar_url} alt="" className="w-10 h-10 rounded-full object-cover" />
+                      {/* Header */}
+                      <div className="flex items-start gap-3 mb-3">
+                        <div className={`w-11 h-11 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${
+                          u.is_super_admin
+                            ? 'bg-gradient-to-br from-amber-500 to-amber-700 text-black'
+                            : u.avatar_url ? '' : 'bg-white/10 text-white/60'
+                        }`}>
+                          {u.avatar_url ? (
+                            <img src={u.avatar_url} alt="" className="w-11 h-11 rounded-full object-cover" />
+                          ) : (
+                            (u.full_name || u.email)[0].toUpperCase()
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="font-semibold text-sm truncate flex items-center gap-1.5 flex-wrap">
+                            <span className="truncate">{u.full_name || 'Sin nombre'}</span>
+                          </div>
+                          <div className="text-xs text-white/50 truncate">{u.email}</div>
+                          <div className="flex flex-wrap gap-1 mt-1.5">
+                            {u.is_super_admin && (
+                              <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 text-[9px] font-bold border border-amber-500/30">
+                                SUPER ADMIN
+                              </span>
+                            )}
+                            <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
+                              u.plan === 'pro'
+                                ? 'bg-emerald-500/20 text-emerald-400'
+                                : 'bg-white/10 text-white/60'
+                            }`}>
+                              {u.plan?.toUpperCase()}
+                            </span>
+                            {u.is_active === false ? (
+                              <span className="px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 text-[9px] font-bold">
+                                BANEADO
+                              </span>
                             ) : (
-                              (u.full_name || u.email)[0].toUpperCase()
+                              <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 text-[9px] font-bold">
+                                ACTIVO
+                              </span>
                             )}
                           </div>
-                          <div className="min-w-0">
-                            <div className="font-medium text-sm truncate flex items-center gap-2">
-                              {u.full_name || 'Sin nombre'}
-                              {u.is_super_admin && (
-                                <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 text-[10px] font-bold border border-amber-500/30">
-                                  SUPER ADMIN
-                                </span>
-                              )}
-                              {u.is_active === false && (
-                                <span className="px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 text-[10px] font-bold border border-red-500/30">
-                                  BANEADO
-                                </span>
-                              )}
-                              {u.plan === 'pro' && (
-                                <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 text-[10px] font-bold">
-                                  PRO
-                                </span>
-                              )}
-                            </div>
-                            <div className="text-xs text-white/50 truncate">{u.email}</div>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-3 flex-shrink-0 text-xs">
-                          <span className="hidden md:inline text-white/40">
-                            <strong className="text-white/70">{u.menus_count}</strong> menús
-                          </span>
-                          <span className="hidden md:inline text-white/40">
-                            <strong className="text-white/70">{u.views_total}</strong> vistas
-                          </span>
-                          <span className="text-white/30">
-                            {new Date(u.created_at).toLocaleDateString('es-PE')}
-                          </span>
                         </div>
                       </div>
 
-                      {expandedUser === u.id && (
-                        <div className="border-t border-white/10 p-3 sm:p-4 bg-white/[0.02]">
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4 text-sm">
-                            <div>
-                              <div className="text-white/40 text-xs">Plan</div>
-                              <div className="font-medium">{u.plan}</div>
-                            </div>
-                            <div>
-                              <div className="text-white/40 text-xs">Menús</div>
-                              <div className="font-medium text-xs sm:text-sm">{u.menus_count} ({u.published_menus} pub.)</div>
-                            </div>
-                            <div>
-                              <div className="text-white/40 text-xs">Platos</div>
-                              <div className="font-medium">{u.dishes_count}</div>
-                            </div>
-                            <div>
-                              <div className="text-white/40 text-xs">Vistas totales</div>
-                              <div className="font-medium">{u.views_total}</div>
-                            </div>
-                            <div>
-                              <div className="text-white/40 text-xs">MP Status</div>
-                              <div className="font-medium text-xs sm:text-sm">{u.mp_status || '—'}</div>
-                            </div>
-                            <div>
-                              <div className="text-white/40 text-xs">BG removals</div>
-                              <div className="font-medium">{u.bg_removals_used}</div>
-                            </div>
-                            <div>
-                              <div className="text-white/40 text-xs">Registro</div>
-                              <div className="font-medium text-xs sm:text-sm">{new Date(u.created_at).toLocaleDateString('es-PE')}</div>
-                            </div>
-                            <div>
-                              <div className="text-white/40 text-xs">Última act.</div>
-                              <div className="font-medium text-xs sm:text-sm">{new Date(u.updated_at).toLocaleDateString('es-PE')}</div>
-                            </div>
-                            {u.banned_at && (
-                              <div className="col-span-2 md:col-span-4 text-red-400 text-xs">
-                                Baneado el {new Date(u.banned_at).toLocaleString('es-PE')}
-                                {u.banned_reason ? ` — ${u.banned_reason}` : ''}
-                              </div>
-                            )}
-                          </div>
-
-                          <div className="flex flex-wrap gap-2">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleViewUserDetail(u.id)}
-                              className="border-blue-500/40 text-blue-400 hover:bg-blue-500/10 h-9 text-xs"
-                            >
-                              <Eye className="w-3.5 h-3.5 mr-1.5" />
-                              Ver detalle
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleAction('toggle_plan', u.id)}
-                              disabled={actionLoading === `toggle_plan-${u.id}`}
-                              className={`border-amber-500/40 text-amber-400 hover:bg-amber-500/10 h-9 text-xs ${
-                                u.plan === 'pro' ? 'bg-amber-500/10' : ''
-                              }`}
-                            >
-                              {actionLoading === `toggle_plan-${u.id}` ? (
-                                <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
-                              ) : (
-                                <Crown className="w-3.5 h-3.5 mr-1.5" />
-                              )}
-                              {u.plan === 'pro' ? 'Quitar Pro' : 'Dar Pro'}
-                            </Button>
-                            {!u.is_super_admin && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleAction('toggle_super_admin', u.id)}
-                                disabled={actionLoading === `toggle_super_admin-${u.id}`}
-                                className="border-amber-500/40 text-amber-400 hover:bg-amber-500/10 h-9 text-xs"
-                              >
-                                {actionLoading === `toggle_super_admin-${u.id}` ? (
-                                  <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
-                                ) : (
-                                  <UserCog className="w-3.5 h-3.5 mr-1.5" />
-                                )}
-                                Super Admin
-                              </Button>
-                            )}
-                            {!u.is_super_admin && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleAction('toggle_active', u.id, u.is_active === false ? undefined : { reason: 'Desactivado por admin' })}
-                                disabled={actionLoading === `toggle_active-${u.id}`}
-                                className={`h-9 text-xs ${
-                                  u.is_active === false
-                                    ? 'border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/10'
-                                    : 'border-orange-500/40 text-orange-400 hover:bg-orange-500/10'
-                                }`}
-                              >
-                                {actionLoading === `toggle_active-${u.id}` ? (
-                                  <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
-                                ) : u.is_active === false ? (
-                                  <UserCheck className="w-3.5 h-3.5 mr-1.5" />
-                                ) : (
-                                  <Ban className="w-3.5 h-3.5 mr-1.5" />
-                                )}
-                                {u.is_active === false ? 'Reactivar' : 'Ban'}
-                              </Button>
-                            )}
-                            {!u.is_super_admin && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleDeleteUser(u.id, u.email)}
-                                disabled={actionLoading === `delete_user-${u.id}`}
-                                className="border-red-500/40 text-red-400 hover:bg-red-500/10 h-9 text-xs"
-                              >
-                                {actionLoading === `delete_user-${u.id}` ? (
-                                  <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
-                                ) : (
-                                  <Trash2 className="w-3.5 h-3.5 mr-1.5" />
-                                )}
-                                Eliminar
-                              </Button>
-                            )}
-                          </div>
+                      {/* Stats inline */}
+                      <div className="grid grid-cols-3 gap-2 mb-3 text-center">
+                        <div className="bg-white/[0.03] rounded-lg p-2">
+                          <div className="text-base font-bold">{u.menus_count}</div>
+                          <div className="text-[10px] text-white/40 uppercase">Menús</div>
                         </div>
-                      )}
+                        <div className="bg-white/[0.03] rounded-lg p-2">
+                          <div className="text-base font-bold text-pink-400">{u.views_total}</div>
+                          <div className="text-[10px] text-white/40 uppercase">Vistas</div>
+                        </div>
+                        <div className="bg-white/[0.03] rounded-lg p-2">
+                          <div className="text-base font-bold text-purple-400">{u.dishes_count}</div>
+                          <div className="text-[10px] text-white/40 uppercase">Platos</div>
+                        </div>
+                      </div>
+
+                      {/* Action grid */}
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleViewUserDetail(u.id)}
+                          className="border-blue-500/40 text-blue-400 hover:bg-blue-500/10 h-9 text-xs"
+                        >
+                          <Eye className="w-3.5 h-3.5 mr-1.5" />
+                          Detalle
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleAction('toggle_plan', u.id)}
+                          disabled={actionLoading === `toggle_plan-${u.id}`}
+                          className={`border-amber-500/40 text-amber-400 hover:bg-amber-500/10 h-9 text-xs ${
+                            u.plan === 'pro' ? 'bg-amber-500/10' : ''
+                          }`}
+                        >
+                          {actionLoading === `toggle_plan-${u.id}` ? (
+                            <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                          ) : (
+                            <Crown className="w-3.5 h-3.5 mr-1.5" />
+                          )}
+                          {u.plan === 'pro' ? 'Quitar Pro' : 'Dar Pro'}
+                        </Button>
+                        {!u.is_super_admin && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleAction('toggle_super_admin', u.id)}
+                            disabled={actionLoading === `toggle_super_admin-${u.id}`}
+                            className="border-purple-500/40 text-purple-400 hover:bg-purple-500/10 h-9 text-xs"
+                          >
+                            {actionLoading === `toggle_super_admin-${u.id}` ? (
+                              <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                            ) : (
+                              <UserCog className="w-3.5 h-3.5 mr-1.5" />
+                            )}
+                            Super Admin
+                          </Button>
+                        )}
+                        {!u.is_super_admin && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleAction('toggle_active', u.id, u.is_active === false ? undefined : { reason: 'Desactivado por admin' })}
+                            disabled={actionLoading === `toggle_active-${u.id}`}
+                            className={`h-9 text-xs ${
+                              u.is_active === false
+                                ? 'border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/10'
+                                : 'border-orange-500/40 text-orange-400 hover:bg-orange-500/10'
+                            }`}
+                          >
+                            {actionLoading === `toggle_active-${u.id}` ? (
+                              <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                            ) : u.is_active === false ? (
+                              <UserCheck className="w-3.5 h-3.5 mr-1.5" />
+                            ) : (
+                              <Ban className="w-3.5 h-3.5 mr-1.5" />
+                            )}
+                            {u.is_active === false ? 'Reactivar' : 'Banear'}
+                          </Button>
+                        )}
+                        {!u.is_super_admin && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleDeleteUser(u.id, u.email)}
+                            disabled={actionLoading === `delete_user-${u.id}`}
+                            className="col-span-2 border-red-500/40 text-red-400 hover:bg-red-500/10 h-9 text-xs"
+                          >
+                            {actionLoading === `delete_user-${u.id}` ? (
+                              <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                            ) : (
+                              <Trash2 className="w-3.5 h-3.5 mr-1.5" />
+                            )}
+                            Eliminar usuario
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -673,7 +813,6 @@ export function SuperAdminClient({ admin }: { admin: AdminInfo }) {
             </div>
           ) : (
             <>
-              {/* Mobile cards */}
               <div className="md:hidden space-y-3">
                 {domains.map((d) => (
                   <div key={d.id} className="bg-white/[0.03] border border-white/10 rounded-xl p-4">
@@ -708,7 +847,6 @@ export function SuperAdminClient({ admin }: { admin: AdminInfo }) {
                   </div>
                 ))}
               </div>
-              {/* Desktop table */}
               <div className="hidden md:block overflow-x-auto bg-white/[0.03] border border-white/10 rounded-2xl">
                 <table className="w-full text-sm">
                   <thead>
@@ -771,7 +909,6 @@ export function SuperAdminClient({ admin }: { admin: AdminInfo }) {
             className="bg-[#0a0a14] border border-amber-500/30 rounded-t-3xl sm:rounded-2xl max-w-4xl w-full max-h-[92vh] sm:max-h-[90vh] overflow-y-auto overscroll-contain"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Sticky header — touch-friendly tap target (44px min) */}
             <div className="sticky top-0 bg-[#0a0a14]/95 backdrop-blur border-b border-white/10 px-4 sm:px-5 py-3.5 sm:py-4 flex items-center justify-between z-10">
               <h2 className="text-base sm:text-lg font-bold flex items-center gap-2 min-w-0">
                 <Eye className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400 flex-shrink-0" />
@@ -793,7 +930,7 @@ export function SuperAdminClient({ admin }: { admin: AdminInfo }) {
                 </div>
               ) : (
                 <>
-                  {/* Profile card — mobile-first stacked layout */}
+                  {/* Profile card */}
                   <div className="bg-white/[0.03] border border-white/10 rounded-xl p-4">
                     <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-4">
                       <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-gradient-to-br from-amber-500 to-amber-700 flex items-center justify-center text-xl font-bold text-black flex-shrink-0 mx-auto sm:mx-0">
@@ -828,7 +965,6 @@ export function SuperAdminClient({ admin }: { admin: AdminInfo }) {
                         </div>
                       </div>
                     </div>
-                    {/* Grid de datos — 1 col mobile, 2 tablet, 3 desktop */}
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm pt-3 border-t border-white/5">
                       <div className="min-w-0">
                         <div className="text-white/40 text-[10px] uppercase tracking-wider mb-0.5">ID</div>
@@ -859,7 +995,7 @@ export function SuperAdminClient({ admin }: { admin: AdminInfo }) {
                     </div>
                   </div>
 
-                  {/* Stats rápidas — 2x2 grid mobile, 4 cols desktop */}
+                  {/* Stats grid */}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                     <div className="bg-white/[0.03] border border-white/10 rounded-lg p-3 text-center">
                       <div className="text-2xl font-bold text-amber-400">{userDetail.profile.menus_count || 0}</div>
@@ -879,7 +1015,7 @@ export function SuperAdminClient({ admin }: { admin: AdminInfo }) {
                     </div>
                   </div>
 
-                  {/* Menus list — mobile stacked */}
+                  {/* Menus list */}
                   <div className="bg-white/[0.03] border border-white/10 rounded-xl p-4">
                     <h3 className="font-semibold mb-3 flex items-center gap-2 text-sm sm:text-base">
                       <MenuIcon className="w-4 h-4 text-amber-400" />
@@ -939,7 +1075,7 @@ export function SuperAdminClient({ admin }: { admin: AdminInfo }) {
                     )}
                   </div>
 
-                  {/* Recent views — mobile scrollable list */}
+                  {/* Recent views */}
                   <div className="bg-white/[0.03] border border-white/10 rounded-xl p-4">
                     <h3 className="font-semibold mb-3 flex items-center gap-2 text-sm sm:text-base">
                       <Eye className="w-4 h-4 text-amber-400" />
@@ -963,7 +1099,7 @@ export function SuperAdminClient({ admin }: { admin: AdminInfo }) {
                     )}
                   </div>
 
-                  {/* Footer action bar — mobile sticky bottom */}
+                  {/* Footer */}
                   <div className="sticky bottom-0 bg-[#0a0a14]/95 backdrop-blur border-t border-white/10 -mx-4 sm:-mx-5 -mb-4 sm:-mb-5 px-4 sm:px-5 py-3 flex gap-2">
                     <Button
                       variant="ghost"

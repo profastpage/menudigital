@@ -13,7 +13,7 @@ export default async function AnalyticsPage() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('plan')
+    .select('plan, full_name, email, is_super_admin')
     .eq('id', user.id)
     .single();
 
@@ -27,9 +27,11 @@ export default async function AnalyticsPage() {
 
   return (
     <AnalyticsClient
+      user={{ email: user.email || '', name: profile?.full_name || user.email?.split('@')[0] || '' }}
       plan={plan}
+      isSuperAdmin={profile?.is_super_admin === true}
       menus={menus || []}
-      profile={{ plan: profile?.plan || 'free' }}
+      profilePlan={profile?.plan || 'free'}
     />
   );
 }

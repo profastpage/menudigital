@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
+import { PLANS } from '@/lib/plans';
 import { DomainsClient } from './domains-client';
 
 export default async function DomainsPage() {
@@ -12,7 +13,7 @@ export default async function DomainsPage() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('plan')
+    .select('plan, full_name, email, is_super_admin')
     .eq('id', user.id)
     .single();
 
@@ -22,5 +23,15 @@ export default async function DomainsPage() {
     .eq('user_id', user.id)
     .order('created_at', { ascending: false });
 
-  return <DomainsClient plan={profile?.plan || 'free'} menus={menus || []} />;
+  const plan = PLANS[profile?.plan || 'free'];
+
+  return (
+    <DomainsClient
+      user={{ email: user.email || '', name: profile?.full_name || user.email?.split('@')[0] || '' }}
+      plan={plan}
+      isSuperAdmin={profile?.is_super_admin === true}
+      planId={profile?.plan || 'free'}
+      menus={menus || []}
+    />
+  );
 }

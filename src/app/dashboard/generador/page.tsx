@@ -14,7 +14,7 @@ export default async function GeneradorPage() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('id, email, full_name, plan')
+    .select('id, email, full_name, plan, is_super_admin')
     .eq('id', user.id)
     .single();
 
@@ -24,6 +24,8 @@ export default async function GeneradorPage() {
         email: user.email || '',
         name: profile?.full_name || user.email?.split('@')[0] || '',
       }}
+      isSuperAdmin={profile?.is_super_admin === true}
+      profilePlan={profile?.plan || 'free'}
     />
   );
 }
