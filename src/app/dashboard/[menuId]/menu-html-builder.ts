@@ -33,7 +33,7 @@ export function buildMenuHTML(data: MenuData, opts?: { isPreview?: boolean }): s
   const showGallery = data.theme_dish_gallery !== false; // default true
 
   const css = buildCSS({ layout, imageSize, cardStyle, font, darkMode, showSearch, showCatIcons, rounded, coverUrl, secondary, showGallery });
-  const js = buildJS({ layout, imageSize, cardStyle, showSearch, showGallery, isPreview });
+  const js = buildJS({ layout, imageSize, cardStyle, showSearch, showGallery, isPreview, darkMode });
   const colorRgb = hexToRgbStr(data.color);
   const secondaryRgb = hexToRgbStr(secondary);
 
@@ -88,7 +88,19 @@ export function buildMenuHTML(data: MenuData, opts?: { isPreview?: boolean }): s
   html += '<button class="scroll-top-btn" id="scrollTopBtn" aria-label="Volver arriba">\n';
   html += '  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>\n';
   html += '</button>\n';
+  // Floating theme toggle button — siempre visible (top-right, below .nav)
+  // Permite al cliente alternar dark/light theme. Persistencia en localStorage.
+  // En preview del dashboard NO se muestra (el dueño controla theme_dark_mode desde el editor)
+  if (!isPreview) {
+    html += '<button class="theme-toggle-btn" id="themeToggleBtn" aria-label="Cambiar tema" title="Cambiar tema">\n';
+    html += '  <svg class="theme-toggle-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>\n';
+    html += '  <svg class="theme-toggle-icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>\n';
+    html += '</button>\n';
+  }
   html += '<script>\n';
+  // Anti-FOUC: aplicar tema guardado ANTES de que el browser renderice el body
+  // Esto evita un flash del tema por defecto si el usuario había elegido otro
+  html += 'try{var saved=localStorage.getItem("menupro-theme");if(saved==="light"||saved==="dark"){document.documentElement.setAttribute("data-theme",saved);}}catch(e){}\n';
   html += 'var RESTAURANT = ' + JSON.stringify(data) + ';\n';
   html += 'var SHOW_BRANDING = ' + (!!data.branding_text) + ';\n';
   html += 'var BRANDING_TEXT = ' + JSON.stringify(data.branding_text || '') + ';\n';
@@ -133,29 +145,72 @@ function buildCSS(opts: ThemeOpts): string {
   // para dar calidez tipo PedidosYa/Rappi light theme.
   // --accent-text es la versión oscurecida del accent para texto sobre fondo claro
   // (garantiza contraste incluso si el usuario elige un accent muy claro como amarillo).
-  const bg0 = darkMode ? '#07070b' : '#fefcf7';
-  const bg1 = darkMode ? '#0f0f1a' : '#ffffff';
-  const text = darkMode ? '#f4f4fa' : '#1a1a2e';
-  const textMuted = darkMode ? '#8a8a9a' : '#6a6a7a';
-  const textSoft = darkMode ? '#b8b8c8' : '#3a3a4a';
-  const glass = darkMode ? 'rgba(255,255,255,0.035)' : 'rgba(0,0,0,0.025)';
-  const glassStrong = darkMode ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.05)';
-  const border = darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)';
-  const borderStrong = darkMode ? 'rgba(255,255,255,0.14)' : 'rgba(0,0,0,0.14)';
+  const darkColors = {
+    bg0: '#07070b', bg1: '#0f0f1a',
+    text: '#f4f4fa', textMuted: '#8a8a9a', textSoft: '#b8b8c8',
+    glass: 'rgba(255,255,255,0.035)', glassStrong: 'rgba(255,255,255,0.07)',
+    border: 'rgba(255,255,255,0.08)', borderStrong: 'rgba(255,255,255,0.14)',
+    accentText: 'var(--accent)',
+    // Extras para toggle de tema runtime
+    navBg: 'rgba(7,7,11,0.78)',
+    bottomNavBg: 'rgba(20,20,31,0.98)',
+    lightboxBg: '#14141f',
+    modalGradient: 'linear-gradient(180deg,#1c1c2e,#14141f)',
+    optionBg: 'rgba(255,255,255,0.035)',
+    optionItemBg: 'rgba(255,255,255,0.045)',
+    optionCounterBg: 'rgba(255,255,255,0.06)',
+    optionBorderDashed: 'rgba(255,255,255,0.15)',
+    handleBg: 'rgba(255,255,255,0.18)'
+  };
+  const lightColors = {
+    bg0: '#fefcf7', bg1: '#ffffff',
+    text: '#1a1a2e', textMuted: '#6a6a7a', textSoft: '#3a3a4a',
+    glass: 'rgba(0,0,0,0.025)', glassStrong: 'rgba(0,0,0,0.05)',
+    border: 'rgba(0,0,0,0.08)', borderStrong: 'rgba(0,0,0,0.14)',
+    accentText: 'color-mix(in srgb, var(--accent) 78%, #000)',
+    navBg: 'rgba(250,250,250,0.85)',
+    bottomNavBg: 'rgba(255,255,255,0.98)',
+    lightboxBg: '#ffffff',
+    modalGradient: 'linear-gradient(180deg,#fff,#f5f5f5)',
+    optionBg: 'rgba(0,0,0,0.025)',
+    optionItemBg: 'rgba(0,0,0,0.035)',
+    optionCounterBg: 'rgba(0,0,0,0.05)',
+    optionBorderDashed: 'rgba(0,0,0,0.15)',
+    handleBg: 'rgba(0,0,0,0.12)'
+  };
+  // El tema por defecto del dueño (darkMode) se aplica en :root sin data-theme.
+  // El cliente puede sobrescribirlo con el toggle → data-theme="light"|"dark" persiste en localStorage.
+  const defaultColors = darkMode ? darkColors : lightColors;
+  const oppositeColors = darkMode ? lightColors : darkColors;
+  const defaultName = darkMode ? 'dark' : 'light';
+  const oppositeName = darkMode ? 'light' : 'dark';
 
   let c = '';
-  // En light mode, --accent-text es el accent oscurecido 18% (legible sobre beige/cream).
-  // En dark mode, --accent-text = --accent tal cual (suficiente contraste sobre oscuro).
-  c += `:root{--accent:#ff6b35;--accent-rgb:255,107,53;--secondary:#1a1a2e;--gold:#d4af37;--bg-0:${bg0};--bg-1:${bg1};--glass:${glass};--glass-strong:${glassStrong};--border:${border};--border-strong:${borderStrong};--text:${text};--text-muted:${textMuted};--text-soft:${textSoft};--font-main:${font},"Inter",sans-serif;--radius:${radius};--radius-sm:${radiusSm};--radius-lg:${radiusLg};--accent-text:${darkMode ? 'var(--accent)' : 'color-mix(in srgb, var(--accent) 78%, #000)'};}`;
+  // Build a string of all color variables for a given color set
+  const colorVars = (cl: typeof darkColors) => `--bg-0:${cl.bg0};--bg-1:${cl.bg1};--glass:${cl.glass};--glass-strong:${cl.glassStrong};--border:${cl.border};--border-strong:${cl.borderStrong};--text:${cl.text};--text-muted:${cl.textMuted};--text-soft:${cl.textSoft};--accent-text:${cl.accentText};--nav-bg:${cl.navBg};--bottom-nav-bg:${cl.bottomNavBg};--lightbox-bg:${cl.lightboxBg};--modal-gradient:${cl.modalGradient};--option-bg:${cl.optionBg};--option-item-bg:${cl.optionItemBg};--option-counter-bg:${cl.optionCounterBg};--option-border-dashed:${cl.optionBorderDashed};--handle-bg:${cl.handleBg};`;
+  // :root = tema por defecto del dueño (sin data-theme attribute)
+  c += `:root{--accent:#ff6b35;--accent-rgb:255,107,53;--secondary:#1a1a2e;--gold:#d4af37;${colorVars(defaultColors)}--font-main:${font},"Inter",sans-serif;--radius:${radius};--radius-sm:${radiusSm};--radius-lg:${radiusLg};}`;
+  // Override explícito para data-theme="dark"
+  c += `:root[data-theme="dark"]{${colorVars(darkColors)}}`;
+  // Override explícito para data-theme="light"
+  c += `:root[data-theme="light"]{${colorVars(lightColors)}}`;
+  // Override para fondos hardcodeados en CSS (cuando darkMode=true se generan estilos extra)
+  // El body::before/after solo se renderiza en dark mode original — lo mostramos siempre
+  // pero con opacidad reducida en light mode para no romper el cálido del cream.
   c += '*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}';
   c += 'html{scroll-behavior:smooth;-webkit-text-size-adjust:100%;}';
   c += `body{font-family:var(--font-main);background:var(--bg-0);color:var(--text);min-height:100vh;padding-bottom:calc(110px + env(safe-area-inset-bottom, 0px));position:relative;overflow-x:hidden;overscroll-behavior-y:contain;-webkit-overflow-scrolling:touch;}`;
   // En desktop (>=640px) la bottom-nav está oculta → no necesita padding extra
   c += '@media(min-width:640px){body{padding-bottom:0;}}';
-  if (darkMode) {
-    c += 'body::before,body::after{content:"";position:fixed;width:500px;height:500px;border-radius:50%;filter:blur(140px);opacity:0.18;z-index:0;pointer-events:none;}';
-    c += 'body::before{background:var(--accent);top:-200px;right:-150px;}';
-    c += 'body::after{background:var(--gold);bottom:-200px;left:-150px;}';
+  // Orbes decorativos (orbs) — visibles en ambos temas, pero con menor opacidad en light mode
+  c += 'body::before,body::after{content:"";position:fixed;width:500px;height:500px;border-radius:50%;filter:blur(140px);opacity:0.18;z-index:0;pointer-events:none;transition:opacity 0.4s;}';
+  c += 'body::before{background:var(--accent);top:-200px;right:-150px;}';
+  c += 'body::after{background:var(--gold);bottom:-200px;left:-150px;}';
+  // En light mode, los orbs son muy invasivos → reducir opacidad
+  c += ':root[data-theme="light"] body::before,:root[data-theme="light"] body::after{opacity:0.07;}';
+  // Si el tema por defecto del dueño ES light, también reducir
+  if (!darkMode) {
+    c += ':root:not([data-theme]) body::before,:root:not([data-theme]) body::after{opacity:0.07;}';
   }
   c += '#app{position:relative;z-index:1;}';
 
@@ -204,7 +259,7 @@ function buildCSS(opts: ThemeOpts): string {
   }
 
   // Nav
-  c += '.nav{position:sticky;top:0;background:' + (darkMode ? 'rgba(7,7,11,0.78)' : 'rgba(250,250,250,0.85)') + ';backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);border-bottom:1px solid var(--border);z-index:100;padding:12px 0;overflow-x:auto;scrollbar-width:none;}';
+  c += '.nav{position:sticky;top:0;background:var(--nav-bg);backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);border-bottom:1px solid var(--border);z-index:100;padding:12px 0;overflow-x:auto;scrollbar-width:none;}';
   c += '.nav::-webkit-scrollbar{display:none;}';
   c += '.nav-inner{display:flex;gap:8px;padding:0 20px;min-width:max-content;}';
   // Tap target ≥44px (Apple HIG / Material spec) — touch-friendly mobile-first
@@ -298,13 +353,13 @@ function buildCSS(opts: ThemeOpts): string {
     c += '@media(min-width:640px){.dish-lightbox{align-items:center;padding:24px;}}';
     // Inner: FULL-SCREEN en mobile (min-height:100dvh — elimina el gap negro superior)
     // En desktop: card centrada con border-radius y max-height
-    c += '.dish-lightbox-inner{background:' + (darkMode ? '#14141f' : '#ffffff') + ';width:100%;max-width:560px;min-height:100dvh;max-height:100dvh;overflow:hidden;position:relative;color:var(--text);border-radius:0;animation:dlbSlideUp 0.32s cubic-bezier(0.32,0.72,0,1);box-shadow:none;display:flex;flex-direction:column;}';
+    c += '.dish-lightbox-inner{background:var(--lightbox-bg);width:100%;max-width:560px;min-height:100dvh;max-height:100dvh;overflow:hidden;position:relative;color:var(--text);border-radius:0;animation:dlbSlideUp 0.32s cubic-bezier(0.32,0.72,0,1);box-shadow:none;display:flex;flex-direction:column;}';
     c += '@media(min-width:640px){.dish-lightbox-inner{border-radius:28px;min-height:auto;max-height:92vh;animation:dlbZoomIn 0.3s cubic-bezier(0.32,0.72,0,1);box-shadow:0 30px 80px rgba(0,0,0,0.6);}}';
     c += '@keyframes dlbSlideUp{from{transform:translateY(100%);}to{transform:translateY(0);}}';
     c += '@keyframes dlbZoomIn{from{transform:scale(0.95);opacity:0;}to{transform:scale(1);opacity:1;}}';
     // Handle bar oculto en mobile (modal full-screen, no necesita handle)
     // Visible solo en desktop como element decorativo (pero ahí también lo ocultamos)
-    c += '.dish-lightbox-handle{display:none;width:40px;height:4px;background:' + (darkMode ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.12)') + ';border-radius:4px;margin:8px auto 0;flex-shrink:0;}';
+    c += '.dish-lightbox-handle{display:none;width:40px;height:4px;background:var(--handle-bg);border-radius:4px;margin:8px auto 0;flex-shrink:0;}';
     c += '@media(min-width:640px){.dish-lightbox-handle{display:none;}}';
     // Close button — flota sobre la imagen (estilo Rappi)
     c += '.dish-lightbox-close{position:absolute;top:14px;right:14px;width:38px;height:38px;border-radius:50%;background:rgba(0,0,0,0.55);color:#fff;border:none;cursor:pointer;font-size:22px;line-height:1;display:flex;align-items:center;justify-content:center;z-index:10;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);transition:all 0.2s;box-shadow:0 4px 12px rgba(0,0,0,0.3);}';
@@ -340,7 +395,7 @@ function buildCSS(opts: ThemeOpts): string {
     c += '.dish-lightbox-desc{font-size:15px;color:var(--text-soft);line-height:1.6;margin:0 0 22px;}';
     c += '@media(min-width:640px){.dish-lightbox-desc{font-size:16px;line-height:1.65;}}';
     // Sticky CTA bar — siempre visible en la parte inferior del modal (no se mueve con scroll)
-    c += '.dish-lightbox-cta{flex-shrink:0;padding:14px 20px calc(18px + env(safe-area-inset-bottom, 0px));background:' + (darkMode ? '#14141f' : '#ffffff') + ';border-top:1px solid var(--border);box-shadow:0 -4px 16px rgba(0,0,0,0.15);}';
+    c += '.dish-lightbox-cta{flex-shrink:0;padding:14px 20px calc(18px + env(safe-area-inset-bottom, 0px));background:var(--lightbox-bg);border-top:1px solid var(--border);box-shadow:0 -4px 16px rgba(0,0,0,0.15);}';
     c += '.dish-lightbox-add{width:100%;background:linear-gradient(135deg,var(--accent),rgba(var(--accent-rgb),0.85));color:#fff;border:none;padding:16px 22px;border-radius:var(--radius);font-size:16px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;transition:all 0.2s;box-shadow:0 8px 24px rgba(var(--accent-rgb),0.45);-webkit-tap-highlight-color:transparent;}';
     c += '.dish-lightbox-add:hover{transform:translateY(-2px);box-shadow:0 12px 32px rgba(var(--accent-rgb),0.6);}';
     c += '.dish-lightbox-add:active{transform:translateY(0);}';
@@ -361,7 +416,7 @@ function buildCSS(opts: ThemeOpts): string {
   // Modal
   c += '.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);z-index:200;display:none;align-items:flex-end;justify-content:center;padding-bottom:env(safe-area-inset-bottom,0px);}';
   c += '.modal-overlay.visible{display:flex;}';
-  c += `.modal{background:linear-gradient(180deg,${darkMode ? '#1c1c2e,#14141f' : '#fff,#f5f5f5'});width:100%;max-width:500px;border-radius:24px 24px 0 0;padding:28px 24px;max-height:85vh;overflow-y:auto;animation:slideUp 0.4s cubic-bezier(0.4,0,0.2,1);border:1px solid rgba(255,255,255,0.08);border-bottom:none;box-shadow:0 -16px 48px rgba(0,0,0,0.5);color:var(--text);}`;
+  c += `.modal{background:var(--modal-gradient);width:100%;max-width:500px;border-radius:24px 24px 0 0;padding:28px 24px;max-height:85vh;overflow-y:auto;animation:slideUp 0.4s cubic-bezier(0.4,0,0.2,1);border:1px solid var(--border);border-bottom:none;box-shadow:0 -16px 48px rgba(0,0,0,0.5);color:var(--text);}`;
   c += '.modal-title{font-size:22px;font-weight:700;margin-bottom:4px;text-align:center;letter-spacing:-0.3px;color:var(--text);}';
   c += '.modal-subtitle{text-align:center;font-size:12.5px;color:var(--text-muted);margin-bottom:22px;letter-spacing:0.3px;}';
   c += '.modal-divider{height:1px;background:linear-gradient(90deg,transparent,var(--border-strong),transparent);margin:0 -24px 20px;}';
@@ -412,19 +467,19 @@ function buildCSS(opts: ThemeOpts): string {
     c += '.dish-options{margin:0 0 22px;padding:0;}';
     c += '.dish-options-title{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;color:var(--text);letter-spacing:-0.2px;margin:0 0 10px;}';
     c += '.dish-options-title svg{color:var(--accent);}';
-    c += '.dish-options-empty{padding:16px;background:' + (darkMode ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.025)') + ';border:1px dashed ' + (darkMode ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)') + ';border-radius:14px;}';
+    c += '.dish-options-empty{padding:16px;background:var(--option-bg);border:1px dashed var(--option-border-dashed);border-radius:14px;}';
     c += '.dish-options-hint{font-size:12.5px;color:var(--text-soft);opacity:0.7;line-height:1.5;}';
     c += '.dish-note-wrap{margin:0 0 20px;}';
-    c += '.dish-note-input{width:100%;background:' + (darkMode ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)') + ';border:1px solid var(--border);border-radius:12px;padding:12px 14px;font-size:13.5px;color:var(--text);font-family:inherit;resize:none;outline:none;transition:border-color 0.15s;line-height:1.5;}';
+    c += '.dish-note-input{width:100%;background:var(--option-item-bg);border:1px solid var(--border);border-radius:12px;padding:12px 14px;font-size:13.5px;color:var(--text);font-family:inherit;resize:none;outline:none;transition:border-color 0.15s;line-height:1.5;}';
     c += '.dish-note-input:focus{border-color:var(--accent);}';
     c += '.dish-note-input::placeholder{color:var(--text-soft);opacity:0.55;}';
-    c += '.dish-option-group{margin:0 0 18px;padding:14px;background:' + (darkMode ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.025)') + ';border:1px solid var(--border);border-radius:14px;}';
+    c += '.dish-option-group{margin:0 0 18px;padding:14px;background:var(--option-bg);border:1px solid var(--border);border-radius:14px;}';
     c += '.dish-option-group-title{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}';
     c += '.dish-option-group-name{font-size:14px;font-weight:700;color:var(--text);letter-spacing:-0.2px;}';
     c += '.dish-option-group-hint{font-size:11px;color:var(--text-soft);opacity:0.7;font-weight:500;}';
     c += '.dish-option-group-hint.required{color:var(--accent);font-weight:600;}';
     c += '.dish-option-items{display:flex;flex-direction:column;gap:6px;}';
-    c += '.dish-option-item{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:' + (darkMode ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)') + ';border:1px solid var(--border);border-radius:10px;transition:all 0.15s;cursor:pointer;}';
+    c += '.dish-option-item{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--option-item-bg);border:1px solid var(--border);border-radius:10px;transition:all 0.15s;cursor:pointer;}';
     c += '.dish-option-item:hover{border-color:var(--accent);background:rgba(var(--accent-rgb),0.06);}';
     c += '.dish-option-item.selected{border-color:var(--accent);background:rgba(var(--accent-rgb),0.12);}';
     c += '.dish-option-item-info{display:flex;align-items:center;gap:10px;flex:1;min-width:0;}';
@@ -436,7 +491,7 @@ function buildCSS(opts: ThemeOpts): string {
     c += '.dish-option-radio.checked{border-color:var(--accent);}';
     c += '.dish-option-radio.checked::after{content:"";width:10px;height:10px;border-radius:50%;background:var(--accent);}';
     // Multiple choice +/- counter
-    c += '.dish-option-counter{display:flex;align-items:center;gap:8px;background:' + (darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)') + ';border-radius:18px;padding:3px;flex-shrink:0;}';
+    c += '.dish-option-counter{display:flex;align-items:center;gap:8px;background:var(--option-counter-bg);border-radius:18px;padding:3px;flex-shrink:0;}';
     c += '.dish-option-counter button{width:26px;height:26px;border-radius:50%;background:var(--glass-strong);color:var(--text);border:none;cursor:pointer;font-size:16px;line-height:1;display:flex;align-items:center;justify-content:center;transition:all 0.15s;-webkit-tap-highlight-color:transparent;}';
     c += '.dish-option-counter button:hover{background:var(--accent);color:#fff;}';
     c += '.dish-option-counter button:disabled{opacity:0.4;cursor:not-allowed;background:var(--glass-strong);color:var(--text-soft);}';
@@ -445,7 +500,7 @@ function buildCSS(opts: ThemeOpts): string {
 
   // ─── Mobile bottom navigation bar (Inicio/Buscar/Favoritos/Carrito) ───
   // z-index:95 = stays below modal (200) and lightbox (300), above content
-  c += '.mobile-bottom-nav{position:fixed;bottom:0;left:0;right:0;background:' + (darkMode ? 'rgba(20,20,31,0.98)' : 'rgba(255,255,255,0.98)') + ';backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:1px solid var(--border);display:flex;justify-content:space-around;align-items:stretch;padding:6px 4px calc(6px + env(safe-area-inset-bottom, 0px));z-index:95;box-shadow:0 -4px 20px rgba(0,0,0,0.18);transform:translateY(110%);transition:transform 0.35s cubic-bezier(0.32,0.72,0,1);}';
+  c += '.mobile-bottom-nav{position:fixed;bottom:0;left:0;right:0;background:var(--bottom-nav-bg);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:1px solid var(--border);display:flex;justify-content:space-around;align-items:stretch;padding:6px 4px calc(6px + env(safe-area-inset-bottom, 0px));z-index:95;box-shadow:0 -4px 20px rgba(0,0,0,0.18);transform:translateY(110%);transition:transform 0.35s cubic-bezier(0.32,0.72,0,1);}';
   c += '.mobile-bottom-nav.visible{transform:translateY(0);}';
   c += '@media(min-width:640px){.mobile-bottom-nav{display:none;}}';
   c += '.mbn-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:8px 4px calc(4px + env(safe-area-inset-bottom, 0px));background:transparent;border:none;color:var(--text-soft);cursor:pointer;font-size:10.5px;font-weight:600;letter-spacing:0.2px;position:relative;transition:all 0.2s;-webkit-tap-highlight-color:transparent;border-radius:10px;min-height:54px;overflow:visible;}';
@@ -473,6 +528,28 @@ function buildCSS(opts: ThemeOpts): string {
   c += '.scroll-top-btn.visible{opacity:1;transform:translateY(0) scale(1);pointer-events:auto;}';
   c += '.scroll-top-btn:active{transform:scale(0.9);}';
   c += '@media(min-width:640px){.scroll-top-btn{display:none;}}';
+  // Theme toggle button — visible siempre (mobile + desktop), top-right abajo del .nav sticky
+  // Diseño glassmorphism que combina con el nav. Muestra sol o luna según tema actual.
+  c += '.theme-toggle-btn{position:fixed;top:calc(12px + 56px);right:14px;width:40px;height:40px;border-radius:50%;background:var(--glass-strong);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid var(--border-strong);color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:99;box-shadow:0 4px 14px rgba(0,0,0,0.18);transition:all 0.25s cubic-bezier(0.32,0.72,0,1);-webkit-tap-highlight-color:transparent;opacity:0.9;}';
+  c += '@media(hover:hover){.theme-toggle-btn:hover{transform:scale(1.08);opacity:1;background:var(--accent);color:#fff;border-color:var(--accent);}}';
+  c += '.theme-toggle-btn:active{transform:scale(0.92);}';
+  c += '.theme-toggle-btn svg{width:18px;height:18px;}';
+  // Mostrar solo el icono del tema OPUESTO al actual (indicar a qué va a cambiar)
+  // Por defecto (sin data-theme), el tema es el del dueño → mostrar icono del opuesto
+  c += '.theme-toggle-icon-sun{display:none;}';
+  c += '.theme-toggle-icon-moon{display:block;}';
+  // Si el tema activo es dark → mostrar sol (para cambiar a light)
+  c += ':root[data-theme="dark"] .theme-toggle-icon-sun{display:block;}';
+  c += ':root[data-theme="dark"] .theme-toggle-icon-moon{display:none;}';
+  // Si el tema activo es light → mostrar luna (para cambiar a dark)
+  c += ':root[data-theme="light"] .theme-toggle-icon-sun{display:none;}';
+  c += ':root[data-theme="light"] .theme-toggle-icon-moon{display:block;}';
+  // Si el tema por defecto del dueño ES dark, mostrar sol por defecto
+  if (darkMode) {
+    c += ':root:not([data-theme]) .theme-toggle-icon-sun{display:block;}';
+    c += ':root:not([data-theme]) .theme-toggle-icon-moon{display:none;}';
+  }
+  // En mobile, mover el botón para no chocar con scroll-top-btn (right:14px ya está ok, son verticales)
 
   return c;
 }
@@ -484,11 +561,13 @@ interface JSOpts {
   showSearch: boolean;
   showGallery: boolean;
   isPreview?: boolean;
+  darkMode?: boolean;
 }
 
 function buildJS(opts: JSOpts): string {
   const { showSearch, showGallery } = opts;
   const isPreview = opts.isPreview === true;
+  const darkMode = opts.darkMode !== false; // default true
   let s = '';
   s += 'var cart = [];\n';
   s += 'var searchQuery = "";\n';
@@ -681,6 +760,22 @@ function buildJS(opts: JSOpts): string {
   s += '    window.addEventListener("scroll",updateScrollTop,{passive:true});\n';
   s += '    scrollTopBtn.addEventListener("click",function(){window.scrollTo({top:0,behavior:"smooth"});});\n';
   s += '    updateScrollTop();\n';
+  s += '  }\n';
+  // Theme toggle: cycle dark↔light, persist in localStorage (key: menupro-theme)
+  // Si el usuario resetea (clear localStorage) vuelve al tema por defecto del dueño
+  s += '  var themeToggleBtn=document.getElementById("themeToggleBtn");\n';
+  s += '  if(themeToggleBtn){\n';
+  s += '    themeToggleBtn.addEventListener("click",function(){\n';
+  s += '      var current="default";\n';
+  s += '      var attr=document.documentElement.getAttribute("data-theme");\n';
+  s += '      if(attr==="light"||attr==="dark"){current=attr;}\n';
+  s += '      var next;\n';
+  s += '      if(current==="default"){next=' + (darkMode ? '"light"' : '"dark"') + ';}\n';
+  s += '      else if(current==="dark"){next="light";}\n';
+  s += '      else{next="dark";}\n';
+  s += '      document.documentElement.setAttribute("data-theme",next);\n';
+  s += '      try{localStorage.setItem("menupro-theme",next);}catch(e){}\n';
+  s += '    });\n';
   s += '  }\n';
   // Dish image error handler — uses event delegation (clean, no nested escapes)
   // Si la imagen del plato falla al cargar, se reemplaza por un placeholder con la letra inicial

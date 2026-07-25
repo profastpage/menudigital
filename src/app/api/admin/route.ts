@@ -217,6 +217,23 @@ export async function PUT(req: NextRequest) {
       });
     }
 
+    case 'update_avatar': {
+      // Admin updates his OWN avatar_url (no impersonation; userId is ignored, uses auth.uid())
+      // body.avatarUrl is the uploaded public URL from /api/upload
+      const { avatarUrl } = body;
+      if (!avatarUrl || typeof avatarUrl !== 'string') {
+        return NextResponse.json({ error: 'Falta avatarUrl' }, { status: 400 });
+      }
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      if (!currentUser) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+      const { error: upErr } = await supabase
+        .from('profiles')
+        .update({ avatar_url: avatarUrl, updated_at: new Date().toISOString() })
+        .eq('id', currentUser.id);
+      if (upErr) return NextResponse.json({ error: upErr.message }, { status: 500 });
+      return NextResponse.json({ success: true, avatar_url: avatarUrl });
+    }
+
     default:
       return NextResponse.json({ error: 'Acción no válida' }, { status: 400 });
   }

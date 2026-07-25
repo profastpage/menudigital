@@ -1603,6 +1603,24 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount }: Props)
                               <p className="text-[10px] text-white/40 leading-relaxed">
                                 La primera imagen es la principal. Agrega hasta 5 para que los clientes deslicen el carrusel.
                               </p>
+                              {/* Demo button — fill gallery with sample food images (only shows if gallery is empty) */}
+                              {(dish.gallery || []).length === 0 && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    // Sample CC0 food images from Unsplash (stable URLs)
+                                    const demo = [
+                                      'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=800&q=80&auto=format&fit=crop',
+                                      'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=800&q=80&auto=format&fit=crop',
+                                      'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=800&q=80&auto=format&fit=crop',
+                                    ];
+                                    demo.forEach((url) => addDishGalleryImage(cat.id, dish.id, url));
+                                  }}
+                                  className="text-[10px] text-amber-400 hover:text-amber-300 underline underline-offset-2"
+                                >
+                                  + Agregar 3 imágenes demo (probar carrusel)
+                                </button>
+                              )}
                             </div>
                           </details>
 

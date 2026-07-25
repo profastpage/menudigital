@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -31,6 +31,7 @@ import {
   Phone,
   Hash,
   Home,
+  Camera,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
@@ -115,6 +116,47 @@ export function SuperAdminClient({ admin }: { admin: AdminInfo }) {
   const [userDetail, setUserDetail] = useState<UserDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const [currentAvatar, setCurrentAvatar] = useState<string | null>(admin.avatar_url);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+
+  // Handle admin avatar upload (own profile)
+  const handleAvatarUpload = useCallback(async (file: File) => {
+    if (!file.type.startsWith('image/')) {
+      toast.error('Solo se permiten imágenes');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('La imagen no debe superar 5MB');
+      return;
+    }
+    setAvatarUploading(true);
+    try {
+      // 1. Upload to /api/upload (handles sharp + Supabase storage)
+      const formData = new FormData();
+      formData.append('file', file);
+      const upRes = await fetch('/api/upload', { method: 'POST', body: formData });
+      const upData = await upRes.json();
+      if (!upRes.ok) throw new Error(upData.error || 'Error al subir');
+      const avatarUrl = upData.url;
+
+      // 2. Update profiles.avatar_url via /api/admin (action: update_avatar)
+      const res = await fetch('/api/admin', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'update_avatar', userId: '', avatarUrl }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Error al guardar');
+      setCurrentAvatar(avatarUrl);
+      toast.success('Foto de perfil actualizada');
+    } catch (err: any) {
+      toast.error(err.message || 'Error al actualizar avatar');
+    } finally {
+      setAvatarUploading(false);
+      if (avatarInputRef.current) avatarInputRef.current.value = '';
+    }
+  }, []);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -185,6 +227,7 @@ export function SuperAdminClient({ admin }: { admin: AdminInfo }) {
       setUserDetail(data.detail);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Error');
+      setUserDetail(null);
       setDetailModalOpen(false);
     } finally {
       setDetailLoading(false);
@@ -240,13 +283,40 @@ export function SuperAdminClient({ admin }: { admin: AdminInfo }) {
 
           <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
             <div className="flex items-center gap-2 px-2 sm:px-3 py-1.5 rounded-lg bg-white/5 border border-white/10">
-              {admin.avatar_url ? (
-                <img src={admin.avatar_url} alt="" className="w-6 h-6 rounded-full" />
-              ) : (
-                <div className="w-6 h-6 rounded-full bg-gradient-to-br from-amber-500 to-amber-700 flex items-center justify-center text-[10px] font-bold text-black">
-                  {admin.name[0]?.toUpperCase()}
-                </div>
-              )}
+              {/* Avatar with upload overlay — click to upload new photo */}
+              <div className="relative group">
+                {currentAvatar ? (
+                  <img src={currentAvatar} alt="" className="w-6 h-6 rounded-full object-cover" />
+                ) : (
+                  <div className="w-6 h-6 rounded-full bg-gradient-to-br from-amber-500 to-amber-700 flex items-center justify-center text-[10px] font-bold text-black">
+                    {admin.name?.[0]?.toUpperCase() || '?'}
+                  </div>
+                )}
+                <button
+                  type="button"
+                  onClick={() => avatarInputRef.current?.click()}
+                  disabled={avatarUploading}
+                  className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-amber-500 hover:bg-amber-400 text-black flex items-center justify-center transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Cambiar foto de perfil"
+                  aria-label="Cambiar foto de perfil"
+                >
+                  {avatarUploading ? (
+                    <Loader2 className="w-2.5 h-2.5 animate-spin" />
+                  ) : (
+                    <Camera className="w-2.5 h-2.5" />
+                  )}
+                </button>
+                <input
+                  ref={avatarInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleAvatarUpload(file);
+                  }}
+                />
+              </div>
               <span className="text-xs text-white/70 hidden md:inline">{admin.email}</span>
             </div>
             <a
@@ -935,7 +1005,7 @@ export function SuperAdminClient({ admin }: { admin: AdminInfo }) {
                     <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-4">
                       <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-gradient-to-br from-amber-500 to-amber-700 flex items-center justify-center text-xl font-bold text-black flex-shrink-0 mx-auto sm:mx-0">
                         {userDetail.profile.full_name?.[0]?.toUpperCase() ||
-                          userDetail.profile.email[0].toUpperCase()}
+                          userDetail.profile.email?.[0]?.toUpperCase() || '?'}
                       </div>
                       <div className="text-center sm:text-left min-w-0 flex-1">
                         <div className="font-bold text-base sm:text-lg break-words">
@@ -968,7 +1038,7 @@ export function SuperAdminClient({ admin }: { admin: AdminInfo }) {
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm pt-3 border-t border-white/5">
                       <div className="min-w-0">
                         <div className="text-white/40 text-[10px] uppercase tracking-wider mb-0.5">ID</div>
-                        <div className="font-mono text-xs truncate">{userDetail.profile.id.slice(0, 8)}...</div>
+                        <div className="font-mono text-xs truncate">{userDetail.profile.id?.slice(0, 8) || '—'}...</div>
                       </div>
                       <div className="min-w-0">
                         <div className="text-white/40 text-[10px] uppercase tracking-wider mb-0.5">Registro</div>
@@ -1019,9 +1089,9 @@ export function SuperAdminClient({ admin }: { admin: AdminInfo }) {
                   <div className="bg-white/[0.03] border border-white/10 rounded-xl p-4">
                     <h3 className="font-semibold mb-3 flex items-center gap-2 text-sm sm:text-base">
                       <MenuIcon className="w-4 h-4 text-amber-400" />
-                      Menús ({userDetail.menus.length})
+                      Menús ({userDetail.menus?.length || 0})
                     </h3>
-                    {userDetail.menus.length === 0 ? (
+                    {(userDetail.menus?.length || 0) === 0 ? (
                       <p className="text-sm text-white/40 py-3 text-center">Sin menús creados</p>
                     ) : (
                       <div className="space-y-2.5">
@@ -1067,7 +1137,7 @@ export function SuperAdminClient({ admin }: { admin: AdminInfo }) {
                               </div>
                             )}
                             <div className="text-[11px] text-white/40">
-                              {m.categories.length} categorías · {m.categories.reduce((sum: number, c: any) => sum + c.dishes.length, 0)} platos
+                              {(m.categories?.length || 0)} categorías · {(m.categories || []).reduce((sum: number, c: any) => sum + (c.dishes?.length || 0), 0)} platos
                             </div>
                           </div>
                         ))}
@@ -1080,9 +1150,9 @@ export function SuperAdminClient({ admin }: { admin: AdminInfo }) {
                     <h3 className="font-semibold mb-3 flex items-center gap-2 text-sm sm:text-base">
                       <Eye className="w-4 h-4 text-amber-400" />
                       Últimas vistas
-                      <span className="text-xs text-white/40 font-normal">({userDetail.recent_views.length})</span>
+                      <span className="text-xs text-white/40 font-normal">({userDetail.recent_views?.length || 0})</span>
                     </h3>
-                    {userDetail.recent_views.length === 0 ? (
+                    {(userDetail.recent_views?.length || 0) === 0 ? (
                       <p className="text-sm text-white/40 py-3 text-center">Sin vistas registradas</p>
                     ) : (
                       <div className="max-h-60 overflow-y-auto space-y-1.5 overscroll-contain">

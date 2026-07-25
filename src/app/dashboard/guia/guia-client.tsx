@@ -102,7 +102,7 @@ const SECTIONS: Section[] = [
       },
       {
         title: 'Todo se autoguarda',
-        detail: 'Mientras editas, los cambios se guardan automáticamente cada 3 segundos. Verás un indicador "Guardado a las HH:MM" junto al título. No necesitas presionar ningún botón de guardar.',
+        detail: 'Mientras editas, los cambios se guardan automáticamente cada 1.5 segundos (con debounce). Verás un indicador "Guardado a las HH:MM" junto al título. No necesitas presionar ningún botón de guardar. La vista previa en vivo se actualiza cada 400ms.',
         tip: 'El indicador verde ✓ significa que tus datos están seguros en la nube.',
       },
     ],
@@ -197,6 +197,11 @@ const SECTIONS: Section[] = [
       {
         title: 'Toggle "Lightbox de platos"',
         detail: 'En esta misma sección puedes activar/desactivar la vista detallada al hacer clic en un plato. Recomendado: activado.',
+      },
+      {
+        title: 'Toggle de tema para el cliente',
+        detail: 'Tu menú público incluye un botón flotante de sol/luna (arriba a la derecha). El cliente puede alternar entre tema claro y oscuro según su preferencia. Su elección se guarda en localStorage y persiste entre visitas. El tema por defecto es el que tú configures aquí (Modo oscuro).',
+        tip: 'Este toggle NO cambia tu configuración — solo es para la comodidad del cliente final. Tu tema por defecto se respeta si el cliente nunca ha tocado el botón.',
       },
     ],
   },
