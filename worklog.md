@@ -110,3 +110,33 @@ Stage Summary:
 - Código con mobile-first responsive, temas personalizables Pro, navegación rápida y fixes de admin ya está en GitHub
 - Vercel desplegará automáticamente en 1-2 minutos en https://menudigital-pro.vercel.app/
 - Usuario debe ejecutar SQL en Supabase SQL Editor para tablas nuevas (menu_themes, etc.)
+
+---
+Task ID: redesign-superadmin-dashboard-shell
+Agent: main (Super Z)
+Task: Usuario reportó "no mejoraste el ux del super admin y panel clientes". Análisis VLM del screenshot confirmó: superadmin usa expandable cards (cramped, misaligned) y subpages del dashboard (billing/domains/analytics/generador) tienen headers desktop-only sin sidebar/drawer/bottom-nav mobile.
+
+Work Log:
+- Creado `src/components/dashboard/dashboard-shell.tsx`: shared layout con sidebar (lg+), drawer mobile (overlay), bottom-nav mobile (5 tabs), user block + logout. Acepta user/plan/isSuperAdmin/children.
+- Rediseñado `superadmin-client.tsx`:
+  * Desktop: tabla real con 7 columnas (Usuario, Plan, Menús, Vistas, Estado, Registro, Acciones)
+  * Acciones desktop: icon-only buttons (eye/crown/cog/ban/trash) con tooltips, hover backgrounds
+  * Mobile: cards con avatar, badges, stats grid 3-cols (Menús/Vistas/Platos), action grid 2-cols
+  * Eliminado el patrón expand-on-click (origen del UX problemático)
+  * Agregado botón "Volver a inicio" en header
+- Refactorizado `dashboard-client.tsx`: usa DashboardShell, mejoradas cards de menú (hover shadow, link como botón completo)
+- Refactorizado `billing-client.tsx`: usa DashboardShell, todo mobile-first (text-xs sm:text-base, grid-cols-2 sm:grid-cols-4, padding responsive)
+- Refactorizado `domains-client.tsx`: usa DashboardShell, form responsive grid, DNS info con flex-wrap, break-all en dominios largos
+- Refactorizado `analytics-client.tsx`: usa DashboardShell, KPIs grid responsive, bars progress con truncate en nombres
+- Refactorizado `generador-client.tsx`: usa DashboardShell, toolbar sticky, iframe con height responsive
+- Actualizados page.tsx de billing/domains/analytics/generador para pasar props user/plan/isSuperAdmin/profilePlan
+- Verificado `npx tsc --noEmit`: 0 errores en src/
+- Verificado `npx next build`: 24/24 static pages generadas exitosamente
+- Commit `2792362` pusheado a origin/main — Vercel deploy activado
+
+Stage Summary:
+- DashboardShell único reutilizable en TODAS las páginas del dashboard (consistencia total)
+- SuperAdmin desktop ahora usa tabla profesional (alineación perfecta, scannable)
+- SuperAdmin mobile usa cards con grid de stats (claramente jerárquico)
+- Todas las subpáginas son mobile-first responsive (xs/sm/md/lg breakpoints en todos los textos, paddings, grids)
+- Bottom nav móvil muestra 4 tabs + Inicio en todas las subpáginas (mismo patrón que /dashboard)
