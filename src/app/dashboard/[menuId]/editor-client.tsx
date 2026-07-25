@@ -318,7 +318,7 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount }: Props)
           })),
         })),
       };
-      setPreviewHtml(buildMenuHTML(data));
+      setPreviewHtml(buildMenuHTML(data, { isPreview: true }));
     }, 400);
     return () => clearTimeout(timer);
   }, [menu, categories, theme, socials, plan, initialMenu.id, initialMenu.slug, profile.id]);

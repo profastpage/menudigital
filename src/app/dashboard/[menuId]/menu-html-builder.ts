@@ -17,7 +17,8 @@ import { escapeHtml, hexToRgbStr, type MenuData } from '@/lib/menu-utils';
  *    un placeholder elegante.
  *  - Fix del bug "sans is not defined" (property CSS sin comillas)
  */
-export function buildMenuHTML(data: MenuData): string {
+export function buildMenuHTML(data: MenuData, opts?: { isPreview?: boolean }): string {
+  const isPreview = opts?.isPreview === true;
   // Defaults seguros (plan Free = single col, medium img, expanded card, dark)
   const layout = data.theme_layout || 'single';
   const imageSize = data.theme_image_size || 'medium';
@@ -32,7 +33,7 @@ export function buildMenuHTML(data: MenuData): string {
   const showGallery = data.theme_dish_gallery !== false; // default true
 
   const css = buildCSS({ layout, imageSize, cardStyle, font, darkMode, showSearch, showCatIcons, rounded, coverUrl, secondary, showGallery });
-  const js = buildJS({ layout, imageSize, cardStyle, showSearch, showGallery });
+  const js = buildJS({ layout, imageSize, cardStyle, showSearch, showGallery, isPreview });
   const colorRgb = hexToRgbStr(data.color);
   const secondaryRgb = hexToRgbStr(secondary);
 
@@ -66,22 +67,19 @@ export function buildMenuHTML(data: MenuData): string {
   // Mobile bottom nav (Inicio/Buscar/Favoritos/Carrito) — solo visible en mobile via CSS
   html += '<nav class="mobile-bottom-nav" id="mobileBottomNav" aria-label="Navegación móvil">\n';
   html += '  <button class="mbn-item active" data-action="home" aria-label="Inicio">\n';
-  html += '    <span class="mbn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></span>\n';
+  html += '    <span class="mbn-icon-wrap"><span class="mbn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></span></span>\n';
   html += '    <span>Inicio</span>\n';
   html += '  </button>\n';
   html += '  <button class="mbn-item" data-action="search" aria-label="Buscar">\n';
-  html += '    <span class="mbn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></span>\n';
+  html += '    <span class="mbn-icon-wrap"><span class="mbn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></span></span>\n';
   html += '    <span>Buscar</span>\n';
   html += '  </button>\n';
   html += '  <button class="mbn-item" data-action="favorites" aria-label="Favoritos">\n';
-  html += '    <span class="mbn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></span>\n';
-  html += '    <span class="mbn-badge" id="mbnFavCount" style="display:none;">0</span>\n';
+  html += '    <span class="mbn-icon-wrap"><span class="mbn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></span><span class="mbn-badge" id="mbnFavCount" style="display:none;">0</span></span>\n';
   html += '    <span>Favoritos</span>\n';
   html += '  </button>\n';
   html += '  <button class="mbn-item" data-action="cart" aria-label="Carrito">\n';
-  html += '    <span class="mbn-cart-total" id="mbnCartTotal"></span>\n';
-  html += '    <span class="mbn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg></span>\n';
-  html += '    <span class="mbn-badge" id="mbnCartCount" style="display:none;">0</span>\n';
+  html += '    <span class="mbn-icon-wrap"><span class="mbn-cart-total" id="mbnCartTotal"></span><span class="mbn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg></span><span class="mbn-badge" id="mbnCartCount" style="display:none;">0</span></span>\n';
   html += '    <span>Pedido</span>\n';
   html += '  </button>\n';
   html += '</nav>\n';
@@ -90,6 +88,7 @@ export function buildMenuHTML(data: MenuData): string {
   html += 'var SHOW_BRANDING = ' + (!!data.branding_text) + ';\n';
   html += 'var BRANDING_TEXT = ' + JSON.stringify(data.branding_text || '') + ';\n';
   html += 'var THEME = ' + JSON.stringify({ layout, imageSize, cardStyle, showSearch, showGallery }) + ';\n';
+  html += 'var IS_PREVIEW = ' + JSON.stringify(isPreview) + ';\n';
   html += 'document.documentElement.style.setProperty("--accent", "' + data.color + '");\n';
   html += 'document.documentElement.style.setProperty("--accent-rgb", "' + colorRgb + '");\n';
   html += 'document.documentElement.style.setProperty("--secondary", "' + secondary + '");\n';
@@ -336,9 +335,12 @@ function buildCSS(opts: ThemeOpts): string {
     c += '.dish-lightbox-add.added{background:linear-gradient(135deg,#22c55e,#16a34a);box-shadow:0 8px 24px rgba(34,197,94,0.4);}';
   }
 
-  // Cart
+  // Cart floating bar — visible en DESKTOP. En mobile el bottom-nav maneja el carrito.
   c += '.cart{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(140px);width:calc(100% - 32px);max-width:480px;background:linear-gradient(135deg,var(--accent),rgba(var(--accent-rgb),0.9));color:#fff;border-radius:var(--radius);padding:16px 22px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 14px 40px rgba(var(--accent-rgb),0.45),0 4px 12px rgba(0,0,0,0.4);cursor:pointer;transition:transform 0.4s cubic-bezier(0.4,0,0.2,1);z-index:90;border:1px solid rgba(255,255,255,0.18);margin-bottom:env(safe-area-inset-bottom,0px);}';
   c += '.cart.visible{transform:translateX(-50%) translateY(0);}';
+  // En mobile (<640px) ocultamos la barra flotante .cart porque el bottom-nav ya tiene
+  // el tab "Pedido" con badge + total. Evita overlap y duplicación.
+  c += '@media(max-width:639px){.cart{display:none !important;}}';
   c += '.cart-left{display:flex;align-items:center;gap:10px;font-weight:600;font-size:15px;}';
   c += '.cart-count{background:rgba(255,255,255,0.25);padding:3px 10px;border-radius:12px;font-size:13px;font-weight:700;min-width:28px;text-align:center;}';
   c += '.cart-count.pulse{animation:countPulse 0.4s ease;}';
@@ -430,16 +432,20 @@ function buildCSS(opts: ThemeOpts): string {
   }
 
   // ─── Mobile bottom navigation bar (Inicio/Buscar/Favoritos/Carrito) ───
-  c += '.mobile-bottom-nav{position:fixed;bottom:0;left:0;right:0;background:' + (darkMode ? 'rgba(20,20,31,0.96)' : 'rgba(255,255,255,0.96)') + ';backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:1px solid var(--border);display:flex;justify-content:space-around;align-items:center;padding:8px 4px calc(8px + env(safe-area-inset-bottom, 0px));z-index:95;box-shadow:0 -8px 24px rgba(0,0,0,0.15);transform:translateY(110%);transition:transform 0.35s cubic-bezier(0.32,0.72,0,1);}';
+  // z-index:95 = stays below modal (200) and lightbox (300), above content
+  c += '.mobile-bottom-nav{position:fixed;bottom:0;left:0;right:0;background:' + (darkMode ? 'rgba(20,20,31,0.98)' : 'rgba(255,255,255,0.98)') + ';backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:1px solid var(--border);display:flex;justify-content:space-around;align-items:stretch;padding:6px 4px calc(6px + env(safe-area-inset-bottom, 0px));z-index:95;box-shadow:0 -4px 20px rgba(0,0,0,0.18);transform:translateY(110%);transition:transform 0.35s cubic-bezier(0.32,0.72,0,1);}';
   c += '.mobile-bottom-nav.visible{transform:translateY(0);}';
   c += '@media(min-width:640px){.mobile-bottom-nav{display:none;}}';
-  c += '.mbn-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:6px 4px;background:transparent;border:none;color:var(--text-soft);cursor:pointer;font-size:10px;font-weight:600;letter-spacing:0.2px;position:relative;transition:all 0.2s;-webkit-tap-highlight-color:transparent;border-radius:10px;}';
+  c += '.mbn-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:8px 4px calc(4px + env(safe-area-inset-bottom, 0px));background:transparent;border:none;color:var(--text-soft);cursor:pointer;font-size:10.5px;font-weight:600;letter-spacing:0.2px;position:relative;transition:all 0.2s;-webkit-tap-highlight-color:transparent;border-radius:10px;min-height:54px;overflow:visible;}';
   c += '.mbn-item.active{color:var(--accent);}';
   c += '.mbn-item:active{transform:scale(0.92);}';
+  c += '.mbn-icon-wrap{position:relative;width:24px;height:24px;display:flex;align-items:center;justify-content:center;}';
   c += '.mbn-icon{width:22px;height:22px;display:flex;align-items:center;justify-content:center;}';
   c += '.mbn-icon svg{width:22px;height:22px;}';
-  c += '.mbn-badge{position:absolute;top:2px;right:calc(50% - 18px);min-width:16px;height:16px;border-radius:8px;background:var(--accent);color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 4px;box-shadow:0 2px 6px rgba(var(--accent-rgb),0.5);}';
-  c += '.mbn-cart-total{position:absolute;top:-2px;left:50%;transform:translateX(-50%);background:var(--accent);color:#fff;font-size:9.5px;font-weight:800;padding:2px 7px;border-radius:8px;white-space:nowrap;box-shadow:0 3px 8px rgba(var(--accent-rgb),0.5);}';
+  // Badge count (item count) — small circle on top-right of icon
+  c += '.mbn-badge{position:absolute;top:-4px;right:-8px;min-width:16px;height:16px;border-radius:8px;background:var(--accent);color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 4px;box-shadow:0 2px 6px rgba(var(--accent-rgb),0.5);z-index:2;}';
+  // Cart total pill — displayed ABOVE the icon, full price visible (no truncation)
+  c += '.mbn-cart-total{position:absolute;top:-14px;left:50%;transform:translateX(-50%);background:var(--accent);color:#fff;font-size:10px;font-weight:800;padding:3px 8px;border-radius:10px;white-space:nowrap;box-shadow:0 3px 8px rgba(var(--accent-rgb),0.5);z-index:2;max-width:90px;overflow:hidden;text-overflow:ellipsis;}';
   c += '.mbn-cart-total:empty{display:none;}';
   // Add bottom padding so content isn't hidden behind bottom nav
   c += '@media(max-width:639px){.menu-footer{padding-bottom:calc(30px + 80px + env(safe-area-inset-bottom, 0px));}.app{padding-bottom:calc(80px + env(safe-area-inset-bottom, 0px)) !important;}}';
@@ -453,10 +459,12 @@ interface JSOpts {
   cardStyle: 'compact' | 'expanded' | 'minimal';
   showSearch: boolean;
   showGallery: boolean;
+  isPreview?: boolean;
 }
 
 function buildJS(opts: JSOpts): string {
   const { showSearch, showGallery } = opts;
+  const isPreview = opts.isPreview === true;
   let s = '';
   s += 'var cart = [];\n';
   s += 'var searchQuery = "";\n';
@@ -683,16 +691,20 @@ function buildJS(opts: JSOpts): string {
     s += '  setTimeout(function(){if(window.Swiper){new Swiper(swiperDiv,{pagination:{el:pag,clickable:true},navigation:{nextEl:next,prevEl:prev},loop:true,on:{slideChange:function(){count.textContent=(this.realIndex+1)+" / "+imgs.length;}}});}},50);\n';
     s += '  return hero;\n';
     s += '}\n';
-    // Construye las opciones (extras/salsas) del plato — muestra sección siempre (placeholder si no hay)
+    // Construye las opciones (extras/salsas) del plato
+    // En carta pública: si no hay options → NO mostrar nada (UX limpia para cliente)
+    // En preview dashboard: mostrar placeholder para que el dueño sepa que la función existe
     s += 'var currentDishOptionsState={};\n';
     s += 'function buildDishOptions(dish){\n';
     s += '  if(!dish.options||!Array.isArray(dish.options)||dish.options.length===0){\n';
-    s += '    // Placeholder: muestra que la sección existe aunque el plato no tenga opciones configuradas\n';
-    s += '    var empty=document.createElement("div");empty.className="dish-options dish-options-empty";\n';
-    s += '    var title=document.createElement("div");title.className="dish-options-title";title.innerHTML="<svg width=\\\"18\\\" height=\\\"18\\\" viewBox=\\\"0 0 24 24\\\" fill=\\\"none\\\" stroke=\\\"currentColor\\\" stroke-width=\\\"2\\\" stroke-linecap=\\\"round\\\" stroke-linejoin=\\\"round\\\"><path d=\\\"M12 5v14M5 12h14\\\"/></svg>Personaliza tu pedido";\n';
-    s += '    var hint=document.createElement("div");hint.className="dish-options-hint";hint.textContent="Este plato no tiene extras configurados aún. El restaurante puede agregar salsas, toppings y opciones opcionales desde el editor.";\n';
-    s += '    empty.appendChild(title);empty.appendChild(hint);\n';
-    s += '    return empty;\n';
+    s += '    if(typeof IS_PREVIEW!=="undefined"&&IS_PREVIEW){\n';
+    s += '      var empty=document.createElement("div");empty.className="dish-options dish-options-empty";\n';
+    s += '      var title=document.createElement("div");title.className="dish-options-title";title.innerHTML="<svg width=\\\"18\\\" height=\\\"18\\\" viewBox=\\\"0 0 24 24\\\" fill=\\\"none\\\" stroke=\\\"currentColor\\\" stroke-width=\\\"2\\\" stroke-linecap=\\\"round\\\" stroke-linejoin=\\\"round\\\"><path d=\\\"M12 5v14M5 12h14\\\"/></svg>Personaliza tu pedido";\n';
+    s += '      var hint=document.createElement("div");hint.className="dish-options-hint";hint.textContent="Este plato no tiene extras configurados. Agrega salsas, toppings u opciones desde el editor para personalizar el pedido de tus clientes.";\n';
+    s += '      empty.appendChild(title);empty.appendChild(hint);\n';
+    s += '      return empty;\n';
+    s += '    }\n';
+    s += '    return null;\n';
     s += '  }\n';
     s += '  var wrap=document.createElement("div");wrap.className="dish-options";\n';
     s += '  currentDishOptionsState={};\n';
