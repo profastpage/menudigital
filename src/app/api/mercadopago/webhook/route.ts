@@ -7,9 +7,6 @@ import { getPreapproval, preapprovalStatusToPlan } from '@/lib/mercadopago';
  *
  * Recibe notificaciones de MercadoPago (Webhooks API).
  *
- * Documentación:
- * https://www.mercadopago.com/developers/en/docs/your-integrations/notifications/webhooks
- *
  * Body típico:
  * {
  *   "type": "subscription_preapproval",
@@ -17,15 +14,10 @@ import { getPreapproval, preapprovalStatusToPlan } from '@/lib/mercadopago';
  *   "live_mode": true
  * }
  *
- * Otros tipos relevantes:
- * - subscription_preapproval_plan (cambios en el plan, no actuamos)
- * - payment (cada cobro mensual — opcional, podemos usarlo para
- *   detectar fallos de pago)
- *
  * Flujo:
  * 1. Si type === 'subscription_preapproval', fetch del PreApproval
- * 2. Mapear status → plan (authorized=pro, resto=free)
- * 3. Buscar usuario por mp_preapproval_id (o external_reference=userId)
+ * 2. Mapear status → plan (authorized=mantiene plan, resto=free)
+ * 3. Buscar usuario por external_reference o mp_preapproval_id
  * 4. Actualizar profile
  */
 export async function POST(req: NextRequest) {
@@ -41,19 +33,18 @@ export async function POST(req: NextRequest) {
   const type: string = body?.type || body?.topic || '';
   const dataId: string | undefined = body?.data?.id || body?.id || body?.resource;
 
-  // MercadoPago expects 200 OK rápidamente; procesar async si hace falta
-  // (no usamos colas aquí porque Supabase responde en ~50ms)
-
   console.log('[MP webhook] type:', type, 'id:', dataId);
 
   if (type === 'subscription_preapproval' && dataId) {
     try {
       const info = await getPreapproval(dataId);
-      const plan = preapprovalStatusToPlan(info.status);
+      const { plan, userId: userIdFromRef } = preapprovalStatusToPlan(
+        info.status,
+        info.externalReference
+      );
 
-      // Buscar el usuario por preapproval_id (más fiable) o external_reference
       const supabase = await createClient();
-      let userId: string | undefined = info.externalReference;
+      let userId: string | undefined = userIdFromRef || undefined;
 
       if (!userId) {
         const { data: existing } = await supabase
@@ -73,6 +64,9 @@ export async function POST(req: NextRequest) {
       let currentPeriodEnd: string | null = null;
       if (info.nextPaymentDate) {
         currentPeriodEnd = new Date(info.nextPaymentDate).toISOString();
+      } else if (info.status === 'authorized') {
+        // Si no hay fecha próxima, asumir +1 mes
+        currentPeriodEnd = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
       }
 
       await supabase
@@ -84,19 +78,17 @@ export async function POST(req: NextRequest) {
           current_period_end: currentPeriodEnd,
         })
         .eq('id', userId);
+
+      console.log(`[MP webhook] ✅ Usuario ${userId} → plan=${plan} status=${info.status}`);
     } catch (err) {
       console.error(
         '[MP webhook] error procesando preapproval',
         dataId,
         err
       );
-      // Devolver 200 para que MP no reintente infinitamente
-      // (los errores de red sí conviene reintentar)
     }
   }
 
-  // `payment` lo usamos solo para log — el status del preapproval
-  // ya refleja si el pago falló (pasará a paused/cancelled)
   if (type === 'payment' && dataId) {
     console.log('[MP webhook] payment event (no-op):', dataId);
   }

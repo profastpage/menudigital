@@ -1,12 +1,12 @@
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
-import { PLANS } from '@/lib/plans';
+import { PLANS, type PlanId } from '@/lib/plans';
 import { BillingClient } from './billing-client';
 
 export default async function BillingPage({
   searchParams,
 }: {
-  searchParams: Promise<{ success?: string; canceled?: string }>;
+  searchParams: Promise<{ success?: string; canceled?: string; plan?: string }>;
 }) {
   const supabase = await createClient();
   const {
@@ -35,7 +35,7 @@ export default async function BillingPage({
 
   const params = await searchParams;
 
-  const plan = PLANS[profile?.plan || 'free'];
+  const plan = PLANS[(profile?.plan as PlanId) || 'free'];
 
   return (
     <BillingClient
@@ -43,7 +43,7 @@ export default async function BillingPage({
       plan={plan}
       isSuperAdmin={profile?.is_super_admin === true}
       profile={{
-        plan: profile?.plan || 'free',
+        plan: (profile?.plan as PlanId) || 'free',
         email: profile?.email || user.email || '',
         currentPeriodEnd: profile?.current_period_end || null,
         mpStatus: profile?.mp_status || null,

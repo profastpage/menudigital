@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { PLANS } from '@/lib/plans';
+import { PLANS, type PlanId } from '@/lib/plans';
 
 /**
  * POST /api/bg-removal/use
@@ -34,18 +34,27 @@ export async function POST() {
     .eq('id', user.id)
     .single();
 
-  const planId = (profile?.plan as 'free' | 'pro') || 'free';
-  const plan = PLANS[planId];
+  const planId = (profile?.plan as PlanId) || 'free';
+  const plan = PLANS[planId] || PLANS.free;
 
   if (!plan.limits.hasBgRemoval) {
     return NextResponse.json(
       {
         error:
-          'Tu plan no incluye "Quitar fondo". Upgrade a Pro para usar esta función.',
+          'Tu plan no incluye "Quitar fondo". Upgrade a Pro o superior para usar esta función.',
         upgradeRequired: true,
       },
       { status: 403 }
     );
+  }
+
+  // Plan Full = ilimitado, no verifica cuota
+  if (plan.limits.bgRemovalCredits === -1) {
+    return NextResponse.json({
+      used: 0,
+      limit: -1,
+      remaining: -1,
+    });
   }
 
   // Verificar cuota antes de incrementar

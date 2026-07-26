@@ -134,7 +134,14 @@ export async function PUT(req: NextRequest) {
         .select('plan')
         .eq('id', userId)
         .single();
-      const newPlan = targetProfile?.plan === 'pro' ? 'free' : 'pro';
+      // Cycle through plans: free → pro → premium → full → free
+      const cycle: Record<string, string> = {
+        free: 'pro',
+        pro: 'premium',
+        premium: 'full',
+        full: 'free',
+      };
+      const newPlan = cycle[targetProfile?.plan || 'free'] || 'free';
       const { error } = await supabase
         .from('profiles')
         .update({
@@ -147,6 +154,26 @@ export async function PUT(req: NextRequest) {
         .eq('id', userId);
       if (error) return NextResponse.json({ error: error.message }, { status: 500 });
       return NextResponse.json({ success: true, newPlan });
+    }
+
+    case 'set_plan': {
+      // Set specific plan: body.plan = 'free' | 'pro' | 'premium' | 'full'
+      const plan = body.plan;
+      if (!['free', 'pro', 'premium', 'full'].includes(plan)) {
+        return NextResponse.json({ error: 'Plan inválido' }, { status: 400 });
+      }
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          plan,
+          current_period_end:
+            plan === 'free'
+              ? null
+              : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        })
+        .eq('id', userId);
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ success: true, newPlan: plan });
     }
 
     case 'toggle_super_admin': {
@@ -249,6 +276,14 @@ async function getStatsFallback(supabase: Awaited<ReturnType<typeof createClient
     .from('profiles')
     .select('*', { count: 'exact', head: true })
     .eq('plan', 'pro');
+  const { count: premiumUsers } = await supabase
+    .from('profiles')
+    .select('*', { count: 'exact', head: true })
+    .eq('plan', 'premium');
+  const { count: fullUsers } = await supabase
+    .from('profiles')
+    .select('*', { count: 'exact', head: true })
+    .eq('plan', 'full');
   const { count: totalMenus } = await supabase
     .from('menus')
     .select('*', { count: 'exact', head: true });
@@ -278,7 +313,9 @@ async function getStatsFallback(supabase: Awaited<ReturnType<typeof createClient
     stats: {
       total_users: totalUsers || 0,
       pro_users: proUsers || 0,
-      free_users: (totalUsers || 0) - (proUsers || 0),
+      premium_users: premiumUsers || 0,
+      full_users: fullUsers || 0,
+      free_users: (totalUsers || 0) - (proUsers || 0) - (premiumUsers || 0) - (fullUsers || 0),
       total_menus: totalMenus || 0,
       published_menus: publishedMenus || 0,
       total_dishes: totalDishes || 0,
@@ -290,8 +327,8 @@ async function getStatsFallback(supabase: Awaited<ReturnType<typeof createClient
       active_users: totalUsers || 0,
       banned_users: 0,
       super_admins: 0,
-      revenue_estimate_pen: (proUsers || 0) * 35,
-      revenue_estimate_usd: (proUsers || 0) * 9,
+      revenue_estimate_pen: (proUsers || 0) * 35 + (premiumUsers || 0) * 99 + (fullUsers || 0) * 199,
+      revenue_estimate_usd: (proUsers || 0) * 9 + (premiumUsers || 0) * 26 + (fullUsers || 0) * 52,
       top_menus_by_views: [],
     },
   });

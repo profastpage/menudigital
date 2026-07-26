@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { PLANS } from '@/lib/plans';
+import { PLANS, type PlanId } from '@/lib/plans';
 
 /**
  * GET /api/bg-removal/quota
@@ -28,8 +28,8 @@ export async function GET() {
     .eq('id', user.id)
     .single();
 
-  const planId = (profile?.plan as 'free' | 'pro') || 'free';
-  const plan = PLANS[planId];
+  const planId = (profile?.plan as PlanId) || 'free';
+  const plan = PLANS[planId] || PLANS.free;
 
   if (!plan.limits.hasBgRemoval) {
     return NextResponse.json({
@@ -37,6 +37,17 @@ export async function GET() {
       used: 0,
       limit: 0,
       remaining: 0,
+      resetAt: null,
+    });
+  }
+
+  // Plan Full = ilimitado
+  if (plan.limits.bgRemovalCredits === -1) {
+    return NextResponse.json({
+      hasFeature: true,
+      used: 0,
+      limit: -1,
+      remaining: -1,
       resetAt: null,
     });
   }

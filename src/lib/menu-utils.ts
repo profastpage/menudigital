@@ -84,7 +84,7 @@ export interface ProfileData {
   email: string;
   full_name: string | null;
   avatar_url: string | null;
-  plan: 'free' | 'pro';
+  plan: 'free' | 'pro' | 'premium' | 'full';
   mp_preapproval_id: string | null;
   mp_status: string | null;
   current_period_end: string | null;

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { PLANS } from '@/lib/plans';
+import { PLANS, type PlanId } from '@/lib/plans';
 import sharp from 'sharp';
 import removeBackground from '@imgly/background-removal-node';
 
@@ -43,39 +43,55 @@ export async function POST(req: NextRequest) {
     .eq('id', user.id)
     .single();
 
-  const planId = (profile?.plan as 'free' | 'pro') || 'free';
-  const plan = PLANS[planId];
+  const planId = (profile?.plan as PlanId) || 'free';
+  const plan = PLANS[planId] || PLANS.free;
 
   if (!plan.limits.hasBgRemoval) {
     return NextResponse.json(
       {
         error:
-          'Tu plan no incluye "Quitar fondo". Upgrade a Pro para usar esta función.',
+          'Tu plan no incluye "Quitar fondo". Upgrade a Pro o superior para usar esta función.',
         upgradeRequired: true,
       },
       { status: 403 }
     );
   }
 
-  // 2. Verificar cuota antes de procesar
-  const { data: quotaData, error: quotaError } = await supabase.rpc(
-    'get_bg_removals_quota',
-    {
-      user_uuid: user.id,
-      monthly_limit: plan.limits.bgRemovalCredits,
-    }
-  );
-
-  if (quotaError) {
-    console.error('[bg-removal/process] quota check error:', quotaError);
+  // Plan Full = ilimitado
+  if (plan.limits.bgRemovalCredits === -1) {
+    // Sin verificación de cuota — continúa directo
+  } else if (plan.limits.bgRemovalCredits === 0) {
     return NextResponse.json(
-      { error: 'Error verificando cuota' },
-      { status: 500 }
+      {
+        error: 'Tu plan no incluye créditos de "Quitar fondo".',
+        upgradeRequired: true,
+      },
+      { status: 403 }
     );
   }
 
-  const quota = (quotaData || {}) as { remaining: number; used: number };
-  if ((quota.remaining ?? 0) <= 0) {
+  // 2. Verificar cuota antes de procesar (skip si es ilimitado)
+  let quota = { remaining: 999999, used: 0 };
+  if (plan.limits.bgRemovalCredits !== -1) {
+    const { data: quotaData, error: quotaError } = await supabase.rpc(
+      'get_bg_removals_quota',
+      {
+        user_uuid: user.id,
+        monthly_limit: plan.limits.bgRemovalCredits,
+      }
+    );
+
+    if (quotaError) {
+      console.error('[bg-removal/process] quota check error:', quotaError);
+      return NextResponse.json(
+        { error: 'Error verificando cuota' },
+        { status: 500 }
+      );
+    }
+
+    quota = (quotaData || {}) as { remaining: number; used: number };
+  }
+  if ((quota.remaining ?? 0) <= 0 && plan.limits.bgRemovalCredits !== -1) {
     return NextResponse.json(
       {
         error:
@@ -230,13 +246,13 @@ export async function POST(req: NextRequest) {
       // El contador puede quedar inconsistente pero el usuario recibió su imagen.
     }
 
-    const used = (newUsed as number) ?? quota.used + 1;
+    const used = plan.limits.bgRemovalCredits === -1 ? 0 : ((newUsed as number) ?? quota.used + 1);
     return NextResponse.json({
       url: publicUrlData.publicUrl,
       quota: {
         used,
         limit: plan.limits.bgRemovalCredits,
-        remaining: Math.max(plan.limits.bgRemovalCredits - used, 0),
+        remaining: plan.limits.bgRemovalCredits === -1 ? -1 : Math.max(plan.limits.bgRemovalCredits - used, 0),
       },
     });
   } catch (err) {

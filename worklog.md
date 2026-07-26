@@ -412,3 +412,128 @@ Stage Summary:
   * Test: scripts/test-carta-style.ts
   * Sample HTMLs: download/test-carta-carta-carousel.html, download/test-carta-carta-rappi-list.html, download/test-carta-carta-carousel-autoscroll.html
   * Screenshots: download/carta-carousel-1-top.png, carta-carousel-2-categories.png, carta-carousel-lightbox.png, carta-rappi-list.png, carta-autoscroll-state1.png, carta-autoscroll-state2.png
+
+---
+Task ID: premium-plan-logistics-system
+Agent: main (Super Z)
+Task: Crear sistema Premium/Full con logística interna completa de restaurante: 4 planes (Free/Pro/Premium S/99/Full S/199), módulos de Mesas, Comandas, Cocina Display, Inventario con recetas automáticas, voucher printing 1-click. Todo funcional con Supabase, pago con MercadoPago.
+
+Work Log:
+- SQL migration: supabase/add-premium-logistics.sql (idempotente, ~330 líneas)
+  * Extendido enum user_plan con 'premium' y 'full'
+  * 11 tablas nuevas: branches, tables, waiters, orders, order_items, order_status_history,
+    inventory_items, product_recipes, inventory_movements, voucher_prints
+  * 4 enums nuevos: table_status, order_status, order_type, order_item_status, inventory_unit, movement_type
+  * RLS habilitado en todas las tablas (policy por owner_id)
+  * Triggers updated_at en 7 tablas
+  * Funciones SQL: get_next_order_number(), get_next_voucher_number(), consume_inventory_for_order()
+  * Trigger automático: al facturar comanda, descuenta inventario según recetas
+- plans.ts actualizado: 4 tiers (free/pro/premium S/99/full S/199) con límites diferenciados
+  * Pro: 35/mes, 30 bg-removal, menús ilimitados
+  * Premium: 99/mes, 100 bg-removal, mesas (50), mozos (20), comandas, cocina display, inventario+recetas
+  * Full: 199/mes, bg-removal ilimitado, multi-sucursal, voucher printing, reportes
+  * Nuevos helpers: hasFeature(), isPlanAtLeast(), PLAN_ORDER
+- mercadopago.ts actualizado:
+  * external_reference ahora codifica "userId:planId" para que webhook sepa a qué plan ascender
+  * createPreapproval() recibe planId en input
+  * preapprovalStatusToPlan() devuelve { plan, userId } en vez de solo plan
+- /api/mercadopago/checkout actualizado:
+  * Acepta body { planId: 'pro' | 'premium' | 'full' } (default 'pro' para compat)
+  * Crea suscripción con el monto correcto del plan
+- /api/mercadopago/webhook actualizado:
+  * Parsea external_reference "userId:planId" para mapear al plan correcto
+  * Compat hacia atrás: si external_reference no tiene planId, default 'pro'
+- billing-client.tsx completamente reescrito:
+  * Grid de 4 planes con colores diferenciados (Free gris, Pro dorado, Premium morado, Full rojo)
+  * Botones "Subir a X" solo para upgrades, "Plan inferior" disabled para downgrades
+  * Tabla comparativa detallada con secciones (Logística interna, Multi-sucursal y voucher)
+  * FAQ actualizada con preguntas sobre cambio de plan y funciones bloqueadas
+- landing pricing.tsx reescrito con 4 planes + 2 cards highlight (Premium/Full)
+- dashboard-shell.tsx actualizado:
+  * NAV_ITEMS expandido: +Mesas, +Comandas, +Cocina, +Inventario (todas con premium:true)
+  * Candados visuales (Lock icon) para features bloqueadas según plan
+  * Badges de plan con colores dinámicos (no más hardcoded 'pro')
+  * Bottom nav mobile adaptativa: muestra Comandas+Cocina para premium, Analíticas para free
+- PremiumGate component (src/components/dashboard/premium-gate.tsx):
+  * Pantalla de upgrade con icono, precio, features, CTA
+  * checkPremiumAccess(userPlan, requiredPlan) helper
+- APIs nuevos (12 rutas):
+  * /api/mesas (GET, POST) + /api/mesas/[id] (PATCH, DELETE)
+  * /api/waiters (GET, POST) + /api/waiters/[id] (PATCH, DELETE)
+  * /api/comandas (GET, POST) + /api/comandas/[id] (GET, DELETE)
+  * /api/comandas/[id]/status (PATCH con validación de transiciones)
+  * /api/comandas/[id]/items (POST) + /api/comandas/[id]/items/[itemId] (PATCH, DELETE)
+  * /api/inventario (GET, POST) + /api/inventario/[id] (GET, PATCH, DELETE)
+  * /api/inventario/[id]/movements (POST con cálculo de delta según tipo)
+  * /api/recetas (GET, POST) + /api/recetas/[id] (PATCH, DELETE)
+  * /api/vouchers/[orderId] (GET — devuelve HTML imprimible POS 80mm/A4/A5)
+- Módulo Mesas (dashboard/mesas/):
+  * Vista grid de mesas con colores por estado (libre/ocupada/reservada/inactiva)
+  * Stats cards: total, libres, ocupadas, reservadas
+  * Modal crear mesa (número, nombre, capacidad, ubicación)
+  * Selector de estado inline + delete con hover
+  * Verificación de límite según plan (maxTables 50 para premium, -1 para full)
+- Módulo Comandas (dashboard/comandas/):
+  * Vista de cards con filtro por estado (todas/borrador/enviada/.../facturada)
+  * Modal nueva comanda con menú interactivo (categorías + platos) y carrito
+  * Selección de mesa (solo libres/reservadas), mozo, comensales, cliente
+  * Modal detalle con flujo de estados (botones siguen STATUS_FLOW válido)
+  * Botón "Imprimir voucher" visible solo si plan.limits.hasVoucherPrinting
+  * Cancelar comanda libera mesa automáticamente
+- Módulo Cocina Display (dashboard/cocina/):
+  * Vista kanban 3 columnas: Por iniciar (enviadas) / En preparación / Listas
+  * Auto-refresh cada 15s (toggle on/off)
+  * Sistema de urgencia por tiempo (>10m warning, >20m critical con !URGENTE!)
+  * Items marcables individualmente como listos (checkbox verde)
+  * Botón "avanzar estado" en cada card
+  * Muestra notas del pedido y notas por item
+- Módulo Inventario (dashboard/inventario/):
+  * Tabla con todos los insumos + alerta stock bajo destacada
+  * Stats: total insumos + count de stock bajo
+  * Modal crear insumo (nombre, SKU, unidad, stock actual/mín/máx, costo, proveedor, categoría)
+  * Modal movimiento (entrada/salida/ajuste/merma) con cálculo automático de delta
+  * Modal Recetas: asociar platos del menú con insumos + cantidad por plato
+  * Verificación plan.limits.hasRecipes para mostrar módulo recetas
+- Voucher printing (plan Full):
+  * GET /api/vouchers/[orderId]?format=pos_80mm devuelve HTML imprimible
+  * 3 formatos: POS 80mm (320px, monoespaciado), A4, A5
+  * Auto-print con window.print() tras 500ms
+  * Incluye logo restaurante, datos comanda, items con notas, totales, voucher number
+  * Registra cada impresión en voucher_prints con voucher_number incremental
+- Bug fixes:
+  * TYPE error en comandas/[id]/status: STATUS_TIMESTAMPS permitía null pero tipo era Record<string,string> → cambiado a Record<string,string|null>
+  * bg-removal/process: agregado soporte para plan.limits.bgRemovalCredits === -1 (ilimitado en Full)
+  * bg-removal/use y bg-removal/quota: same fix para ilimitado
+  * admin/route.ts toggle_plan: ahora cicla free→pro→premium→full→free en vez de solo free/pro
+  * admin/route.ts: agregada acción 'set_plan' para asignar plan específico
+  * admin fallback stats: agrega premium_users, full_users, revenue real con 3 planes
+- TypeScript: 0 errores en src/ (verificado con tsc --noEmit)
+- Build: ✓ Compiled successfully en 12.9s
+- 27 rutas nuevas generadas (4 dashboard + 12 API + multiplicadas por [id])
+
+Stage Summary:
+- ✅ PLAN FREE (S/0): Menú digital básico, igual que antes
+- ✅ PLAN PRO (S/35/mes): Todo lo anterior, igual que antes
+- ✅ PLAN PREMIUM (S/99/mes): PRO + logística interna completa
+  * Mesas (50) con estados visuales
+  * Mozos (20) con asignación a comandas
+  * Comandas con flujo: borrador → enviada → en_preparacion → lista → entregada → facturada
+  * Cocina Display en tiempo real (auto-refresh 15s, urgencia por tiempo)
+  * Inventario de insumos con stock mín/máx + alertas
+  * Recetas plato→insumo (descuento automático al facturar)
+- ✅ PLAN FULL (S/199/mes): PREMIUM + multi-sucursal + voucher printing
+  * Voucher HTML imprimible (POS 80mm / A4 / A5) con auto-print
+  * Multi-sucursal ilimitada (esquema branch_id en todas las tablas)
+  * Quitar fondo ilimitado
+  * Reportes avanzados (próximo)
+- ✅ Feature gating: todos los módulos visibles pero bloqueados con candado para planes inferiores
+- ✅ PremiumGate component reutilizable con CTA claro
+- ✅ MercadoPago: soporta suscripción a cualquier plan vía external_reference "userId:planId"
+- ✅ Webhook: mapea correctamente authorized→plan del external_reference, resto→free
+- ⚠️ USER MUST RUN: `supabase/add-premium-logistics.sql` en Supabase SQL Editor para crear las 11 tablas + extender enum user_plan
+- Artifacts:
+  * SQL: /home/z/my-project/supabase/add-premium-logistics.sql + copia en download/
+  * Code: src/lib/plans.ts (4 tiers), src/lib/mercadopago.ts (multi-plan), src/components/dashboard/premium-gate.tsx (nuevo), src/components/dashboard/dashboard-shell.tsx (nav + candados), src/components/landing/pricing.tsx (4 planes), src/app/dashboard/billing/billing-client.tsx (4 planes + comparativa), src/app/dashboard/billing/page.tsx
+  * APIs: 12 rutas nuevas en src/app/api/{mesas,waiters,comandas,inventario,recetas,vouchers}/
+  * Pages: 4 dashboards nuevos en src/app/dashboard/{mesas,comandas,cocina,inventario}/
+  * Bug fixes: bg-removal routes (ilimitado), admin route (cycle 4 planes)

@@ -16,14 +16,22 @@ import {
   Menu as MenuIcon,
   X,
   HelpCircle,
+  Utensils,
+  ClipboardList,
+  ChefHat,
+  Package,
+  Lock,
 } from 'lucide-react';
 import type { Plan } from '@/lib/plans';
+import { isPlanAtLeast, type PlanId } from '@/lib/plans';
 
 interface NavItem {
   href: string;
   label: string;
   icon: typeof LayoutDashboard;
   pro?: boolean;
+  premium?: boolean; // requiere Premium o superior
+  full?: boolean; // requiere Full
   superAdmin?: boolean;
 }
 
@@ -32,6 +40,10 @@ const NAV_ITEMS: NavItem[] = [
   { href: '/dashboard/guia', label: 'Guía', icon: HelpCircle },
   { href: '/dashboard/analytics', label: 'Analíticas', icon: BarChart3, pro: true },
   { href: '/dashboard/domains', label: 'Dominios', icon: Globe, pro: true },
+  { href: '/dashboard/mesas', label: 'Mesas', icon: Utensils, premium: true },
+  { href: '/dashboard/comandas', label: 'Comandas', icon: ClipboardList, premium: true },
+  { href: '/dashboard/cocina', label: 'Cocina', icon: ChefHat, premium: true },
+  { href: '/dashboard/inventario', label: 'Inventario', icon: Package, premium: true },
   { href: '/dashboard/billing', label: 'Planes', icon: CreditCard },
 ];
 
@@ -72,17 +84,32 @@ export function DashboardShell({ user, plan, isSuperAdmin = false, children }: P
       ? 'text-white/50 hover:bg-white/5'
       : 'text-white/60 hover:text-white hover:bg-white/5';
 
+    // ¿Está bloqueado?
+    let locked = false;
+    let lockReason = '';
+    if (item.premium && !isPlanAtLeast(plan.id, 'premium' as PlanId)) {
+      locked = true;
+      lockReason = 'Requiere plan Premium';
+    } else if (item.full && !isPlanAtLeast(plan.id, 'full' as PlanId)) {
+      locked = true;
+      lockReason = 'Requiere plan Full';
+    }
+
     return (
       <Link
         key={item.href}
         href={item.href}
         prefetch={true}
         onClick={() => mobile && setDrawerOpen(false)}
-        className={`${base} ${active ? activeCls : idleCls}`}
+        className={`${base} ${active ? activeCls : idleCls} ${locked ? 'opacity-60' : ''}`}
+        title={locked ? lockReason : item.label}
       >
         <item.icon className={mobile ? 'w-5 h-5' : 'w-4 h-4'} />
         <span className="flex-1 min-w-0 truncate">{mobile ? item.label.split(' ')[0] : item.label}</span>
-        {!mobile && item.pro && (
+        {!mobile && locked && (
+          <Lock className="w-3 h-3 text-amber-400/80 ml-auto flex-shrink-0" />
+        )}
+        {!mobile && !locked && item.pro && (
           <Crown className="w-3 h-3 text-[#d4af37] ml-auto flex-shrink-0" />
         )}
       </Link>
@@ -113,10 +140,17 @@ export function DashboardShell({ user, plan, isSuperAdmin = false, children }: P
         <div className="text-sm text-white/80 truncate">{user.email}</div>
         <span
           className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold ${
-            plan.id === 'pro'
-              ? 'bg-[#d4af37]/20 text-[#d4af37] border border-[#d4af37]/40'
-              : 'bg-white/5 text-white/60'
+            plan.id === 'free' ? 'bg-white/5 text-white/60' : ''
           }`}
+          style={
+            plan.id !== 'free'
+              ? {
+                  background: `${plan.color}20`,
+                  color: plan.color,
+                  border: `1px solid ${plan.color}40`,
+                }
+              : undefined
+          }
         >
           {plan.name}
         </span>
@@ -238,10 +272,16 @@ export function DashboardShell({ user, plan, isSuperAdmin = false, children }: P
             <div className="flex items-center gap-2">
               <span
                 className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
-                  plan.id === 'pro'
-                    ? 'bg-[#d4af37]/20 text-[#d4af37]'
-                    : 'bg-white/5 text-white/60'
+                  plan.id === 'free' ? 'bg-white/5 text-white/60' : ''
                 }`}
+                style={
+                  plan.id !== 'free'
+                    ? {
+                        background: `${plan.color}20`,
+                        color: plan.color,
+                      }
+                    : undefined
+                }
               >
                 {plan.name}
               </span>
@@ -265,22 +305,39 @@ export function DashboardShell({ user, plan, isSuperAdmin = false, children }: P
         {/* ───────── Bottom nav mobile (fija) ───────── */}
         <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#0a0a14]/95 backdrop-blur border-t border-white/10 safe-bottom">
           <div className="grid grid-cols-5 gap-1 px-2 py-1.5">
-            {NAV_ITEMS.slice(0, 4).map((item) => {
-              const active = isActive(item.href);
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  prefetch={true}
-                  className={`flex flex-col items-center gap-0.5 py-1.5 rounded-lg text-[10px] ${
-                    active ? 'bg-white/5 text-white font-medium' : 'text-white/50'
-                  }`}
-                >
-                  <item.icon className="w-5 h-5" />
-                  {item.label.split(' ')[0]}
-                </Link>
-              );
-            })}
+            {/* Items relevantes según plan */}
+            {(() => {
+              const isPremium = isPlanAtLeast(plan.id, 'premium' as PlanId);
+              const mobileItems = isPremium
+                ? [
+                    NAV_ITEMS[0], // Mis menús
+                    NAV_ITEMS.find(i => i.href === '/dashboard/comandas')!,
+                    NAV_ITEMS.find(i => i.href === '/dashboard/cocina')!,
+                    NAV_ITEMS.find(i => i.href === '/dashboard/billing')!,
+                  ]
+                : [
+                    NAV_ITEMS[0], // Mis menús
+                    NAV_ITEMS.find(i => i.href === '/dashboard/guia')!,
+                    NAV_ITEMS.find(i => i.href === '/dashboard/analytics')!,
+                    NAV_ITEMS.find(i => i.href === '/dashboard/billing')!,
+                  ];
+              return mobileItems.map((item) => {
+                const active = isActive(item.href);
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    prefetch={true}
+                    className={`flex flex-col items-center gap-0.5 py-1.5 rounded-lg text-[10px] ${
+                      active ? 'bg-white/5 text-white font-medium' : 'text-white/50'
+                    }`}
+                  >
+                    <item.icon className="w-5 h-5" />
+                    {item.label.split(' ')[0]}
+                  </Link>
+                );
+              });
+            })()}
             <Link
               href="/"
               prefetch={false}

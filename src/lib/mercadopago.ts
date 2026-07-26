@@ -1,14 +1,8 @@
 import { MercadoPagoConfig, PreApproval } from 'mercadopago';
+import type { PlanId } from './plans';
 
 /**
  * MercadoPago client (lazy-init).
- *
- * Inicializa el cliente solo en el primer acceso para evitar errores
- * durante `next build` (Vercel no expone las env vars de runtime en build).
- *
- * Documentación:
- * - Subscriptions (PreApproval): https://www.mercadopago.com/developers/en/reference/subscriptions/preapproval/_preapproval/post
- * - Webhooks: https://www.mercadopago.com/developers/en/docs/your-integrations/notifications/webhooks
  */
 
 let _client: MercadoPagoConfig | null = null;
@@ -24,10 +18,6 @@ export function getMP(): MercadoPagoConfig {
     );
   }
 
-  // El modo sandbox se controla con el prefijo del access token:
-  //   TEST-xxx  → sandbox
-  //   APP_USR-xxx → producción
-  // MERCADOPAGO_SANDBOX es solo informativo (no se pasa al SDK).
   _client = new MercadoPagoConfig({
     accessToken,
     options: { timeout: 15000 },
@@ -35,7 +25,6 @@ export function getMP(): MercadoPagoConfig {
   return _client;
 }
 
-/** Moneda por defecto — ajusta si vendes en otra región */
 export const MP_CURRENCY = process.env.MERCADOPAGO_CURRENCY_ID || 'PEN';
 
 export interface CreatePreapprovalInput {
@@ -43,14 +32,14 @@ export interface CreatePreapprovalInput {
   reason: string;
   amount: number; // monto mensual
   userId: string; // lo guardamos en external_reference
+  planId: PlanId; // Nuevo: plan a suscribir
   backUrl?: string;
 }
 
 /**
  * Crea una suscripción (PreApproval) en MercadoPago.
- *
- * Devuelve `init_point` — la URL de Checkout Pro a la que se redirige
- * al cliente para que autorice el cobro recurrente.
+ * El planId se guarda en external_reference como "userId:planId"
+ * para que el webhook sepa a qué plan ascender.
  */
 export async function createPreapproval(
   input: CreatePreapprovalInput
@@ -61,10 +50,13 @@ export async function createPreapproval(
   const origin =
     process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
 
+  // Codificar planId en external_reference para el webhook
+  const externalReference = `${input.userId}:${input.planId}`;
+
   const response = await preApproval.create({
     body: {
       reason: input.reason,
-      external_reference: input.userId, // clave para el webhook
+      external_reference: externalReference,
       payer_email: input.payerEmail,
       back_url: input.backUrl || `${origin}/dashboard/billing?success=1`,
       status: 'pending',
@@ -89,7 +81,7 @@ export interface PreapprovalInfo {
   status: string; // authorized | paused | cancelled | pending
   payerEmail?: string;
   nextPaymentDate?: string;
-  externalReference?: string;
+  externalReference?: string; // "userId:planId"
 }
 
 export async function getPreapproval(id: string): Promise<PreapprovalInfo> {
@@ -112,16 +104,44 @@ export async function cancelPreapproval(id: string): Promise<void> {
 }
 
 /**
- * Mapa de estados de MercadoPago → nuestro plan.
+ * Mapa de estados de MercadoPago → plan.
  *
  * Estados posibles del PreApproval:
  * - pending    → el comprador aún no completó el checkout
  * - authorized → suscripción activa (cobra cada mes)
  * - paused     → pausada por el vendedor
  * - cancelled  → cancelada (no se cobra más)
+ *
+ * Si estaba autorizado y deja de estarlo → vuelve a free.
+ * Si está autorizado → conserva el plan indicado en external_reference.
  */
 export function preapprovalStatusToPlan(
-  status: string
-): 'free' | 'pro' {
-  return status === 'authorized' ? 'pro' : 'free';
+  status: string,
+  externalReference?: string
+): { plan: PlanId; userId: string | null } {
+  // Intentar extraer planId del external_reference
+  let planId: PlanId | null = null;
+  let userId: string | null = null;
+
+  if (externalReference) {
+    const parts = externalReference.split(':');
+    if (parts.length >= 2) {
+      userId = parts[0];
+      const p = parts[1] as PlanId;
+      if (['free', 'pro', 'premium', 'full'].includes(p)) {
+        planId = p;
+      }
+    } else {
+      userId = externalReference;
+    }
+  }
+
+  if (status === 'authorized') {
+    // Si está autorizado, mantiene el plan del external_reference.
+    // Fallback a 'pro' si no viene especificado (compat con suscripciones viejas).
+    return { plan: planId || 'pro', userId };
+  }
+
+  // Si no está autorizado (pending, paused, cancelled) → free
+  return { plan: 'free', userId };
 }
