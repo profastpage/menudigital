@@ -972,3 +972,86 @@ Stage Summary:
   - /home/z/my-project/scripts/verify-unsplash-urls.py (verificador)
   - /home/z/my-project/scripts/fix-broken-unsplash-urls.py (fixer)
 - PRÓXIMO PASO: el usuario debe pegar el contenido de seed-demo-account.sql en Supabase SQL Editor y ejecutarlo
+
+---
+Task ID: demo-mozos-org-seed
+Agent: main (Super Z)
+Task: Crear toda la organización de mozos para la cuenta demo (5 restaurantes) en producción real: sucursales, mesas, mozos con PIN/QR, comandas, items, inventario, recetas, vouchers. Todo funcional para validar el flujo completo (cliente escanea QR → ve carta → hace pedido → llega a cocina/mozo).
+
+Work Log:
+- Revisé el schema completo de mozos/mesas/comandas en supabase/add-premium-logistics.sql (líneas 1-581):
+  - Tabla branches (sucursales)
+  - Tabla tables (mesas con estados: libre, ocupada, reservada, inactiva)
+  - Tabla waiters (mozos con PIN, qr_token, branch_id)
+  - Tabla orders (comandas con status flow: borrador → enviada → en_preparacion → lista → entregada → facturada → cancelada)
+  - Tabla order_items (items de comanda con status propio: pendiente → en_preparacion → listo → entregado → cancelado)
+  - Tabla order_status_history (auditoría de cambios de estado)
+  - Tabla inventory_items (insumos con stock)
+  - Tabla product_recipes (receta: plato → insumos)
+  - Tabla inventory_movements (entradas/salidas/ajustes)
+  - Tabla voucher_prints (vouchers impresos)
+  - Function get_next_order_number(), get_next_voucher_number(), consume_inventory_for_order()
+- Revisé también mozos-mesas-migration.sql (tablas branches, tables, waiters con qr_token auto-generado por trigger)
+- Revisé los clientes React de /dashboard/mozos/mozos-client.tsx y /dashboard/mesas/mesas-client.tsx para confirmar qué campos consume el frontend (full_name, document_id, phone, pin, is_active, qr_token, number, name, capacity, status, location)
+- Creé script Python /home/z/my-project/scripts/generate-demo-mozos-seed.py con:
+  - 5 restaurantes definidos con datos realistas:
+    1. Pollería El Dorado Chicken (12 mesas, 5 mozos, 10 insumos, 10 recetas, 5 comandas)
+    2. Chifa Dragón de Oro (10 mesas, 4 mozos, 12 insumos, 13 recetas, 5 comandas)
+    3. Pizzería Bella Napoli (10 mesas, 5 mozos, 14 insumos, 14 recetas, 5 comandas)
+    4. Smash Brothers Burger House (15 mesas, 4 mozos, 13 insumos, 17 recetas, 6 comandas)
+    5. La Mar Cevichería (12 mesas, 4 mozos, 15 insumos, 17 recetas, 6 comandas)
+  - Direcciones reales de Lima (San Borja, Jesús María, Miraflores, Barranco, San Isidro)
+  - Mozos con nombres realistas peruanos + DNI + phone + PIN 4 dígitos + qr_token único
+  - Insumos típicos de cada rubro con stock_current/min/max, cost_per_unit, supplier, category
+  - Recetas que vinculan dishes con inventory_items (ej: "Pollo a la Brasa Entero" → 1 pollo + 1kg papa + 500g carbón)
+  - Comandas en distintos estados para probar TODO el flujo:
+    - borrador (mozo armando)
+    - enviada (recién enviada a cocina)
+    - en_preparacion (cocina cocinando)
+    - lista (lista para servir)
+    - entregada (servida al cliente)
+    - facturada (cuenta cobrada — con voucher)
+  - Cada comanda tiene 2-4 items con notas ("Sin cebolla", "Extra picante", etc.)
+  - Status history completo (cada transición de estado queda registrada)
+  - Movimientos de inventario (entradas por stock inicial de cada insumo)
+  - Vouchers impresos solo para comandas facturadas (formato pos_80mm)
+  - Timestamps realistas con INTERVAL: comanda enviada hace 30min, lista hace 15min, entregada hace 5min, facturada hace 3min
+- Ejecuté el generador: produjo 322KB de SQL / 9798 líneas
+- Verifiqué balance:
+  - 494 INSERTs / 494 ON CONFLICT (100% idempotente)
+  - Por tabla: 102 status_history, 75 order_items, 71 recipes, 64 inventory_items, 64 movements, 59 tables, 27 orders, 22 waiters, 5 branches, 5 vouchers
+  - DO $$ balanceados (2 opens, 2 closes)
+  - 2.8 items por comanda (promedio sano)
+- Commit 9e29783 y push exitoso a GitHub (origin/main sincronizado)
+
+Stage Summary:
+- Cuenta demo completamente poblada para validación end-to-end:
+  - Email: demo@menudigital.pro (plan FULL)
+  - 5 restaurantes con 5 menús distintos (del seed anterior)
+  - 5 sucursales con direcciones reales de Lima
+  - 59 mesas distribuidas por zonas (Salón, Terraza, 2do piso, Barra, Privado)
+  - 22 mozos con PINs y qr_tokens únicos para acceso móvil
+  - 64 insumos típicos de cada rubro con stock y costos
+  - 71 recetas que vinculan platos con insumos
+  - 27 comandas en distintos estados para probar TODO el flujo
+  - 75 items con notas, precios y cantidades
+  - 102 entradas de auditoría (order_status_history)
+  - 5 vouchers impresos para comandas facturadas
+- Flujo completo de validación posible:
+  1. Login como demo@menudigital.pro en /dashboard
+  2. Ver los 5 menús en /dashboard/menus
+  3. Ver las 5 sucursales y 59 mesas en /dashboard/mesas
+  4. Ver los 22 mozos con QRs en /dashboard/mozos (cada QR abre /mozo/[token])
+  5. Ver las 27 comandas en /dashboard/comandas (en distintos estados)
+  6. Ver el inventario y recetas en /dashboard/inventario
+  7. Ver la pantalla de cocina en /dashboard/cocina (comandas en_preparacion)
+  8. Ver vouchers en /dashboard/reportes
+  9. Abrir las cartas públicas en /r/[slug] y hacer pedidos como cliente
+  10. Validar que el pedido llegue al dashboard del mozo y cocina
+- Archivos generados:
+  - /home/z/my-project/supabase/seed-demo-mozos-org.sql (SQL en repo)
+  - /home/z/my-project/download/seed-demo-mozos-org.sql (copia para descarga)
+  - /home/z/my-project/scripts/generate-demo-mozos-seed.py (generador)
+- PRÓXIMO PASO: el usuario debe ejecutar en Supabase SQL Editor:
+  1. seed-demo-account.sql (si no lo ha ejecutado aún)
+  2. seed-demo-mozos-org.sql (este nuevo)
