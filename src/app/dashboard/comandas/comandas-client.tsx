@@ -42,7 +42,7 @@ interface Mesa {
   id: string; number: number; name: string | null; status: string;
 }
 interface Waiter {
-  id: string; full_name: string;
+  id: string; full_name: string; qr_token?: string | null;
 }
 
 interface Props {
@@ -361,6 +361,58 @@ export function ComandasClient({ user, plan, isSuperAdmin, menus }: Props) {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* ───────── Panel móvil de mozos ───────── */}
+      {waiters.length > 0 && (
+        <div className="mt-8 bg-white/5 border border-white/10 rounded-2xl p-4">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <h3 className="text-white font-semibold flex items-center gap-2">
+                <span>📱</span> Panel móvil de mozos
+              </h3>
+              <p className="text-xs text-white/50 mt-0.5">
+                Comparte estos enlaces con tus mozos. Lo abren desde su celular y toman comandas sin login.
+              </p>
+            </div>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {waiters.map(w => {
+              const url = w.qr_token ? `${typeof window !== 'undefined' ? window.location.origin : ''}/mozo/${w.qr_token}` : null;
+              return (
+                <div key={w.id} className="bg-white/5 rounded-xl p-3 flex items-center justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm text-white font-medium truncate">{w.full_name}</div>
+                    <div className="text-[10px] text-white/40 truncate font-mono">
+                      {url || 'Sin token (ejecuta add-waiter-qr-token.sql)'}
+                    </div>
+                  </div>
+                  {url && (
+                    <div className="flex gap-1 flex-shrink-0">
+                      <button
+                        onClick={() => {
+                          navigator.clipboard?.writeText(url);
+                          toast.success('Enlace copiado');
+                        }}
+                        className="px-2 py-1 rounded bg-white/10 text-white/80 text-[10px] hover:bg-white/15"
+                      >
+                        Copiar
+                      </button>
+                      <a
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-2 py-1 rounded bg-[#9d4edd] text-white text-[10px] font-semibold"
+                      >
+                        Abrir
+                      </a>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 

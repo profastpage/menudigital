@@ -231,6 +231,7 @@ export const PLANS: Record<PlanId, Plan> = {
       '🏬 Mesas y mozos ilimitados por sucursal',
       '🖨️ Voucher printing 1-click (POS 80mm / A4 / A5)',
       '📈 Reportes avanzados: ventas por mozo, plato, sucursal, hora',
+      '📱 Panel móvil para mozos (toman comandas desde su celular)',
       '🔄 Transferencia de stock entre sucursales',
       '🔗 Integraciones API (delivery, POS externo)',
       '🎫 Boletas/facturas electrónicas (próximamente)',

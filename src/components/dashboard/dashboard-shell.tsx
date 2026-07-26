@@ -21,6 +21,7 @@ import {
   ChefHat,
   Package,
   Lock,
+  TrendingUp,
 } from 'lucide-react';
 import type { Plan } from '@/lib/plans';
 import { isPlanAtLeast, type PlanId } from '@/lib/plans';
@@ -44,6 +45,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: '/dashboard/comandas', label: 'Comandas', icon: ClipboardList, premium: true },
   { href: '/dashboard/cocina', label: 'Cocina', icon: ChefHat, premium: true },
   { href: '/dashboard/inventario', label: 'Inventario', icon: Package, premium: true },
+  { href: '/dashboard/reportes', label: 'Reportes', icon: TrendingUp, full: true },
   { href: '/dashboard/billing', label: 'Planes', icon: CreditCard },
 ];
 
@@ -308,19 +310,30 @@ export function DashboardShell({ user, plan, isSuperAdmin = false, children }: P
             {/* Items relevantes según plan */}
             {(() => {
               const isPremium = isPlanAtLeast(plan.id, 'premium' as PlanId);
-              const mobileItems = isPremium
-                ? [
-                    NAV_ITEMS[0], // Mis menús
-                    NAV_ITEMS.find(i => i.href === '/dashboard/comandas')!,
-                    NAV_ITEMS.find(i => i.href === '/dashboard/cocina')!,
-                    NAV_ITEMS.find(i => i.href === '/dashboard/billing')!,
-                  ]
-                : [
-                    NAV_ITEMS[0], // Mis menús
-                    NAV_ITEMS.find(i => i.href === '/dashboard/guia')!,
-                    NAV_ITEMS.find(i => i.href === '/dashboard/analytics')!,
-                    NAV_ITEMS.find(i => i.href === '/dashboard/billing')!,
-                  ];
+              const isFull = isPlanAtLeast(plan.id, 'full' as PlanId);
+              let mobileItems: NavItem[];
+              if (isFull) {
+                mobileItems = [
+                  NAV_ITEMS[0], // Mis menús
+                  NAV_ITEMS.find(i => i.href === '/dashboard/comandas')!,
+                  NAV_ITEMS.find(i => i.href === '/dashboard/cocina')!,
+                  NAV_ITEMS.find(i => i.href === '/dashboard/reportes')!,
+                ];
+              } else if (isPremium) {
+                mobileItems = [
+                  NAV_ITEMS[0], // Mis menús
+                  NAV_ITEMS.find(i => i.href === '/dashboard/comandas')!,
+                  NAV_ITEMS.find(i => i.href === '/dashboard/cocina')!,
+                  NAV_ITEMS.find(i => i.href === '/dashboard/billing')!,
+                ];
+              } else {
+                mobileItems = [
+                  NAV_ITEMS[0], // Mis menús
+                  NAV_ITEMS.find(i => i.href === '/dashboard/guia')!,
+                  NAV_ITEMS.find(i => i.href === '/dashboard/analytics')!,
+                  NAV_ITEMS.find(i => i.href === '/dashboard/billing')!,
+                ];
+              }
               return mobileItems.map((item) => {
                 const active = isActive(item.href);
                 return (

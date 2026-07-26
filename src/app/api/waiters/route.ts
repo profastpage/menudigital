@@ -20,7 +20,7 @@ export async function GET() {
 
   const { data, error } = await supabase
     .from('waiters')
-    .select('*')
+    .select('id, full_name, document_id, phone, pin, is_active, qr_token, created_at')
     .eq('owner_id', user.id)
     .order('full_name', { ascending: true });
 

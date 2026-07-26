@@ -567,3 +567,64 @@ Stage Summary:
 - Patrón canónico PostgreSQL 11+ aplicado (RETURNS TRIGGER sin argumentos)
 - Eliminados BEGIN/COMMIT problemáticos
 - Listo para que el usuario re-ejecute el SQL en Supabase SQL Editor
+
+---
+Task ID: full-plan-reports-and-mozo-mobile
+Agent: Super Z (main)
+Task: Agregar Reportes Avanzados (Full) + Vista móvil para mozos (Premium+)
+
+Work Log:
+- Creado API GET /api/reportes con 4 vistas de análisis:
+  * por_mozo: ranking de mozos por ventas, comandas, ticket promedio
+  * por_plato: top platos por cantidad vendida + ingresos
+  * por_sucursal: ventas por sucursal (solo si multi-branch)
+  * por_hora: distribución horaria 0-23 (detecta horas pico)
+  * por_dia: serie diaria para gráfico de tendencia
+  * por_tipo: mesa/para_llevar/delivery
+  * KPIs: total_ventas, num_comandas, ticket_promedio, num_mesas, num_platos
+  * Filtros: from, to, branch_id — default últimos 30 días
+  * Gate: solo hasAdvancedReports (Full)
+- Creada página /dashboard/reportes (reportes-client.tsx):
+  * 5 KPI cards con colores temáticos
+  * 4 tabs: Mozos / Platos / Sucursales / Horas
+  * Gráfico de barras horarias (24 barras, hora pico destacada)
+  * Gráfico de tendencia diaria
+  * Selector de rango: 7d/30d/90d/este mes
+  * Selector de sucursal si multi-branch
+  * PremiumGate para plan < Full
+- Creado API /api/mozo-panel (GET + POST + PATCH):
+  * GET: resuelve waiter por qr_token, valida plan, devuelve mesas + menú + comandas activas
+  * POST: crea comanda desde el celular del mozo (directo a 'enviada')
+  * PATCH: marcar_entregada | cancelar (libera mesa automáticamente)
+  * Auto-refresh cada 20s en el cliente
+- Creada página pública /mozo/[token]/mozo-client.tsx:
+  * Interfaz 100% móvil, dark theme, sin login
+  * 3 vistas: Mesas / Menú / Comandas
+  * Mesas: grid 3-col con dots de color por estado (libre/ocupada/reservada)
+  * Menú: búsqueda + categorías scroll horizontal + lista de platos con imagen
+  * Carrito flotante con total, qty +-, vaciar
+  * Comandas: lista de activas con status color, acciones
+  * Header sticky con avatar mozo + refresh
+- Creada migración supabase/add-waiter-qr-token.sql:
+  * Agrega columna qr_token a waiters (TEXT UNIQUE)
+  * Genera tokens para waiters existentes (formato wt-{uuid})
+  * Trigger trg_waiter_qr_token auto-genera en INSERT
+  * Índice idx_waiters_qr_token
+- Actualizado /api/waiters/route.ts: ahora devuelve qr_token
+- Actualizado comandas-client.tsx: interfaz Waiter incluye qr_token, nuevo bloque "Panel móvil de mozos" muestra enlace /mozo/{token} por cada mozo con botones Copiar y Abrir
+- Actualizado dashboard-shell.tsx:
+  * NAV_ITEMS incluye 'Reportes' gateado a Full con icono TrendingUp
+  * Bottom nav móvil: si es Full muestra Reportes, si es Premium muestra Billing
+- Actualizado plans.ts: feature 'Panel móvil para mozos' agregado a Full
+- Verificación: `npx tsc --noEmit` sin errores en src/. `npx next build` exitoso, todas las rutas nuevas aparecen en manifiesto.
+
+Stage Summary:
+- ✅ Reportes avanzados Full: 4 dimensiones (mozo/plato/sucursal/hora) + KPIs + gráficos
+- ✅ Vista móvil de mozos: /mozo/[token] sin login, auto-refresh 20s
+- ✅ Integración completa: dashboard → /api/mozo-panel → comandas → cocina
+- ⚠️ USER MUST RUN: `supabase/add-waiter-qr-token.sql` para habilitar qr_token en waiters (necesario para /mozo/[token])
+- Artifacts:
+  * SQL: /home/z/my-project/supabase/add-waiter-qr-token.sql
+  * APIs: src/app/api/reportes/route.ts, src/app/api/mozo-panel/route.ts
+  * Pages: src/app/dashboard/reportes/{page,reportes-client}.tsx, src/app/mozo/[token]/{page,mozo-client}.tsx
+  * Updated: dashboard-shell.tsx (nav), comandas-client.tsx (panel mozo bloque), plans.ts (features), api/waiters/route.ts
