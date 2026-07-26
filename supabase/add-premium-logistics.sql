@@ -18,8 +18,9 @@
 --  13. Índices para performance
 --  14. Triggers para updated_at
 -- ============================================================
-
-BEGIN;
+-- NOTA: No usamos BEGIN/COMMIT explícito porque ALTER TYPE ... ADD VALUE
+-- tiene restricciones dentro de bloques transaccionales en algunas versiones
+-- de PostgreSQL. Cada statement es autocommit por defecto en Supabase SQL Editor.
 
 -- ============================================================
 -- 1. Extender enum user_plan
@@ -32,7 +33,7 @@ BEGIN
     WHERE enumlabel = 'premium'
     AND enumtypid = (SELECT oid FROM pg_type WHERE typname = 'user_plan')
   ) THEN
-    ALTER TYPE user_plan ADD VALUE 'premium';
+    ALTER TYPE user_plan ADD VALUE IF NOT EXISTS 'premium';
   END IF;
 
   -- Añadir 'full' si no existe
@@ -41,7 +42,7 @@ BEGIN
     WHERE enumlabel = 'full'
     AND enumtypid = (SELECT oid FROM pg_type WHERE typname = 'user_plan')
   ) THEN
-    ALTER TYPE user_plan ADD VALUE 'full';
+    ALTER TYPE user_plan ADD VALUE IF NOT EXISTS 'full';
   END IF;
 END
 $$;
@@ -451,70 +452,91 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- ============================================================
--- 16. Función: descontar inventario al facturar comanda
+-- 16. Función: descontar inventario al facturar comanda (lógica pura)
 -- ============================================================
 CREATE OR REPLACE FUNCTION consume_inventory_for_order(p_order UUID)
 RETURNS VOID AS $$
 DECLARE
-  item_row RECORD;
-  recipe_row RECORD;
-  current_stock NUMERIC;
+  v_status       order_status;
+  v_owner        UUID;
+  v_branch       UUID;
+  v_order_num    TEXT;
+  item_row       RECORD;
+  recipe_row     RECORD;
 BEGIN
-  -- Solo proceder si la orden está siendo facturada o entregada
-  SELECT status INTO item_row FROM orders WHERE id = p_order;
-  IF item_row.status NOT IN ('facturada', 'entregada') THEN
-    RETURN;
-  END IF;
+  -- Validar que la orden existe y está facturada/entregada
+  SELECT status, owner_id, branch_id, order_number
+    INTO v_status, v_owner, v_branch, v_order_num
+  FROM orders WHERE id = p_order;
 
-  -- Por cada item de la comanda
+  IF NOT FOUND THEN RETURN; END IF;
+  IF v_status NOT IN ('facturada', 'entregada') THEN RETURN; END IF;
+
+  -- Por cada item no cancelado de la comanda
   FOR item_row IN
     SELECT id, menu_item_id, menu_item_name, quantity
     FROM order_items
     WHERE order_id = p_order AND status <> 'cancelado'
   LOOP
-    -- Por cada insumo de la receta
+    -- Por cada insumo de la receta del plato
     FOR recipe_row IN
       SELECT id, inventory_item_id, quantity_per_dish
       FROM product_recipes
-      WHERE owner_id = (SELECT owner_id FROM orders WHERE id = p_order)
+      WHERE owner_id = v_owner
         AND menu_item_id = item_row.menu_item_id
     LOOP
-      -- Descontar stock
+      -- Descontar stock del insumo
       UPDATE inventory_items
-      SET stock_current = stock_current - (recipe_row.quantity_per_dish * item_row.quantity)
-      WHERE id = recipe_row.inventory_item_id;
+        SET stock_current = stock_current - (recipe_row.quantity_per_dish * item_row.quantity)
+        WHERE id = recipe_row.inventory_item_id;
 
-      -- Registrar movimiento
+      -- Registrar movimiento de salida
       INSERT INTO inventory_movements (
         owner_id, branch_id, inventory_item_id, movement_type,
         quantity, unit_cost, reason, related_order_id, created_by
       )
       SELECT
-        o.owner_id, o.branch_id, recipe_row.inventory_item_id, 'salida',
+        v_owner,
+        v_branch,
+        recipe_row.inventory_item_id,
+        'salida'::movement_type,
         -(recipe_row.quantity_per_dish * item_row.quantity),
         ii.cost_per_unit,
-        'Comanda ' || o.order_number || ' — ' || item_row.menu_item_name,
-        p_order, 'system'
-      FROM orders o
-      JOIN inventory_items ii ON ii.id = recipe_row.inventory_item_id
-      WHERE o.id = p_order;
+        'Comanda ' || v_order_num || ' — ' || item_row.menu_item_name,
+        p_order,
+        'system'
+      FROM inventory_items ii
+      WHERE ii.id = recipe_row.inventory_item_id;
     END LOOP;
   END LOOP;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- ============================================================
--- 17. Trigger: descontar inventario automáticamente
+-- 17. Función trigger estándar (RETURNS TRIGGER, sin argumentos)
+--     Esta es la forma canónica — NEW está disponible automáticamente.
+-- ============================================================
+CREATE OR REPLACE FUNCTION consume_inventory_on_invoice()
+RETURNS TRIGGER AS $$
+BEGIN
+  PERFORM consume_inventory_for_order(NEW.id);
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- ============================================================
+-- 18. Trigger: descontar inventario automáticamente (sintaxis canónica)
 -- ============================================================
 DROP TRIGGER IF EXISTS trg_consume_inventory ON orders;
 CREATE TRIGGER trg_consume_inventory
   AFTER UPDATE OF status ON orders
   FOR EACH ROW
-  WHEN (NEW.status IN ('facturada','entregada') AND OLD.status NOT IN ('facturada','entregada'))
-  EXECUTE FUNCTION consume_inventory_for_order(NEW.id);
+  WHEN (NEW.status IN ('facturada','entregada')
+        AND OLD.status NOT IN ('facturada','entregada'))
+  EXECUTE FUNCTION consume_inventory_on_invoice();
 
 -- ============================================================
--- 18. Comentarios informativos
+-- 19. Comentarios informativos
 -- ============================================================
 COMMENT ON TABLE branches IS 'Sucursales — solo plan Full';
 COMMENT ON TABLE tables IS 'Mesas del restaurante — plan Premium+';
@@ -530,7 +552,7 @@ COMMENT ON FUNCTION get_next_order_number IS 'Obtiene #0001, #0002... para coman
 COMMENT ON FUNCTION consume_inventory_for_order IS 'Descuenta insumos automáticamente al facturar';
 
 -- ============================================================
--- 19. Verificación final
+-- 20. Verificación final
 -- ============================================================
 DO $$
 DECLARE
@@ -553,9 +575,7 @@ BEGIN
   RAISE NOTICE '✅ Tabla voucher_prints creada';
   RAISE NOTICE '✅ RLS habilitado en todas las tablas';
   RAISE NOTICE '✅ Triggers updated_at creados';
-  RAISE NOTICE '✅ Funciones get_next_order_number, get_next_voucher_number, consume_inventory_for_order creadas';
+  RAISE NOTICE '✅ Funciones get_next_order_number, get_next_voucher_number, consume_inventory_for_order, consume_inventory_on_invoice creadas';
   RAISE NOTICE '';
   RAISE NOTICE '🎉 Migration completa. Ejecuta también add-carta-style.sql si no lo has hecho.';
 END $$;
-
-COMMIT;

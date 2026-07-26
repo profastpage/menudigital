@@ -537,3 +537,33 @@ Stage Summary:
   * APIs: 12 rutas nuevas en src/app/api/{mesas,waiters,comandas,inventario,recetas,vouchers}/
   * Pages: 4 dashboards nuevos en src/app/dashboard/{mesas,comandas,cocina,inventario}/
   * Bug fixes: bg-removal routes (ilimitado), admin route (cycle 4 planes)
+
+---
+Task ID: fix-sql-trigger
+Agent: Super Z (main)
+Task: Corregir error de sintaxis SQL en add-premium-logistics.sql línea 514 (EXECUTE FUNCTION consume_inventory_for_order(NEW.id))
+
+Work Log:
+- Analizado error: `syntax error at or near "."` en `NEW.id` del trigger
+- Identificada causa raíz: patrón no estándar — función RETURNS VOID invocada desde trigger con argumento NEW.id. PostgreSQL no resolvía correctamente NEW.id en ese contexto, exacerbado por BEGIN/COMMIT envolviendo ALTER TYPE ... ADD VALUE
+- Creado archivo de corrección: supabase/fix-trigger-syntax.sql
+  * Reescribe consume_inventory_for_order(UUID) RETURNS VOID (lógica pura)
+  * Crea nueva función trigger consume_inventory_on_invoice() RETURNS TRIGGER (forma canónica, accede a NEW internamente)
+  * Trigger ejecuta consume_inventory_on_invoice() SIN argumentos
+  * Tipado explícito 'salida'::movement_type para evitar ambigüedad
+  * Variables separadas v_owner, v_branch, v_order_num (mejor que reutilizar item_row)
+- Actualizado add-premium-logistics.sql para que futuras ejecuciones sean correctas:
+  * Eliminado BEGIN; / COMMIT; (causa problemas con ALTER TYPE en transacciones)
+  * ALTER TYPE ... ADD VALUE IF NOT EXISTS (sintaxis más segura)
+  * Migradas secciones 16-18 al patrón estándar de trigger
+  * Renumeradas secciones 19-20 (comentarios y verificación)
+- Estado actual: SQL listo para re-ejecutarse. El usuario debe:
+  1. Ejecutar supabase/fix-trigger-syntax.sql (fix puntual)
+  2. O re-ejecutar supabase/add-premium-logistics.sql completo (ya corregido)
+
+Stage Summary:
+- Causa raíz identificada y documentada
+- Fix aplicado a archivo principal + archivo de corrección separado creado
+- Patrón canónico PostgreSQL 11+ aplicado (RETURNS TRIGGER sin argumentos)
+- Eliminados BEGIN/COMMIT problemáticos
+- Listo para que el usuario re-ejecute el SQL en Supabase SQL Editor
