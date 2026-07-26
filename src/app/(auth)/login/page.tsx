@@ -51,9 +51,14 @@ export default async function LoginPage({
         <div className="relative z-10 flex flex-col justify-center px-20 py-12 text-white">
           {/* Logo */}
           <div className="flex items-center gap-3 mb-10">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#d4af37] to-[#f4d35e] flex items-center justify-center text-2xl font-bold text-[#1a1a2e] shadow-lg shadow-[#d4af37]/30">
-              M
-            </div>
+            <img
+              src="/logo.png"
+              alt="MenuPro"
+              width={48}
+              height={48}
+              className="rounded-xl shadow-lg shadow-[#d4af37]/30"
+              style={{ width: 48, height: 48 }}
+            />
             <span className="text-2xl font-bold tracking-tight">MenuPro</span>
           </div>
 
@@ -157,9 +162,14 @@ export default async function LoginPage({
 
           {/* Mobile logo */}
           <div className="lg:hidden flex items-center gap-3 mb-8 mt-12">
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#d4af37] to-[#f4d35e] flex items-center justify-center text-xl font-bold text-[#1a1a2e]">
-              M
-            </div>
+            <img
+              src="/logo.png"
+              alt="MenuPro"
+              width={40}
+              height={40}
+              className="rounded-lg"
+              style={{ width: 40, height: 40 }}
+            />
             <span className="text-xl font-bold text-white">MenuPro</span>
           </div>
 

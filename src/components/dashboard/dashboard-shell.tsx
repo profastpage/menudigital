@@ -17,6 +17,7 @@ import {
   X,
   HelpCircle,
   Utensils,
+  UtensilsCrossed,
   ClipboardList,
   ChefHat,
   Package,
@@ -43,6 +44,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: '/dashboard/analytics', label: 'Analíticas', icon: BarChart3, pro: true },
   { href: '/dashboard/domains', label: 'Dominios', icon: Globe, pro: true },
   { href: '/dashboard/mesas', label: 'Mesas', icon: Utensils, premium: true },
+  { href: '/dashboard/mozos', label: 'Mozos', icon: UtensilsCrossed, premium: true },
   { href: '/dashboard/comandas', label: 'Comandas', icon: ClipboardList, premium: true },
   { href: '/dashboard/cocina', label: 'Cocina', icon: ChefHat, premium: true },
   { href: '/dashboard/inventario', label: 'Inventario', icon: Package, premium: true },
@@ -178,9 +180,16 @@ export function DashboardShell({ user, plan, isSuperAdmin = false, children }: P
           <Link
             href="/"
             prefetch={false}
-            className="w-9 h-9 rounded-lg bg-gradient-to-br from-[#d4af37] to-[#f4d35e] flex items-center justify-center text-lg font-bold text-[#1a1a2e] hover:opacity-90 transition"
+            className="hover:opacity-90 transition"
           >
-            M
+            <img
+              src="/logo.png"
+              alt="MenuPro"
+              width={36}
+              height={36}
+              className="rounded-lg"
+              style={{ width: 36, height: 36 }}
+            />
           </Link>
           <Link
             href="/"
@@ -241,9 +250,14 @@ export function DashboardShell({ user, plan, isSuperAdmin = false, children }: P
                 onClick={() => setDrawerOpen(false)}
                 className="flex items-center gap-3"
               >
-                <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-[#d4af37] to-[#f4d35e] flex items-center justify-center text-lg font-bold text-[#1a1a2e]">
-                  M
-                </div>
+                <img
+                  src="/logo.png"
+                  alt="MenuPro"
+                  width={36}
+                  height={36}
+                  className="rounded-lg"
+                  style={{ width: 36, height: 36 }}
+                />
                 <span className="font-bold">MenuPro</span>
               </Link>
               <button
@@ -285,9 +299,14 @@ export function DashboardShell({ user, plan, isSuperAdmin = false, children }: P
                 <MenuIcon className="w-5 h-5" />
               </button>
               <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#d4af37] to-[#f4d35e] flex items-center justify-center text-xs font-bold text-[#1a1a2e]">
-                  M
-                </div>
+                <img
+                  src="/logo-192.png"
+                  alt="MenuPro"
+                  width={28}
+                  height={28}
+                  className="rounded-lg"
+                  style={{ width: 28, height: 28 }}
+                />
                 <span className="font-bold text-sm">MenuPro</span>
               </div>
             </div>

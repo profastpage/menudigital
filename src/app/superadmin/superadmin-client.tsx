@@ -267,8 +267,18 @@ export function SuperAdminClient({ admin }: { admin: AdminInfo }) {
       <header className="border-b border-amber-500/20 bg-gradient-to-r from-[#0a0a14] via-[#0f0a1a] to-[#0a0a14] sticky top-0 z-40 safe-top">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-amber-500 to-amber-700 flex items-center justify-center shadow-lg shadow-amber-500/30 flex-shrink-0">
-              <Shield className="w-4 h-4 sm:w-5 sm:h-5 text-black" />
+            <div className="relative flex-shrink-0">
+              <img
+                src="/logo.png"
+                alt="MenuPro"
+                width={40}
+                height={40}
+                className="rounded-xl shadow-lg shadow-amber-500/30 sm:w-10 sm:h-10"
+                style={{ width: 36, height: 36 }}
+              />
+              <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-amber-500 border-2 border-[#0a0a14] flex items-center justify-center">
+                <Shield className="w-2 h-2 text-black" />
+              </div>
             </div>
             <div className="min-w-0">
               <div className="font-bold text-sm sm:text-base leading-tight flex items-center gap-2 flex-wrap">

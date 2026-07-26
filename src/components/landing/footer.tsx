@@ -7,9 +7,14 @@ export function Footer() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-10">
           <div className="col-span-2 md:col-span-2">
             <Link href="/" className="flex items-center gap-3 mb-4">
-              <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-[#d4af37] to-[#f4d35e] flex items-center justify-center text-lg font-bold text-[#1a1a2e]">
-                M
-              </div>
+              <img
+                src="/logo.png"
+                alt="MenuPro"
+                width={36}
+                height={36}
+                className="rounded-lg"
+                style={{ width: 36, height: 36 }}
+              />
               <span className="font-bold text-lg">MenuPro</span>
             </Link>
             <p className="text-sm text-white/50 max-w-xs leading-relaxed">

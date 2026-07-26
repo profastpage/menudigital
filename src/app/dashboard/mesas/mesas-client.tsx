@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, RefreshCw, Trash2, Users, X, Utensils } from 'lucide-react';
+import { Plus, RefreshCw, Trash2, Users, X, Utensils, Crown, AlertCircle } from 'lucide-react';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -175,6 +176,84 @@ export function MesasClient({ user, plan, isSuperAdmin }: Props) {
         <StatCard label="Ocupadas" value={stats.ocupadas} color="#e63946" />
         <StatCard label="Reservadas" value={stats.reservadas} color="#d4af37" />
       </div>
+
+      {/* ───────── Contador de límite (banner) ───────── */}
+      {(() => {
+        const maxTables = plan.limits.maxTables;
+        const isUnlimited = maxTables === -1;
+        if (isUnlimited) {
+          return (
+            <div className="mb-6 rounded-2xl border border-[#e63946]/30 bg-[#e63946]/10 p-3 flex items-center gap-3">
+              <Crown className="w-5 h-5 text-[#e63946] flex-shrink-0" />
+              <div className="text-sm">
+                <span className="font-semibold text-[#e63946]">Plan Full</span>
+                <span className="text-white/60 ml-2">Mesas ilimitadas · {stats.total} creadas</span>
+              </div>
+            </div>
+          );
+        }
+        const atLimit = mesas.length >= maxTables;
+        const nearLimit = !atLimit && mesas.length >= maxTables * 0.8;
+        const remaining = Math.max(0, maxTables - mesas.length);
+        return (
+          <div
+            className={`mb-6 rounded-2xl border p-4 flex items-center justify-between flex-wrap gap-3 ${
+              atLimit
+                ? 'border-red-500/40 bg-red-500/10'
+                : nearLimit
+                ? 'border-amber-500/40 bg-amber-500/10'
+                : 'border-white/10 bg-white/[0.03]'
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <div
+                className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                  atLimit ? 'bg-red-500/20' : nearLimit ? 'bg-amber-500/20' : 'bg-white/5'
+                }`}
+              >
+                {atLimit || nearLimit ? (
+                  <AlertCircle className={`w-5 h-5 ${atLimit ? 'text-red-400' : 'text-amber-400'}`} />
+                ) : (
+                  <Utensils className="w-5 h-5 text-white/60" />
+                )}
+              </div>
+              <div>
+                <div className="text-sm font-semibold">
+                  {mesas.length} / {maxTables} mesas usadas
+                  {remaining > 0 && (
+                    <span className="text-white/50 font-normal ml-1">· {remaining} restantes</span>
+                  )}
+                </div>
+                <div className="text-xs text-white/50">
+                  Plan {plan.name} · {atLimit ? 'Límite alcanzado' : nearLimit ? 'Cerca del límite' : 'Dentro del límite'}
+                </div>
+              </div>
+            </div>
+
+            {/* Barra de progreso */}
+            <div className="flex-1 max-w-xs min-w-[120px]">
+              <div className="h-2 bg-white/5 rounded-full overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all ${
+                    atLimit ? 'bg-red-500' : nearLimit ? 'bg-amber-500' : 'bg-[#9d4edd]'
+                  }`}
+                  style={{ width: `${Math.min(100, (mesas.length / maxTables) * 100)}%` }}
+                />
+              </div>
+            </div>
+
+            {(atLimit || nearLimit) && (
+              <Link
+                href="/dashboard/billing"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-[#d4af37] to-[#f4d35e] text-[#1a1a2e] text-xs font-semibold hover:opacity-90 transition"
+              >
+                <Crown className="w-3.5 h-3.5" />
+                {plan.id === 'premium' ? 'Upgrade a Full (ilimitado)' : 'Upgrade a Premium'}
+              </Link>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Grid de mesas */}
       {loading ? (

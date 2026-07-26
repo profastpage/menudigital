@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { randomBytes } from 'crypto';
 
 export async function PATCH(
   req: NextRequest,
@@ -17,6 +18,12 @@ export async function PATCH(
   if (body.phone !== undefined) update.phone = body.phone;
   if (body.pin !== undefined) update.pin = body.pin;
   if (body.is_active !== undefined) update.is_active = body.is_active;
+
+  // Regenerar qr_token: el cliente pasa { regenerate_qr: true }
+  if (body.regenerate_qr === true) {
+    // 32 bytes hex = 64 chars — suficiente entropía para QR token
+    update.qr_token = randomBytes(24).toString('hex');
+  }
 
   const { data, error } = await supabase
     .from('waiters')

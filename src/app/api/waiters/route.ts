@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { PLANS, type PlanId } from '@/lib/plans';
+import { randomBytes } from 'crypto';
 
 export async function GET() {
   const supabase = await createClient();
@@ -73,6 +74,7 @@ export async function POST(req: NextRequest) {
       document_id: document_id || null,
       phone: phone || null,
       pin: pin || null,
+      qr_token: randomBytes(24).toString('hex'), // QR token auto-generado para acceso móvil sin login
     })
     .select()
     .single();
