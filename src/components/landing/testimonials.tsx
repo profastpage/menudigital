@@ -85,12 +85,9 @@ export function Testimonials() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
           >
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#06d6a0]/10 border border-[#06d6a0]/30 text-xs font-semibold text-[#06d6a0] tracking-wider mb-4">
-              ⭐ +500 RESTAURANTES CONFÍAN
-            </div>
-            <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-4 tracking-tight">
+            <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-3 tracking-tight">
               Lo que dicen
-              <span className="bg-gradient-to-r from-[#06d6a0] to-[#d4af37] bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-[#d4af37] to-[#f4d35e] bg-clip-text text-transparent">
                 {" "}los restauranteros
               </span>
             </h2>

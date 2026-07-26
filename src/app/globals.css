@@ -205,3 +205,58 @@ body {
   min-height: 100vh;
   min-height: 100dvh;
 }
+
+/* ───────── Custom premium scrollbar ─────────
+ * Diseño: track transparente, thumb dorado con glow sutil.
+ * Funciona en: Chrome, Edge, Safari (Webkit) y Firefox.
+ * En mobile (touch) los browsers ocultan nativamente el scrollbar,
+ * así que esto aplica principalmente a desktop.
+ */
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(212, 175, 55, 0.4) transparent;
+}
+
+/* Webkit (Chrome, Edge, Safari) */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(212, 175, 55, 0.5), rgba(244, 211, 94, 0.35));
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+  -webkit-background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, rgba(212, 175, 55, 0.85), rgba(244, 211, 94, 0.7));
+  background-clip: content-box;
+  -webkit-background-clip: content-box;
+}
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* En dark theme (default de la landing), el thumb se ve mejor con más contraste */
+.dark ::-webkit-scrollbar-thumb,
+html[class*="dark"] ::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(212, 175, 55, 0.55), rgba(244, 211, 94, 0.4));
+  background-clip: content-box;
+  -webkit-background-clip: content-box;
+}
+
+/* ───────── Selection color (premium detail) ───────── */
+::selection {
+  background: rgba(212, 175, 55, 0.35);
+  color: #fff;
+}
+::-moz-selection {
+  background: rgba(212, 175, 55, 0.35);
+  color: #fff;
+}

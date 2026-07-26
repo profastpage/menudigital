@@ -6,7 +6,6 @@ import {
   ShoppingCart,
   QrCode,
   Image as ImageIcon,
-  Zap,
   Shield,
   TrendingUp,
   Globe,
@@ -89,19 +88,14 @@ export function Features() {
             viewport={{ once: true }}
             transition={{ duration: 0.5 }}
           >
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#d4af37]/10 border border-[#d4af37]/30 text-xs font-semibold text-[#d4af37] tracking-wider mb-4">
-              <Zap className="w-3 h-3" />
-              TODO LO QUE NECESITAS
-            </div>
-            <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-4 tracking-tight">
+            <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-3 tracking-tight">
               Diseñado para
               <span className="bg-gradient-to-r from-[#d4af37] to-[#f4d35e] bg-clip-text text-transparent">
                 {" "}restaurantes reales
               </span>
             </h2>
-            <p className="text-lg text-white/60 max-w-2xl mx-auto">
-              Desde el ceviche hasta la anticuchería. MenuPro funciona en cualquier tipo de restaurante,
-              pollería, sanguchería o cafetería del Perú.
+            <p className="text-base md:text-lg text-white/55 max-w-xl mx-auto">
+              Funciona en cualquier restaurante, pollería, sanguchería o cafetería del Perú.
             </p>
           </motion.div>
         </div>

@@ -8,32 +8,28 @@ const STEPS = [
     num: "01",
     icon: UserPlus,
     title: "Crea tu cuenta",
-    desc: "Regístrate gratis con email o Google. Sin tarjeta de crédito. En 30 segundos estás dentro del panel.",
-    accent: "#d4af37",
+    desc: "Regístrate gratis con email o Google. Sin tarjeta de crédito.",
     duration: "30 seg",
   },
   {
     num: "02",
     icon: Edit3,
     title: "Diseña tu menú",
-    desc: "Agrega categorías, platos, precios e imágenes. Vista previa en vivo mientras editas. Arrastra y suelta para reordenar.",
-    accent: "#9d4edd",
+    desc: "Agrega categorías, platos, precios e imágenes. Vista previa en vivo.",
     duration: "2-5 min",
   },
   {
     num: "03",
     icon: Share2,
     title: "Publica y comparte",
-    desc: "Obtén tu URL única y código QR. Compártelo en redes, imprímelo en mesas, ponlo en tus flyers. Todo desde un solo lugar.",
-    accent: "#06d6a0",
+    desc: "Obtén tu URL única y código QR. Compártelo donde quieras.",
     duration: "1 min",
   },
   {
     num: "04",
     icon: TrendingUp,
     title: "Vende más",
-    desc: "Recibe pedidos por WhatsApp directo. Mide qué platos funcionan mejor con analytics. Itera y crece.",
-    accent: "#e63946",
+    desc: "Recibe pedidos por WhatsApp. Mide qué platos funcionan mejor.",
     duration: "Para siempre",
   },
 ];
@@ -41,7 +37,7 @@ const STEPS = [
 export function HowItWorks() {
   return (
     <section className="py-20 md:py-28 border-t border-white/5 relative overflow-hidden">
-      <div className="absolute top-1/2 left-0 w-[400px] h-[400px] bg-[#9d4edd]/5 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-1/2 left-0 w-[400px] h-[400px] bg-[#d4af37]/[0.04] rounded-full blur-3xl pointer-events-none" />
 
       <div className="relative max-w-6xl mx-auto px-6">
         {/* Header */}
@@ -51,17 +47,14 @@ export function HowItWorks() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
           >
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#9d4edd]/10 border border-[#9d4edd]/30 text-xs font-semibold text-[#9d4edd] tracking-wider mb-4">
-              SIMPLE Y RÁPIDO
-            </div>
-            <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-4 tracking-tight">
+            <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-3 tracking-tight">
               En 4 pasos
-              <span className="bg-gradient-to-r from-[#9d4edd] to-[#d4af37] bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-[#d4af37] to-[#f4d35e] bg-clip-text text-transparent">
                 {" "}estás vendiendo
               </span>
             </h2>
-            <p className="text-lg text-white/60 max-w-2xl mx-auto">
-              De cero a menú publicado en menos de 5 minutos. Sin curva de aprendizaje.
+            <p className="text-base md:text-lg text-white/55 max-w-xl mx-auto">
+              De cero a menú publicado en menos de 5 minutos.
             </p>
           </motion.div>
         </div>
@@ -82,29 +75,16 @@ export function HowItWorks() {
                 className="relative"
               >
                 {/* Icon circle */}
-                <div className="relative mb-6 flex justify-center lg:justify-start">
+                <div className="relative mb-5 flex justify-center lg:justify-start">
                   <div className="relative">
-                    {/* Glow */}
-                    <div
-                      className="absolute inset-0 rounded-2xl blur-xl opacity-40"
-                      style={{ background: s.accent }}
-                    />
                     <motion.div
-                      whileHover={{ scale: 1.1, rotate: 5 }}
-                      className="relative w-16 h-16 rounded-2xl flex items-center justify-center border-2"
-                      style={{
-                        background: `${s.accent}15`,
-                        borderColor: `${s.accent}50`,
-                        boxShadow: `0 8px 24px -8px ${s.accent}40`,
-                      }}
+                      whileHover={{ scale: 1.05 }}
+                      className="relative w-14 h-14 rounded-2xl flex items-center justify-center border border-[#d4af37]/40 bg-[#d4af37]/[0.08]"
                     >
-                      <s.icon className="w-7 h-7" style={{ color: s.accent }} />
+                      <s.icon className="w-6 h-6 text-[#d4af37]" />
                     </motion.div>
                     {/* Step number badge */}
-                    <div
-                      className="absolute -top-2 -right-2 w-6 h-6 rounded-full text-[10px] font-bold flex items-center justify-center border-2 border-[#07070b]"
-                      style={{ background: s.accent, color: "#07070b" }}
-                    >
+                    <div className="absolute -top-2 -right-2 w-6 h-6 rounded-full text-[10px] font-bold flex items-center justify-center border-2 border-[#07070b] bg-gradient-to-r from-[#d4af37] to-[#f4d35e] text-[#07070b]">
                       {i + 1}
                     </div>
                   </div>
@@ -112,23 +92,12 @@ export function HowItWorks() {
 
                 {/* Content */}
                 <div className="text-center lg:text-left">
-                  <div
-                    className="text-xs font-bold tracking-widest mb-2"
-                    style={{ color: s.accent }}
-                  >
-                    PASO {s.num}
-                  </div>
-                  <h3 className="text-xl font-bold mb-2">{s.title}</h3>
-                  <p className="text-sm text-white/60 leading-relaxed mb-3">{s.desc}</p>
+                  <h3 className="text-lg font-bold mb-1.5">{s.title}</h3>
+                  <p className="text-sm text-white/55 leading-relaxed mb-3">{s.desc}</p>
 
                   {/* Duration badge */}
                   <span
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold border"
-                    style={{
-                      background: `${s.accent}10`,
-                      borderColor: `${s.accent}30`,
-                      color: s.accent,
-                    }}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold border bg-white/[0.03] border-white/10 text-white/55"
                   >
                     ⏱ {s.duration}
                   </span>

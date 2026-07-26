@@ -8,10 +8,12 @@ import { Pricing } from "@/components/landing/pricing";
 import { Testimonials } from "@/components/landing/testimonials";
 import { FAQ } from "@/components/landing/faq";
 import { Footer } from "@/components/landing/footer";
+import { ScrollProgress } from "@/components/landing/scroll-progress";
 
 export default function Home() {
   return (
     <main className="min-h-screen flex flex-col bg-[#07070b] text-white">
+      <ScrollProgress />
       <header className="border-b border-white/5 backdrop-blur sticky top-0 z-50 bg-[#07070b]/80">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3">

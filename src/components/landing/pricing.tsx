@@ -114,31 +114,15 @@ export function Pricing() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
           >
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#d4af37]/10 border border-[#d4af37]/30 text-xs font-semibold text-[#d4af37] tracking-wider mb-4">
-              PRECIOS TRANSPARENTES
-            </div>
-            <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-4 tracking-tight">
+            <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-3 tracking-tight">
               Planes simples,
               <span className="bg-gradient-to-r from-[#d4af37] to-[#f4d35e] bg-clip-text text-transparent">
                 {" "}sin comisiones
               </span>
             </h2>
-            <p className="text-lg text-white/60 max-w-2xl mx-auto">
-              Sin contratos. Cancelas cuando quieras. Pagos en Soles vía MercadoPago.
+            <p className="text-base md:text-lg text-white/55 max-w-xl mx-auto">
+              Sin contratos. Cancelas cuando quieras.
             </p>
-            {/* Quick comparison badge row */}
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.2 }}
-              className="mt-6 flex flex-wrap items-center justify-center gap-3 text-xs text-white/60"
-            >
-              <span className="px-3 py-1.5 rounded-full bg-white/5 border border-white/10">🆓 Free — 1 menú, 1 foto/plato</span>
-              <span className="px-3 py-1.5 rounded-full bg-[#d4af37]/10 border border-[#d4af37]/30 text-[#d4af37]">⚡ Pro — 3 menús, 3 fotos/plato</span>
-              <span className="px-3 py-1.5 rounded-full bg-[#9d4edd]/10 border border-[#9d4edd]/30 text-[#9d4edd]">👑 Premium — 10 menús, 5 fotos/plato + white label</span>
-              <span className="px-3 py-1.5 rounded-full bg-[#e63946]/10 border border-[#e63946]/30 text-[#e63946]">🏆 Full — ∞ menús, 10 fotos/plato + AI</span>
-            </motion.div>
           </motion.div>
         </div>
 
@@ -255,46 +239,40 @@ export function Pricing() {
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="mt-12 rounded-3xl overflow-hidden bg-gradient-to-r from-[#9d4edd]/10 via-[#d4af37]/10 to-[#e63946]/10 border border-[#d4af37]/30 p-8 text-center relative"
+          className="mt-12 rounded-3xl overflow-hidden bg-white/[0.03] border border-[#d4af37]/30 p-8 text-center relative"
         >
-          <div className="absolute inset-0 opacity-30" style={{ background: "radial-gradient(circle at center, #d4af37 0%, transparent 60%)" }} />
           <div className="relative">
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#d4af37]/15 border border-[#d4af37]/40 text-xs font-semibold text-[#d4af37] tracking-wider mb-3">
               ⚡ RECOMENDADO PARA RESTAURANTES EN CRECIMIENTO
             </div>
-            <h3 className="text-2xl md:text-3xl font-bold mb-2">
-              La mayoría elige <span className="text-[#9d4edd]">Premium (S/ 99)</span> o <span className="text-[#e63946]">Full (S/ 199)</span>
+            <h3 className="text-2xl md:text-3xl font-bold mb-2 text-white">
+              La mayoría elige <span className="text-[#d4af37]">Premium</span> o <span className="text-[#d4af37]">Full</span>
             </h3>
-            <p className="text-white/70 max-w-2xl mx-auto mb-4">
-              Por menos de <strong>S/ 4 al día</strong>, obtienes comandas, cocina display, inventario, mozos offline y white label.
-              Tu restaurante se vuelve eficiente desde el día 1.
+            <p className="text-white/60 max-w-xl mx-auto mb-4 text-sm">
+              Por menos de <strong className="text-white/80">S/ 4 al día</strong>, obtienes comandas, cocina display, inventario y white label.
             </p>
-            <div className="flex flex-wrap items-center justify-center gap-3 text-xs">
-              <span className="px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-white/80">✅ Sin comisiones por venta</span>
-              <span className="px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-white/80">✅ Cancelas cuando quieras</span>
-              <span className="px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-white/80">✅ Onboarding gratis</span>
-              <span className="px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-white/80">✅ Pagos en Soles (MercadoPago)</span>
+            <div className="flex flex-wrap items-center justify-center gap-2 text-xs">
+              <span className="px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-white/70">Sin comisiones por venta</span>
+              <span className="px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-white/70">Cancelas cuando quieras</span>
             </div>
           </div>
         </motion.div>
 
         {/* Help cards — Premium / Full */}
-        <div className="mt-12 grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-4">
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
-            className="rounded-2xl p-5 bg-[#9d4edd]/5 border border-[#9d4edd]/30 flex items-start gap-4 hover:bg-[#9d4edd]/10 transition"
+            className="rounded-2xl p-5 bg-white/[0.02] border border-white/10 flex items-start gap-4 hover:bg-white/[0.04] transition"
           >
-            <div className="w-12 h-12 rounded-xl bg-[#9d4edd]/20 flex items-center justify-center flex-shrink-0">
-              <Utensils className="w-6 h-6 text-[#9d4edd]" />
+            <div className="w-11 h-11 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center flex-shrink-0">
+              <Utensils className="w-5 h-5 text-[#d4af37]" />
             </div>
             <div>
-              <div className="font-bold text-[#9d4edd] mb-1">¿Tienes mesas y mozos?</div>
-              <div className="text-sm text-white/70 leading-relaxed">
-                El plan <strong>Premium (S/ 99/mes)</strong> incluye toda la logística interna: comandas
-                que van del mozo a la cocina, inventario de insumos con recetas automáticas, cocina
-                display en tiempo real, y <strong>white label (sin marca MenuPro)</strong>.
+              <div className="font-bold text-white mb-1">¿Tienes mesas y mozos?</div>
+              <div className="text-sm text-white/55 leading-relaxed">
+                <strong className="text-white/80">Premium (S/ 99/mes)</strong> incluye comandas, inventario, cocina display y white label.
               </div>
             </div>
           </motion.div>
@@ -302,16 +280,15 @@ export function Pricing() {
             initial={{ opacity: 0, x: 20 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
-            className="rounded-2xl p-5 bg-[#e63946]/5 border border-[#e63946]/30 flex items-start gap-4 hover:bg-[#e63946]/10 transition"
+            className="rounded-2xl p-5 bg-white/[0.02] border border-white/10 flex items-start gap-4 hover:bg-white/[0.04] transition"
           >
-            <div className="w-12 h-12 rounded-xl bg-[#e63946]/20 flex items-center justify-center flex-shrink-0">
-              <Building2 className="w-6 h-6 text-[#e63946]" />
+            <div className="w-11 h-11 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center flex-shrink-0">
+              <Building2 className="w-5 h-5 text-[#d4af37]" />
             </div>
             <div>
-              <div className="font-bold text-[#e63946] mb-1">¿Tienes varias sucursales?</div>
-              <div className="text-sm text-white/70 leading-relaxed">
-                El plan <strong>Full (S/ 199/mes)</strong> desbloquea menús ilimitados, 10 fotos por plato,
-                multi-sucursal, voucher printing 1-click para POS, dominio propio, AI y reportes consolidados.
+              <div className="font-bold text-white mb-1">¿Tienes varias sucursales?</div>
+              <div className="text-sm text-white/55 leading-relaxed">
+                <strong className="text-white/80">Full (S/ 199/mes)</strong> desbloquea multi-sucursal, voucher POS, dominio propio y AI.
               </div>
             </div>
           </motion.div>
