@@ -119,10 +119,12 @@ BEGIN
   ) t;
 
   -- Dominios
-  SELECT COALESCE(json_agg(row_to_json(d)), '[]'::json) INTO domains_data
+  -- IMPORTANTE: Cuando se usa json_agg() sin GROUP BY, cualquier ORDER BY
+  -- debe ir DENTRO del aggregate. Si va afuera, Postgres tira:
+  --   "column d.created_at must appear in the GROUP BY clause or be used in an aggregate function"
+  SELECT COALESCE(json_agg(row_to_json(d) ORDER BY d.created_at DESC), '[]'::json) INTO domains_data
   FROM custom_domains d
-  WHERE d.user_id = target_user_id
-  ORDER BY d.created_at DESC;
+  WHERE d.user_id = target_user_id;
 
   -- Últimas 50 vistas
   SELECT COALESCE(json_agg(row_to_json(v)), '[]'::json) INTO recent_views

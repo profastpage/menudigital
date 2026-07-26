@@ -136,7 +136,11 @@ UPDATE waiters
 SET qr_token = generate_mozopro_token()
 WHERE qr_token IS NULL;
 
-RAISE NOTICE '✅ Backfill de qr_token completado para mozos existentes';
+-- RAISE NOTICE solo puede usarse dentro de un bloque PL/pgSQL (DO $$)
+DO $$
+BEGIN
+  RAISE NOTICE '✅ Backfill de qr_token completado para mozos existentes';
+END $$;
 
 -- ============================================================
 -- 9. Row Level Security (RLS)

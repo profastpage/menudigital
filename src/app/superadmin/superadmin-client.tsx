@@ -4,6 +4,14 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
   LogOut,
   Users,
   LayoutDashboard,
@@ -32,6 +40,7 @@ import {
   Hash,
   Home,
   Camera,
+  ChevronDown,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
@@ -202,6 +211,8 @@ export function SuperAdminClient({ admin }: { admin: AdminInfo }) {
 
       if (action === 'toggle_plan') {
         toast.success(`Plan cambiado a ${data.newPlan}`);
+      } else if (action === 'set_plan') {
+        toast.success(`Plan actualizado a ${data.newPlan?.toUpperCase()}`);
       } else if (action === 'toggle_super_admin') {
         toast.success(`Super admin: ${data.is_super_admin ? 'activado' : 'desactivado'}`);
       } else if (action === 'toggle_active') {
@@ -634,21 +645,53 @@ export function SuperAdminClient({ admin }: { admin: AdminInfo }) {
                               >
                                 <Eye className="w-4 h-4" />
                               </button>
-                              <button
-                                onClick={() => handleAction('toggle_plan', u.id)}
-                                disabled={actionLoading === `toggle_plan-${u.id}`}
-                                className={`p-1.5 rounded-lg text-amber-400 hover:bg-amber-500/10 transition disabled:opacity-50 ${
-                                  u.plan === 'pro' ? 'bg-amber-500/10' : ''
-                                }`}
-                                title={u.plan === 'pro' ? 'Quitar Pro' : 'Dar Pro'}
-                                aria-label={u.plan === 'pro' ? 'Quitar Pro' : 'Dar Pro'}
-                              >
-                                {actionLoading === `toggle_plan-${u.id}` ? (
-                                  <Loader2 className="w-4 h-4 animate-spin" />
-                                ) : (
-                                  <Crown className="w-4 h-4" />
-                                )}
-                              </button>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <button
+                                    disabled={actionLoading === `set_plan-${u.id}`}
+                                    className={`p-1.5 rounded-lg text-amber-400 hover:bg-amber-500/10 transition disabled:opacity-50 inline-flex items-center gap-1 ${
+                                      u.plan !== 'free' ? 'bg-amber-500/10' : ''
+                                    }`}
+                                    title="Cambiar plan"
+                                    aria-label="Cambiar plan"
+                                  >
+                                    {actionLoading === `set_plan-${u.id}` ? (
+                                      <Loader2 className="w-4 h-4 animate-spin" />
+                                    ) : (
+                                      <Crown className="w-4 h-4" />
+                                    )}
+                                  </button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-44">
+                                  <DropdownMenuLabel className="text-xs text-white/50">
+                                    Cambiar plan
+                                  </DropdownMenuLabel>
+                                  <DropdownMenuSeparator />
+                                  {(['free', 'pro', 'premium', 'full'] as const).map((plan) => (
+                                    <DropdownMenuItem
+                                      key={plan}
+                                      onClick={() => handleAction('set_plan', u.id, { plan })}
+                                      disabled={u.plan === plan}
+                                      className={`flex items-center justify-between cursor-pointer ${
+                                        u.plan === plan ? 'opacity-50 cursor-default' : ''
+                                      }`}
+                                    >
+                                      <span className="flex items-center gap-2">
+                                        <Crown className={`w-3.5 h-3.5 ${
+                                          plan === 'free' ? 'text-white/40' :
+                                          plan === 'pro' ? 'text-emerald-400' :
+                                          plan === 'premium' ? 'text-blue-400' :
+                                          'text-amber-400'
+                                        }`} />
+                                        <span className="font-semibold uppercase text-xs">{plan}</span>
+                                      </span>
+                                      {u.plan === plan && (
+                                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                                      )}
+                                    </DropdownMenuItem>
+                                  ))}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
                               {!u.is_super_admin && (
                                 <button
                                   onClick={() => handleAction('toggle_super_admin', u.id)}
@@ -788,22 +831,55 @@ export function SuperAdminClient({ admin }: { admin: AdminInfo }) {
                           <Eye className="w-3.5 h-3.5 mr-1.5" />
                           Detalle
                         </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleAction('toggle_plan', u.id)}
-                          disabled={actionLoading === `toggle_plan-${u.id}`}
-                          className={`border-amber-500/40 text-amber-400 hover:bg-amber-500/10 h-9 text-xs ${
-                            u.plan === 'pro' ? 'bg-amber-500/10' : ''
-                          }`}
-                        >
-                          {actionLoading === `toggle_plan-${u.id}` ? (
-                            <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
-                          ) : (
-                            <Crown className="w-3.5 h-3.5 mr-1.5" />
-                          )}
-                          {u.plan === 'pro' ? 'Quitar Pro' : 'Dar Pro'}
-                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={actionLoading === `set_plan-${u.id}`}
+                              className={`border-amber-500/40 text-amber-400 hover:bg-amber-500/10 h-9 text-xs justify-between ${
+                                u.plan !== 'free' ? 'bg-amber-500/10' : ''
+                              }`}
+                            >
+                              {actionLoading === `set_plan-${u.id}` ? (
+                                <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                              ) : (
+                                <Crown className="w-3.5 h-3.5 mr-1.5" />
+                              )}
+                              <span className="uppercase">{u.plan || 'free'}</span>
+                              <ChevronDown className="w-3.5 h-3.5 ml-1" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-44">
+                            <DropdownMenuLabel className="text-xs text-white/50">
+                              Cambiar plan
+                            </DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            {(['free', 'pro', 'premium', 'full'] as const).map((plan) => (
+                              <DropdownMenuItem
+                                key={plan}
+                                onClick={() => handleAction('set_plan', u.id, { plan })}
+                                disabled={u.plan === plan}
+                                className={`flex items-center justify-between cursor-pointer ${
+                                  u.plan === plan ? 'opacity-50 cursor-default' : ''
+                                }`}
+                              >
+                                <span className="flex items-center gap-2">
+                                  <Crown className={`w-3.5 h-3.5 ${
+                                    plan === 'free' ? 'text-white/40' :
+                                    plan === 'pro' ? 'text-emerald-400' :
+                                    plan === 'premium' ? 'text-blue-400' :
+                                    'text-amber-400'
+                                  }`} />
+                                  <span className="font-semibold uppercase text-xs">{plan}</span>
+                                </span>
+                                {u.plan === plan && (
+                                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                                )}
+                              </DropdownMenuItem>
+                            ))}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                         {!u.is_super_admin && (
                           <Button
                             size="sm"

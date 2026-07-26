@@ -781,3 +781,28 @@ Stage Summary:
   * src/app/r/[slug]/page.tsx (branding Free+Pro)
   * src/app/dashboard/[menuId]/menu-html-builder.ts (hipervinculo al landing real)
   * src/app/api/menus/route.ts (error plan-aware)
+
+---
+Task ID: fix-superadmin-3-bugs
+Agent: main (Super Z)
+Task: Corregir 3 bugs reportados por el usuario: (1) SQL syntax error "RAISE" en línea 139, (2) error "d.created_at must appear in GROUP BY" en panel super admin al ver detalles de cliente, (3) no se podía activar Premium o Full manualmente desde super admin.
+
+Work Log:
+- Identificada causa raíz de Bug 1: `RAISE NOTICE` en línea 139 de `mozos-mesas-migration.sql` estaba FUERA de un bloque `DO $$ ... END $$`. PL/pgSQL solo permite `RAISE` dentro de un bloque procedural.
+- Identificada causa raíz de Bug 2: en `admin_get_user_detail()` de `fix-admin-user-detail.sql`, el `ORDER BY d.created_at DESC` estaba afuera del `json_agg()`. Cuando se usa aggregate sin GROUP BY, el ORDER BY de columnas debe ir dentro del aggregate: `json_agg(row_to_json(d) ORDER BY d.created_at DESC)`.
+- Identificada causa raíz de Bug 3: el enum `user_plan` originalmente solo tenía `('free','pro')`. Aunque existía `add-premium-logistics.sql` con `ALTER TYPE ... ADD VALUE IF NOT EXISTS 'premium'/'full'`, estaba envuelto en un DO block lo que puede fallar en algunas configs de Supabase. Sin los valores en el enum, el `UPDATE profiles SET plan='premium'` tira "invalid input value for enum user_plan".
+- Fix aplicado en `mozos-mesas-migration.sql`: envuelto el `RAISE NOTICE` en un bloque `DO $$ BEGIN ... END $$;`.
+- Fix aplicado en `fix-admin-user-detail.sql`: movido `ORDER BY d.created_at DESC` dentro del `json_agg()`.
+- Creado `supabase/fix-all-admin-issues.sql` (también copiado a `download/`) — SQL consolidado e idempotente que: (a) rehace el backfill de qr_token con RAISE correcto, (b) recrea `admin_get_user_detail()` con ORDER BY dentro de json_agg, (c) recrea `admin_list_all_users()` con el mismo fix preventivo, (d) ejecuta `ALTER TYPE user_plan ADD VALUE IF NOT EXISTS 'premium'/'full'` como statements sueltos (no dentro de DO), (e) verifica el estado final con RAISE NOTICE dentro de DO block.
+- Mejora frontend en `src/app/superadmin/superadmin-client.tsx`:
+  - Agregados imports: DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, ChevronDown.
+  - Actualizado `handleAction` para reconocer `set_plan` (ya existía en `/api/admin` route.ts pero el frontend solo usaba `toggle_plan` cíclico).
+  - Reemplazado el botón simple "Dar Pro / Quitar Pro" (que solo ciclaba free→pro→premium→full→free) por un DropdownMenu con los 4 planes (Free, Pro, Premium, Full) directamente seleccionables, mostrando el plan actual con un check verde y deshabilitando la opción del plan actual.
+  - Aplicado tanto en desktop (tabla) como en mobile (cards): el trigger del desktop es solo el ícono Corona, el de mobile muestra el plan actual + ChevronDown para indicar que es desplegable.
+  - Cada plan tiene su color: Free=gris, Pro=emerald, Premium=blue, Full=amber.
+
+Stage Summary:
+- 3 bugs corregidos en el código del repo.
+- 1 archivo SQL consolidado listo para pegar en Supabase SQL Editor: `/home/z/my-project/download/fix-all-admin-issues.sql`
+- El usuario debe ejecutar ese SQL una vez en Supabase, y luego refrescar el panel super admin para ver el nuevo dropdown de planes.
+- TypeScript compila sin errores en los archivos modificados.
