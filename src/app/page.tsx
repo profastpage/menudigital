@@ -8,7 +8,6 @@ import { Pricing } from "@/components/landing/pricing";
 import { Testimonials } from "@/components/landing/testimonials";
 import { FAQ } from "@/components/landing/faq";
 import { Footer } from "@/components/landing/footer";
-import { InstallAppButton } from "@/components/pwa/install-app-button";
 
 export default function Home() {
   return (
@@ -34,10 +33,14 @@ export default function Home() {
             <a href="#faq" className="hover:text-white transition">FAQ</a>
           </nav>
           <div className="flex items-center gap-3">
-            {/* Botón instalar app (PWA) — landing variant */}
-            <div className="hidden sm:block">
-              <InstallAppButton variant="landing" size="sm" style="ghost" />
-            </div>
+            {/*
+              Nota: el botón "Instalar app" (PWA) se omite en el header público.
+              Razón: la PWA del dashboard es exclusiva de usuarios logueados (Pro+).
+              La PWA de la carta pública (/r/[slug]) ya es instalable por los clientes
+              del restaurante a través del manifest de esa ruta.
+              El botón de instalación del dashboard vive dentro del dashboard mismo,
+              donde se valida el plan y se muestra el badge correspondiente.
+            */}
             <Link
               href="/login"
               className="text-sm text-white/70 hover:text-white px-3 py-2"

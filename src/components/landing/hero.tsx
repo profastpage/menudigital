@@ -51,11 +51,10 @@ export function Hero() {
             <span className="text-xs font-semibold text-[#d4af37] tracking-wide">
               MENÚS DIGITALES PROFESIONALES
             </span>
-            <span className="ml-1 text-[10px] text-white/40">v2.0 PWA</span>
           </motion.div>
 
           {/* Headline */}
-          <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold leading-[1.05] mb-6 tracking-tight">
+          <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold leading-[1.05] mb-5 tracking-tight">
             Menús digitales
             <br />
             <span className="relative inline-block">
@@ -73,12 +72,11 @@ export function Hero() {
 
           {/* Subheadline */}
           <p className="text-lg md:text-xl text-white/70 mb-8 max-w-xl leading-relaxed">
-            Crea tu carta digital con carrito integrado de WhatsApp en menos de 5 minutos.
-            Sin comisiones por venta. Sin contratos. Hecho en Perú para restaurantes peruanos.
+            Tu carta digital con carrito de WhatsApp en 5 minutos. Sin comisiones, sin contratos.
           </p>
 
           {/* CTAs */}
-          <div className="flex flex-col sm:flex-row gap-3 mb-8">
+          <div className="flex flex-col sm:flex-row gap-3 mb-6">
             <motion.div
               whileHover={{ y: -2 }}
               whileTap={{ scale: 0.98 }}
@@ -113,10 +111,6 @@ export function Hero() {
             <div className="flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
               Cancelas cuando quieras
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-              Soporte en español
             </div>
           </div>
 
