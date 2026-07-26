@@ -1,8 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import {
-  ClipboardList, Send, Check, X, Plus, Minus, Search,
+import {  ClipboardList, Send, Check, X, Plus, Minus, Search,
   RefreshCw, AlertCircle, Utensils, ChefHat, Clock, User,
   WifiOff, CloudUpload, Loader2,
 } from 'lucide-react';
@@ -10,6 +9,7 @@ import { toast } from 'sonner';
 import { useOfflineQueue } from '@/hooks/use-offline-queue';
 import { InstallAppButton } from '@/components/pwa/install-app-button';
 import { type PlanId } from '@/lib/plans';
+import { deriveVariantUrl } from '@/lib/image-utils';
 
 interface Dish {
   id: string; name: string; price: number; description?: string; image_url?: string;
@@ -516,7 +516,7 @@ export function MozoPanel({ token, waiterName }: Props) {
                   className="w-full bg-white/5 border border-white/10 rounded-xl p-3 flex items-center gap-3 text-left active:bg-white/10 transition-colors"
                 >
                   {dish.image_url ? (
-                    <img src={dish.image_url} alt={dish.name} className="w-12 h-12 rounded-lg object-cover flex-shrink-0" />
+                    <img src={deriveVariantUrl(dish.image_url, 'thumb')} alt={dish.name} className="w-12 h-12 rounded-lg object-cover flex-shrink-0" loading="lazy" decoding="async" />
                   ) : (
                     <div className="w-12 h-12 rounded-lg bg-white/5 flex items-center justify-center flex-shrink-0">
                       <Utensils className="w-5 h-5 text-white/30" />

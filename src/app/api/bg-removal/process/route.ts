@@ -3,6 +3,8 @@ import { createClient } from '@/lib/supabase/server';
 import { PLANS, type PlanId } from '@/lib/plans';
 import sharp from 'sharp';
 import removeBackground from '@imgly/background-removal-node';
+import { optimizeImage } from '@/lib/image-optimizer';
+import type { ImageSize } from '@/lib/image-utils';
 
 /**
  * POST /api/bg-removal/process
@@ -205,36 +207,54 @@ export async function POST(req: NextRequest) {
           background: { r: 0, g: 0, b: 0, alpha: 0 },
           withoutEnlargement: false,
         })
-        .webp({ quality: 90, alphaQuality: 100, effort: 4 })
+        .png() // mantener PNG lossless temporal con alpha antes de optimizar a WebP
         .toBuffer();
     }
 
-    // 7. Subir resultado a Supabase Storage
+    // ─── 7. Optimizar el resultado a multi-size WebP con alpha preservado ───
+    const optimized = await optimizeImage(finalBuffer, {
+      transparent: true,
+      sizes: ['thumb', 'medium', 'large'] as ImageSize[],
+    });
+
+    // 8. Subir todas las variantes a Supabase Storage
     const timestamp = Date.now();
     const random = Math.random().toString(36).substring(2, 10);
-    const filename = `${user.id}/${timestamp}-bgremoved-${random}.webp`;
+    const baseName = `${user.id}/${timestamp}-bgremoved-${random}`;
 
-    const { error: uploadError } = await supabase.storage
-      .from('menus')
-      .upload(filename, finalBuffer, {
-        contentType: 'image/webp',
-        cacheControl: '31536000',
-        upsert: false,
-      });
-
-    if (uploadError) {
-      console.error('[bg-removal/process] upload error:', uploadError);
-      return NextResponse.json(
-        { error: `Error al subir: ${uploadError.message}` },
-        { status: 500 }
-      );
+    const uploadedUrls: Record<string, string> = {};
+    for (const variant of optimized.variants) {
+      const filename = `${baseName}${variant.suffix}.webp`;
+      const { error: variantErr } = await supabase.storage
+        .from('menus')
+        .upload(filename, variant.buffer, {
+          contentType: 'image/webp',
+          cacheControl: '31536000',
+          upsert: false,
+        });
+      if (variantErr) {
+        console.error(`[bg-removal/process] upload error (${variant.size}):`, variantErr);
+        continue;
+      }
+      const { data: publicUrlData } = supabase.storage
+        .from('menus')
+        .getPublicUrl(filename);
+      uploadedUrls[variant.size] = publicUrlData.publicUrl;
     }
 
-    const { data: publicUrlData } = supabase.storage
-      .from('menus')
-      .getPublicUrl(filename);
+    // Fallback si el large falló pero hay otro
+    if (!uploadedUrls.large) {
+      const anySize = Object.keys(uploadedUrls)[0];
+      if (!anySize) {
+        return NextResponse.json(
+          { error: 'Error al subir imagen optimizada' },
+          { status: 500 }
+        );
+      }
+      uploadedUrls.large = uploadedUrls[anySize];
+    }
 
-    // 8. Incrementar contador atómicamente
+    // 9. Incrementar contador atómicamente
     const { data: newUsed, error: incError } = await supabase.rpc(
       'increment_bg_removals',
       { user_uuid: user.id }
@@ -248,7 +268,21 @@ export async function POST(req: NextRequest) {
 
     const used = plan.limits.bgRemovalCredits === -1 ? 0 : ((newUsed as number) ?? quota.used + 1);
     return NextResponse.json({
-      url: publicUrlData.publicUrl,
+      url: uploadedUrls.large,
+      thumb: uploadedUrls.thumb || uploadedUrls.large,
+      medium: uploadedUrls.medium || uploadedUrls.large,
+      large: uploadedUrls.large,
+      variants: {
+        thumb: uploadedUrls.thumb || uploadedUrls.large,
+        medium: uploadedUrls.medium || uploadedUrls.large,
+        large: uploadedUrls.large,
+      },
+      metadata: {
+        originalBytes: optimized.metadata.originalBytes,
+        optimizedBytes: optimized.metadata.optimizedBytes,
+        savingsPct: optimized.metadata.savingsPct,
+        hasAlpha: optimized.metadata.hasAlpha,
+      },
       quota: {
         used,
         limit: plan.limits.bgRemovalCredits,

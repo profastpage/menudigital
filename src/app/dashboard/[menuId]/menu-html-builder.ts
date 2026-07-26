@@ -660,6 +660,14 @@ function buildJS(opts: JSOpts): string {
   s += 'var searchQuery = "";\n';
   s += 'function escapeHtml(s){if(s==null)return "";return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/\'/g,"&#39;");}\n';
   s += 'function formatPrice(n){return (RESTAURANT.currency||"S/")+" "+Number(n).toFixed(2);}\n';
+  // Helper: si la URL es de una imagen optimizada por MenuPro (tiene sufijo "-large-wNNNN.webp"),
+  // genera un atributo srcset con 3 tamaños (thumb 400w, medium 800w, large 1200w) para que el
+  // navegador cargue el tamaño óptimo según el viewport. Si la URL no sigue el patrón (imagen
+  // externa o subida antes de la optimización), devuelve string vacío (sin srcset).
+  s += 'function imgSrcset(url){if(!url)return "";var m=String(url).match(/^(.*?)-(thumb|medium|large)-w\\d+\\.(webp|avif)$/);if(!m)return "";var base=m[1],ext=m[3];return base+"-thumb-w400."+ext+" 400w, "+base+"-medium-w800."+ext+" 800w, "+base+"-large-w1200."+ext+" 1200w";}\n';
+  // Helper: si la URL es optimizada, deriva la versión "medium" (800w) para usar como src por defecto.
+  // Es un balance óptimo para móvil (~50KB) y desktop (~120KB). El navegador puede subir al large vía srcset.
+  s += 'function imgMedium(url){if(!url)return url;var m=String(url).match(/^(.*?)-(thumb|medium|large)-w\\d+\\.(webp|avif)$/);if(!m)return url;return m[1]+"-medium-w800."+m[3];}\n';
   s += 'function dishMatches(dish,q){if(!q)return true;var n=(dish.name||"").toLowerCase();var d=(dish.description||"").toLowerCase();return n.indexOf(q)>=0||d.indexOf(q)>=0;}\n';
 
   // SVG icons inline para redes sociales (premium, sin dependencias)
@@ -679,8 +687,8 @@ function buildJS(opts: JSOpts): string {
   s += 'function renderApp(){\n';
   s += '  var app=document.getElementById("app");\n';
   s += '  var html="";\n';
-  // Cover image — fondo HERO detrás del header
-  s += '  if(RESTAURANT.theme_cover_url){html+="<div class=\\"hero\\"><img src=\\""+escapeHtml(RESTAURANT.theme_cover_url)+"\\" alt=\\"cover\\" onerror=\\"this.remove()\\"/></div>";}\n';
+  // Cover image — fondo HERO detrás del header (con srcset si la URL está optimizada)
+  s += '  if(RESTAURANT.theme_cover_url){var _csrc=imgMedium(RESTAURANT.theme_cover_url),_css=imgSrcset(RESTAURANT.theme_cover_url);html+="<div class=\\"hero\\"><img src=\\""+escapeHtml(_csrc)+"\\" "+(_css?"srcset=\\""+escapeHtml(_css)+"\\" sizes=\\"100vw\\" ":"")+"alt=\\"cover\\" onerror=\\"this.remove()\\"/></div>";}\n';
   // Header
   s += '  html+="<header class=\\"header\\">";\n';
   s += '  html+="<div class=\\"logo-wrap\\">";\n';
@@ -738,7 +746,7 @@ function buildJS(opts: JSOpts): string {
       s += '      html+="<div class=\\"carta-card-img-wrap\\">";\n';
       s += '      if(idx<3){html+="<span class=\\"carta-card-featured\\">Top</span>";}\n';
       s += '      html+="<span class=\\"carta-card-price-overlay\\">"+formatPrice(d.price)+"</span>";\n';
-      s += '      if(d.image_url){html+="<img src=\\""+escapeHtml(d.image_url)+"\\" class=\\"carta-card-img\\" alt=\\""+escapeHtml(d.name||"Plato")+"\\" data-letter=\\""+escapeHtml(letter)+"\\" loading=\\"lazy\\"/>";}\n';
+      s += '      if(d.image_url){var _src=imgMedium(d.image_url),_ss=imgSrcset(d.image_url);html+="<img src=\\""+escapeHtml(_src)+"\\" "+(_ss?"srcset=\\""+escapeHtml(_ss)+"\\" sizes=\\"(max-width: 600px) 90vw, (max-width: 1024px) 45vw, 300px\\" ":"")+"class=\\"carta-card-img\\" alt=\\""+escapeHtml(d.name||"Plato")+"\\" data-letter=\\""+escapeHtml(letter)+"\\" loading=\\"lazy\\" decoding=\\"async\\"/>";}\n';
       s += '      else{html+="<div class=\\"carta-card-placeholder\\">"+escapeHtml(letter)+"</div>";}\n';
       s += '      html+="<button class=\\"carta-card-add\\" data-cat=\\""+it.catIdx+"\\" data-dish=\\""+it.dishIdx+"\\" title=\\"Agregar\\"><svg viewBox=\\"0 0 24 24\\" fill=\\"none\\" stroke=\\"currentColor\\" stroke-width=\\"3\\" stroke-linecap=\\"round\\" stroke-linejoin=\\"round\\"><path d=\\"M12 5v14M5 12h14\\"/></svg></button>";\n';
       s += '      html+="</div>";\n';
@@ -763,7 +771,7 @@ function buildJS(opts: JSOpts): string {
       s += '      html+="<div class=\\"carta-card\\" data-cat=\\""+i+"\\" data-dish=\\""+j+"\\" data-name=\\""+escapeHtml((dish.name||"").toLowerCase())+"\\" data-desc=\\""+escapeHtml((dish.description||"").toLowerCase())+"\\" style=\\"transition-delay:"+(j*40)+"ms\\">";\n';
       s += '      html+="<div class=\\"carta-card-img-wrap\\">";\n';
       s += '      html+="<span class=\\"carta-card-price-overlay\\">"+formatPrice(dish.price)+"</span>";\n';
-      s += '      if(dish.image_url){html+="<img src=\\""+escapeHtml(dish.image_url)+"\\" class=\\"carta-card-img\\" alt=\\""+escapeHtml(dish.name||"Plato")+"\\" data-letter=\\""+escapeHtml(letter)+"\\" loading=\\"lazy\\"/>";}\n';
+      s += '      if(dish.image_url){var _src=imgMedium(dish.image_url),_ss=imgSrcset(dish.image_url);html+="<img src=\\""+escapeHtml(_src)+"\\" "+(_ss?"srcset=\\""+escapeHtml(_ss)+"\\" sizes=\\"(max-width: 600px) 90vw, (max-width: 1024px) 45vw, 300px\\" ":"")+"class=\\"carta-card-img\\" alt=\\""+escapeHtml(dish.name||"Plato")+"\\" data-letter=\\""+escapeHtml(letter)+"\\" loading=\\"lazy\\" decoding=\\"async\\"/>";}\n';
       s += '      else{html+="<div class=\\"carta-card-placeholder\\">"+escapeHtml(letter)+"</div>";}\n';
       s += '      html+="<button class=\\"carta-card-add\\" data-cat=\\""+i+"\\" data-dish=\\""+j+"\\" title=\\"Agregar\\"><svg viewBox=\\"0 0 24 24\\" fill=\\"none\\" stroke=\\"currentColor\\" stroke-width=\\"3\\" stroke-linecap=\\"round\\" stroke-linejoin=\\"round\\"><path d=\\"M12 5v14M5 12h14\\"/></svg></button>";\n';
       s += '      html+="</div>";\n';
@@ -783,7 +791,7 @@ function buildJS(opts: JSOpts): string {
       s += '      else{html+="<div class=\\"rappi-item-desc\\">Delicioso plato preparado con ingredientes frescos.</div>";}\n';
       s += '      html+="<div class=\\"rappi-item-price\\">"+formatPrice(dish.price)+"</div></div>";\n';
       s += '      html+="<div class=\\"rappi-item-img-wrap\\">";\n';
-      s += '      if(dish.image_url){html+="<img src=\\""+escapeHtml(dish.image_url)+"\\" class=\\"rappi-item-img\\" alt=\\""+escapeHtml(dish.name||"Plato")+"\\" data-letter=\\""+escapeHtml(letter)+"\\" loading=\\"lazy\\"/>";}\n';
+      s += '      if(dish.image_url){var _src=imgMedium(dish.image_url),_ss=imgSrcset(dish.image_url);html+="<img src=\\""+escapeHtml(_src)+"\\" "+(_ss?"srcset=\\""+escapeHtml(_ss)+"\\" sizes=\\"(max-width: 600px) 90vw, (max-width: 1024px) 45vw, 300px\\" ":"")+"class=\\"rappi-item-img\\" alt=\\""+escapeHtml(dish.name||"Plato")+"\\" data-letter=\\""+escapeHtml(letter)+"\\" loading=\\"lazy\\" decoding=\\"async\\"/>";}\n';
       s += '      else{html+="<div class=\\"rappi-item-placeholder\\">"+escapeHtml(letter)+"</div>";}\n';
       s += '      html+="<button class=\\"rappi-item-add\\" data-cat=\\""+i+"\\" data-dish=\\""+j+"\\" title=\\"Agregar\\"><svg viewBox=\\"0 0 24 24\\" fill=\\"none\\" stroke=\\"currentColor\\" stroke-width=\\"3\\" stroke-linecap=\\"round\\" stroke-linejoin=\\"round\\"><path d=\\"M12 5v14M5 12h14\\"/></svg></button>";\n';
       s += '      html+="</div></div>";\n';
@@ -804,7 +812,7 @@ function buildJS(opts: JSOpts): string {
     s += '      if(THEME.imageSize!=="none"){\n';
     s += '        html+="<div class=\\"dish-img-wrap\\">";\n';
     s += '        html+="<span class=\\"dish-cat-badge\\">"+escapeHtml(cat.name||"Plato")+"</span>";\n';
-    s += '        if(dish.image_url){html+="<img src=\\""+escapeHtml(dish.image_url)+"\\" class=\\"dish-img\\" alt=\\""+escapeHtml(dish.name||"Plato")+"\\" data-letter=\\""+escapeHtml((dish.name||"P").charAt(0).toUpperCase())+"\\" loading=\\"lazy\\"/>";}\n';
+    s += '        if(dish.image_url){var _src=imgMedium(dish.image_url),_ss=imgSrcset(dish.image_url);html+="<img src=\\""+escapeHtml(_src)+"\\" "+(_ss?"srcset=\\""+escapeHtml(_ss)+"\\" sizes=\\"(max-width: 600px) 90vw, (max-width: 1024px) 45vw, 400px\\" ":"")+"class=\\"dish-img\\" alt=\\""+escapeHtml(dish.name||"Plato")+"\\" data-letter=\\""+escapeHtml((dish.name||"P").charAt(0).toUpperCase())+"\\" loading=\\"lazy\\" decoding=\\"async\\"/>";}\n';
     s += '        else{html+="<div class=\\"dish-img-placeholder\\">"+escapeHtml((dish.name||"P").charAt(0).toUpperCase())+"</div>";}\n';
     s += '        html+="</div>";\n';
     s += '      }\n';
@@ -1021,7 +1029,7 @@ function buildJS(opts: JSOpts): string {
   if (showGallery) {
     // Helper: genera placeholder (letra inicial + cat name) como elemento DOM
     s += 'function buildPlaceholderEl(letter,catName){var div=document.createElement("div");div.className="dish-lightbox-img-placeholder";div.innerHTML="<div class=\\"ph-letter\\">"+escapeHtml(letter)+"</div><div class=\\"ph-label\\">"+escapeHtml(catName)+"</div>";return div;}\n';
-    s += 'function buildImgEl(src,name){var img=document.createElement("img");img.className="dish-lightbox-img";img.alt=escapeHtml(name||"Plato");img.src=src;return img;}\n';
+    s += 'function buildImgEl(src,name){var img=document.createElement("img");img.className="dish-lightbox-img";img.alt=escapeHtml(name||"Plato");img.src=src;img.loading="lazy";img.decoding="async";var ss=imgSrcset(src);if(ss){img.srcset=ss;img.sizes="(max-width: 600px) 100vw, 800px";}return img;}\n';
     // Construye el hero: Swiper si gallery>1, img simple si solo 1
     s += 'function buildDishHero(dish,catName){\n';
     s += '  var hero=document.createElement("div");hero.className="dish-lightbox-hero";\n';

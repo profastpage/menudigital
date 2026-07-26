@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { Upload, X, Loader2, Image as ImageIcon, Wand2, Sparkles } from 'lucide-react';
 import type { Plan } from '@/lib/plans';
+import { deriveVariantUrl } from '@/lib/image-utils';
 
 interface Props {
   initialUrl?: string;
@@ -201,8 +202,12 @@ export function ImageUploader({
         {url ? (
           <>
             <img
-              src={url}
+              src={deriveVariantUrl(url, 'thumb')}
+              srcSet={`${deriveVariantUrl(url, 'thumb')} 400w, ${deriveVariantUrl(url, 'medium')} 800w`}
+              sizes={`${size}px`}
               alt=""
+              loading="lazy"
+              decoding="async"
               className={`w-full h-full object-cover ${shapeClass} ${
                 removingBg ? 'opacity-40' : ''
               }`}

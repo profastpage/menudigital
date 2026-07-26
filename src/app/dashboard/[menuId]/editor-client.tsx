@@ -51,6 +51,7 @@ import {
 } from 'lucide-react';
 import { COLORS, CURRENCIES, type Plan } from '@/lib/plans';
 import type { MenuData, ProfileData } from '@/lib/menu-utils';
+import { deriveVariantUrl } from '@/lib/image-utils';
 import { buildMenuHTML } from './menu-html-builder';
 import { ImageUploader } from './image-uploader';
 
@@ -960,9 +961,13 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount }: Props)
                     {theme.cover_url ? (
                       <>
                         <img
-                          src={theme.cover_url}
+                          src={deriveVariantUrl(theme.cover_url, 'medium')}
+                          srcSet={`${deriveVariantUrl(theme.cover_url, 'thumb')} 400w, ${deriveVariantUrl(theme.cover_url, 'medium')} 800w, ${deriveVariantUrl(theme.cover_url, 'large')} 1200w`}
+                          sizes="(max-width: 768px) 100vw, 600px"
                           alt="Cover"
                           className="absolute inset-0 w-full h-full object-cover"
+                          loading="lazy"
+                          decoding="async"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
                         <button
@@ -1672,9 +1677,11 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount }: Props)
                                   <div key={idx} className="relative group">
                                     {/* eslint-disable-next-line @next/next/no-img-element */}
                                     <img
-                                      src={img}
+                                      src={deriveVariantUrl(img, 'thumb')}
                                       alt={`Imagen ${idx + 1}`}
                                       className="w-14 h-14 object-cover rounded-md border border-white/10"
+                                      loading="lazy"
+                                      decoding="async"
                                     />
                                     <button
                                       type="button"
