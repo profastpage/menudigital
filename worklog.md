@@ -922,3 +922,53 @@ Stage Summary:
 - manifest.json NO requiere cambios (paths se mantienen)
 - Deploy automático a Vercel activado (~40s)
 - Scripts persistidos para futuras iteraciones: si el usuario envía otro logo, basta reemplazar /home/z/my-project/upload/pasted_image_1785097360610.png y re-ejecutar ambos scripts
+
+---
+Task ID: demo-account-seed
+Agent: main (Super Z)
+Task: Crear cuenta demo con 5 menús de distintos rubros (pollería, chifa, pizzería, burgers, cevichería), cada uno con layout/tema diferente y 10-30 productos con imágenes WebP de Unsplash/Pexels/Pixabay. Plan FULL.
+
+Work Log:
+- Revisé el schema completo de Supabase (schema.sql, consolidated-migrations.sql, add-carta-style.sql) para entender:
+  - Tabla menus con campos theme_* (layout, dark_mode, card_style, image_size, font, cover_url, etc.)
+  - Tabla categories y dishes con ON CONFLICT support
+  - Tabla auth.users de Supabase (con campo encrypted_password bcrypt)
+  - 3 layouts disponibles: single, double, grid
+  - 2 estilos especiales: theme_carta_style (carrusel Rappi) y theme_carta_list_style (lista Rappi)
+  - theme_carta_autoscroll para carrusel automático
+- Verifico que bcrypt está disponible en Python (pip install bcrypt)
+- Creé script /home/z/my-project/scripts/generate-demo-seed.py que:
+  - Calcula hash bcrypt de la contraseña demo (cost factor 10, compatible con Supabase)
+  - Usa UUIDs determinísticos (uuid5 con namespace fijo) para idempotencia
+  - Define 5 restaurantes con metadata, themes, social media, categorías y platos
+  - Genera SQL completo con 187 INSERTs (1 auth.users + 1 auth.identities + 1 profiles + 5 menus + 31 categorías + 148 platos)
+  - Cada INSERT tiene ON CONFLICT DO NOTHING o DO UPDATE → 100% idempotente
+- Ejecuto el generador: produce 121KB de SQL / 3636 líneas
+- Detecto URLs rotas: 14 de 45 photo IDs únicos de Unsplash devuelven HTTP 404
+- Creé script /home/z/my-project/scripts/verify-unsplash-urls.py para verificar masivamente URLs
+- Creé script /home/z/my-project/scripts/fix-broken-unsplash-urls.py que reemplaza los 14 IDs rotos con alternativas verificadas temáticamente cercanas
+- Reemplazos hechos: 35 ocurrencias totales (incluyendo 18 del ID más usado en cevichería)
+- Re-vero URLs: 34 IDs únicos, 0 rotas, 100% funcionales
+- Commit 5712bb8 y push exitoso a GitHub (origin/main sincronizado)
+
+Stage Summary:
+- Cuenta demo lista para ser creada:
+  - Email:    demo@menudigital.pro
+  - Password: DemoMenuPro2025!
+  - Plan:     FULL (white-label)
+- 5 menús con 5 layouts/estilos distintos para demostración:
+  1. Pollería El Dorado Chicken     → /r/polleria-el-dorado    (single col, dark, naranja, expanded, large img)
+  2. Chifa Dragón de Oro            → /r/chifa-dragon-de-oro   (double col, dark, rojo+Playfair, expanded, medium)
+  3. Pizzería Bella Napoli          → /r/pizzeria-bella-napoli (grid, light, rojo italiano+crema, minimal, Playfair)
+  4. Smash Brothers Burger House    → /r/smash-brothers-burgers (single + carta_style → carrusel Rappi con autoscroll)
+  5. La Mar Cevichería              → /r/cevicheria-la-mar     (single + carta_list_style → lista Rappi)
+- 31 categorías, 148 platos con descripciones profesionales en español
+- 34 URLs de Unsplash únicas, 100% funcionales (todas sirven WebP con &fm=webp)
+- SQL idempotente: el usuario puede ejecutarlo cuantas veces quiera
+- Archivos generados:
+  - /home/z/my-project/supabase/seed-demo-account.sql (SQL en repo)
+  - /home/z/my-project/download/seed-demo-account.sql (copia para descarga)
+  - /home/z/my-project/scripts/generate-demo-seed.py (generador)
+  - /home/z/my-project/scripts/verify-unsplash-urls.py (verificador)
+  - /home/z/my-project/scripts/fix-broken-unsplash-urls.py (fixer)
+- PRÓXIMO PASO: el usuario debe pegar el contenido de seed-demo-account.sql en Supabase SQL Editor y ejecutarlo
