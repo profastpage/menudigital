@@ -1055,3 +1055,19 @@ Stage Summary:
 - PRÓXIMO PASO: el usuario debe ejecutar en Supabase SQL Editor:
   1. seed-demo-account.sql (si no lo ha ejecutado aún)
   2. seed-demo-mozos-org.sql (este nuevo)
+
+---
+Task ID: fix-identities-column
+Agent: main
+Task: Corregir error `column "identity_id" of relation "identities" does not exist` al inyectar seed-demo-account.sql en Supabase SQL Editor
+
+Work Log:
+- Diagnosticado: en Supabase moderno la tabla `auth.identities` NO tiene columna `identity_id`. El sub se guarda dentro de `identity_data` JSONB. Columnas reales: id, user_id, identity_data, provider, last_sign_in_at, created_at, updated_at.
+- Editado /home/z/my-project/supabase/seed-demo-account.sql: eliminada columna `identity_id` del INSERT y su valor correspondiente. Agregado comentario explicativo.
+- Sincronizado a /home/z/my-project/download/seed-demo-account.sql (copia idéntica).
+- Verificado con rg: ninguna ocurrencia restante de `identity_id` como columna.
+
+Stage Summary:
+- El INSERT a auth.identities ahora usa solo columnas válidas (id, user_id, identity_data, provider, last_sign_in_at, created_at, updated_at).
+- El usuario puede volver a ejecutar el SQL en Supabase SQL Editor sin el error 42703.
+- Archivos afectados: supabase/seed-demo-account.sql, download/seed-demo-account.sql (3639 líneas cada uno).
