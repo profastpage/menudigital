@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useOfflineQueue } from '@/hooks/use-offline-queue';
+import { InstallAppButton } from '@/components/pwa/install-app-button';
 
 interface Dish {
   id: string; name: string; price: number; description?: string; image_url?: string;
@@ -329,6 +330,12 @@ export function MozoPanel({ token, waiterName }: Props) {
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
           </button>
+          <InstallAppButton
+            variant="mozo"
+            size="sm"
+            style="compact"
+            showLabel={false}
+          />
         </div>
       </header>
 

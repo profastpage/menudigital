@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import type { Plan } from '@/lib/plans';
 import { isPlanAtLeast, type PlanId } from '@/lib/plans';
+import { InstallAppButton } from '@/components/pwa/install-app-button';
 
 interface NavItem {
   href: string;
@@ -203,6 +204,16 @@ export function DashboardShell({ user, plan, isSuperAdmin = false, children }: P
           </Link>
         </nav>
 
+        {/* Botón instalar app — PWA */}
+        <div className="border-t border-white/10 pt-3 px-2">
+          <InstallAppButton
+            variant="dashboard"
+            size="sm"
+            style="compact"
+            className="w-full justify-center"
+          />
+        </div>
+
         {renderUserBlock()}
       </aside>
 
@@ -287,6 +298,12 @@ export function DashboardShell({ user, plan, isSuperAdmin = false, children }: P
               >
                 {plan.name}
               </span>
+              <InstallAppButton
+                variant="dashboard"
+                size="sm"
+                style="ghost"
+                showLabel={false}
+              />
               <Button
                 variant="ghost"
                 size="icon"
