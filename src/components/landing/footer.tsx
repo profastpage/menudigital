@@ -54,6 +54,37 @@ export function Footer() {
             <span className="text-[#d4af37]">Hecho con ♥ en Perú</span>
           </div>
         </div>
+
+        {/* Créditos de desarrollo */}
+        <div className="mt-6 pt-6 border-t border-white/5 text-center">
+          <p className="text-xs text-white/40">
+            Creado &amp; Desarrollado por{' '}
+            <a
+              href="https://fastpagepro.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-white/60 hover:text-[#d4af37] transition-colors font-medium"
+            >
+              <span className="bg-gradient-to-r from-[#d4af37] to-[#f4d35e] bg-clip-text text-transparent font-semibold">
+                fastpagepro.com
+              </span>
+              <svg
+                className="w-3 h-3 opacity-60"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                />
+              </svg>
+            </a>
+          </p>
+        </div>
       </div>
     </footer>
   );
