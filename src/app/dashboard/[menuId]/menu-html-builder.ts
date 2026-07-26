@@ -31,9 +31,14 @@ export function buildMenuHTML(data: MenuData, opts?: { isPreview?: boolean }): s
   const coverUrl = data.theme_cover_url || null;
   const secondary = data.theme_color_secondary || '#1a1a2e';
   const showGallery = data.theme_dish_gallery !== false; // default true
+  // Estilo Carta (PedidosYa/Rappi horizontal carousel)
+  const cartaStyle = data.theme_carta_style === true;
+  const cartaListStyle = data.theme_carta_list_style === true;
+  const cartaAutoscroll = data.theme_carta_autoscroll === true;
+  const cartaScrollSpeed = data.theme_carta_scroll_speed || 30;
 
-  const css = buildCSS({ layout, imageSize, cardStyle, font, darkMode, showSearch, showCatIcons, rounded, coverUrl, secondary, showGallery });
-  const js = buildJS({ layout, imageSize, cardStyle, showSearch, showGallery, isPreview, darkMode });
+  const css = buildCSS({ layout, imageSize, cardStyle, font, darkMode, showSearch, showCatIcons, rounded, coverUrl, secondary, showGallery, cartaStyle, cartaListStyle });
+  const js = buildJS({ layout, imageSize, cardStyle, showSearch, showGallery, isPreview, darkMode, cartaStyle, cartaListStyle, cartaAutoscroll, cartaScrollSpeed });
   const colorRgb = hexToRgbStr(data.color);
   const secondaryRgb = hexToRgbStr(secondary);
 
@@ -104,7 +109,7 @@ export function buildMenuHTML(data: MenuData, opts?: { isPreview?: boolean }): s
   html += 'var RESTAURANT = ' + JSON.stringify(data) + ';\n';
   html += 'var SHOW_BRANDING = ' + (!!data.branding_text) + ';\n';
   html += 'var BRANDING_TEXT = ' + JSON.stringify(data.branding_text || '') + ';\n';
-  html += 'var THEME = ' + JSON.stringify({ layout, imageSize, cardStyle, showSearch, showGallery }) + ';\n';
+  html += 'var THEME = ' + JSON.stringify({ layout, imageSize, cardStyle, showSearch, showGallery, cartaStyle, cartaListStyle, cartaAutoscroll, cartaScrollSpeed }) + ';\n';
   html += 'var IS_PREVIEW = ' + JSON.stringify(isPreview) + ';\n';
   html += 'document.documentElement.style.setProperty("--accent", "' + data.color + '");\n';
   html += 'document.documentElement.style.setProperty("--accent-rgb", "' + colorRgb + '");\n';
@@ -133,10 +138,12 @@ interface ThemeOpts {
   coverUrl: string | null;
   secondary: string;
   showGallery: boolean;
+  cartaStyle: boolean;
+  cartaListStyle: boolean;
 }
 
 function buildCSS(opts: ThemeOpts): string {
-  const { layout, imageSize, cardStyle, font, darkMode, showSearch, showCatIcons, rounded, coverUrl, showGallery } = opts;
+  const { layout, imageSize, cardStyle, font, darkMode, showSearch, showCatIcons, rounded, coverUrl, showGallery, cartaStyle, cartaListStyle } = opts;
   const radius = rounded ? '16px' : '4px';
   const radiusSm = rounded ? '12px' : '2px';
   const radiusLg = rounded ? '24px' : '8px';
@@ -551,6 +558,78 @@ function buildCSS(opts: ThemeOpts): string {
   }
   // En mobile, mover el botón para no chocar con scroll-top-btn (right:14px ya está ok, son verticales)
 
+  // ─── MODO CARTA (PedidosYa/Rappi horizontal carousel) ───
+  // Solo se activa cuando THEME.cartaStyle=true.
+  // Estructura:
+  //   .carta-destacados (sección sticky destacados)
+  //     .carta-section-title (titulo "Destacados")
+  //     .carta-track (horizontal scroll, snap-x mandatory)
+  //       .carta-card (imagen grande + nombre + precio)
+  //   .carta-category (cada categoría)
+  //     .carta-section-title
+  //     .carta-track (horizontal scroll, snap-x mandatory)
+  //       .carta-card
+  if (cartaStyle || cartaListStyle) {
+    // Layout contenedor del modo Carta: padding inferior para no chocar con bottom nav
+    c += '.carta-wrapper{padding:8px 0 24px;}';
+    // Título de sección (estilo PedidosYa: bold + accent left-bar)
+    c += '.carta-section-title{font-size:18px;font-weight:700;margin:18px 16px 12px;display:flex;align-items:center;gap:10px;letter-spacing:-0.3px;}';
+    c += '.carta-section-title::before{content:"";width:4px;height:20px;background:linear-gradient(180deg,var(--accent),var(--gold));border-radius:2px;}';
+    c += '.carta-section-title .cat-count{font-size:12px;color:var(--text-muted);font-weight:500;}';
+    // Track horizontal con scroll-snap
+    c += '.carta-track{display:flex;gap:12px;padding:4px 16px 12px;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;-webkit-overflow-scrolling:touch;scroll-behavior:smooth;}';
+    c += '.carta-track::-webkit-scrollbar{display:none;}';
+    c += '.carta-track.paused{scroll-behavior:auto;}';
+    // Cada card del carrusel (aspect 1/1, snap-start)
+    c += '.carta-card{flex:0 0 160px;scroll-snap-align:start;background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;cursor:pointer;position:relative;transition:transform 0.25s,border-color 0.25s;opacity:0;transform:translateY(15px);}';
+    c += '.carta-card.revealed{opacity:1;transform:translateY(0);}';
+    c += '@media(min-width:480px){.carta-card{flex:0 0 180px;}}';
+    c += '@media(min-width:640px){.carta-card{flex:0 0 200px;}}';
+    c += '@media(hover:hover){.carta-card:hover{transform:translateY(-3px);border-color:rgba(var(--accent-rgb),0.4);box-shadow:0 10px 24px rgba(0,0,0,0.16);}}';
+    // Imagen del card (cuadrada, 1/1 aspect)
+    c += '.carta-card-img-wrap{position:relative;width:100%;aspect-ratio:1/1;overflow:hidden;background:linear-gradient(135deg,var(--glass),var(--glass-strong));}';
+    c += '.carta-card-img{width:100%;height:100%;object-fit:cover;display:block;transition:transform 0.5s cubic-bezier(0.2,0,0.2,1);}';
+    c += '@media(hover:hover){.carta-card:hover .carta-card-img{transform:scale(1.07);}}';
+    c += '.carta-card-placeholder{width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--accent),rgba(var(--accent-rgb),0.55));color:#fff;font-size:46px;font-weight:900;letter-spacing:-2px;}';
+    // Precio overlay (top-right, fondo translúcido accent)
+    c += '.carta-card-price-overlay{position:absolute;top:8px;right:8px;background:rgba(0,0,0,0.55);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);color:#fff;padding:4px 8px;border-radius:10px;font-size:11px;font-weight:700;}';
+    // Add btn overlay (bottom-right de la imagen)
+    c += '.carta-card-add{position:absolute;bottom:8px;right:8px;width:36px;height:36px;border-radius:50%;background:var(--accent);color:#fff;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 12px rgba(var(--accent-rgb),0.4);transition:transform 0.2s;}';
+    c += '.carta-card-add:active{transform:scale(0.92);}';
+    c += '.carta-card-add svg{width:16px;height:16px;}';
+    // Info debajo de la imagen (nombre + descripción pequeña)
+    c += '.carta-card-info{padding:10px 12px 12px;}';
+    c += '.carta-card-name{font-size:14px;font-weight:600;color:var(--text);line-height:1.3;margin-bottom:4px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:36px;}';
+    c += '.carta-card-desc{font-size:11px;color:var(--text-muted);line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}';
+    // Featured badge (top-left del card destacado)
+    c += '.carta-card-featured{position:absolute;top:8px;left:8px;background:linear-gradient(135deg,var(--gold),#b8860b);color:#1a1a1a;padding:3px 8px;border-radius:8px;font-size:10px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;}';
+    // Pausa indicator (cuando auto-scroll está pausado por interacción)
+    c += '.carta-pause-indicator{position:absolute;top:8px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.7);backdrop-filter:blur(8px);color:#fff;padding:4px 12px;border-radius:12px;font-size:11px;font-weight:600;opacity:0;transition:opacity 0.3s;pointer-events:none;z-index:5;}';
+    c += '.carta-track.paused + .carta-pause-indicator{opacity:1;}';
+  }
+
+  // ─── MODO LISTA Rappi (texto izquierda, imagen pequeña derecha) ───
+  if (cartaListStyle) {
+    c += '.rappi-list{display:flex;flex-direction:column;gap:12px;padding:8px 16px;}';
+    c += '.rappi-item{display:flex;gap:12px;background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius);padding:12px;cursor:pointer;position:relative;transition:transform 0.2s,border-color 0.2s;opacity:0;transform:translateY(10px);}';
+    c += '.rappi-item.revealed{opacity:1;transform:translateY(0);}';
+    c += '@media(hover:hover){.rappi-item:hover{border-color:rgba(var(--accent-rgb),0.35);}}';
+    c += '.rappi-item:active{transform:scale(0.997);}';
+    // Info izquierda (flex:1)
+    c += '.rappi-item-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;}';
+    c += '.rappi-item-name{font-size:15px;font-weight:600;color:var(--text);line-height:1.3;}';
+    c += '.rappi-item-desc{font-size:12px;color:var(--text-muted);line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}';
+    c += '.rappi-item-price{font-size:15px;font-weight:700;color:var(--accent-text);margin-top:auto;}';
+    // Imagen derecha (cuadrada 88px)
+    c += '.rappi-item-img-wrap{position:relative;flex:0 0 88px;width:88px;height:88px;border-radius:var(--radius-sm);overflow:hidden;background:linear-gradient(135deg,var(--glass),var(--glass-strong));}';
+    c += '.rappi-item-img{width:100%;height:100%;object-fit:cover;display:block;}';
+    c += '.rappi-item-placeholder{width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--accent),rgba(var(--accent-rgb),0.55));color:#fff;font-size:32px;font-weight:900;}';
+    // Add btn overlay (bottom-right de la imagen)
+    c += '.rappi-item-add{position:absolute;bottom:-6px;right:-6px;width:32px;height:32px;border-radius:50%;background:var(--accent);color:#fff;border:2px solid var(--bg-1);display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 10px rgba(var(--accent-rgb),0.4);transition:transform 0.2s;}';
+    c += '.rappi-item-add:active{transform:scale(0.92);}';
+    c += '.rappi-item-add svg{width:14px;height:14px;}';
+  }
+
   return c;
 }
 
@@ -562,12 +641,20 @@ interface JSOpts {
   showGallery: boolean;
   isPreview?: boolean;
   darkMode?: boolean;
+  cartaStyle?: boolean;
+  cartaListStyle?: boolean;
+  cartaAutoscroll?: boolean;
+  cartaScrollSpeed?: number;
 }
 
 function buildJS(opts: JSOpts): string {
   const { showSearch, showGallery } = opts;
   const isPreview = opts.isPreview === true;
   const darkMode = opts.darkMode !== false; // default true
+  const cartaStyle = opts.cartaStyle === true;
+  const cartaListStyle = opts.cartaListStyle === true;
+  const cartaAutoscroll = opts.cartaAutoscroll === true;
+  const cartaScrollSpeed = opts.cartaScrollSpeed || 30;
   let s = '';
   s += 'var cart = [];\n';
   s += 'var searchQuery = "";\n';
@@ -630,33 +717,109 @@ function buildJS(opts: JSOpts): string {
   s += '    html+="<div class=\\"nav-item"+(i===0?" active":"")+"\\" data-idx=\\""+i+"\\">"+(icon?"<span class=\\"nav-item-icon\\">"+icon+"</span>":"")+escapeHtml(cat.name)+"</div>";\n';
   s += '  });\n';
   s += '  html+="</div></nav>";\n';
-  // Sections con dishes-grid
-  s += '  RESTAURANT.categories.forEach(function(cat,i){\n';
-  s += '    html+="<section class=\\"section ' + (opts.layout === 'single' ? 'single-layout' : 'two-layout') + '\\" id=\\"cat-"+i+"\\">";\n';
-  s += '    html+="<h2 class=\\"section-title\\">"+escapeHtml(cat.name)+"</h2>";\n';
-  s += '    html+="<div class=\\"dishes-grid\\">";\n';
-  s += '    cat.dishes.forEach(function(dish,j){\n';
-  s += '      html+="<div class=\\"dish\\" data-cat=\\""+i+"\\" data-dish=\\""+j+"\\" data-name=\\""+escapeHtml((dish.name||"").toLowerCase())+"\\" data-desc=\\""+escapeHtml((dish.description||"").toLowerCase())+"\\" style=\\"transition-delay:"+(j*40)+"ms\\">";\n';
-  // HERO IMAGE — PedidosYa/Rappi style: imagen grande arriba SIEMPRE (si THEME.imageSize!=="none")
-  s += '      if(THEME.imageSize!=="none"){\n';
-  s += '        html+="<div class=\\"dish-img-wrap\\">";\n';
-  s += '        html+="<span class=\\"dish-cat-badge\\">"+escapeHtml(cat.name||"Plato")+"</span>";\n';
-  s += '        if(dish.image_url){html+="<img src=\\""+escapeHtml(dish.image_url)+"\\" class=\\"dish-img\\" alt=\\""+escapeHtml(dish.name||"Plato")+"\\" data-letter=\\""+escapeHtml((dish.name||"P").charAt(0).toUpperCase())+"\\" loading=\\"lazy\\"/>";}\n';
-  s += '        else{html+="<div class=\\"dish-img-placeholder\\">"+escapeHtml((dish.name||"P").charAt(0).toUpperCase())+"</div>";}\n';
-  s += '        html+="</div>";\n';
-  s += '      }\n';
-  // INFO area — nombre, descripción, precio + add btn
-  s += '      html+="<div class=\\"dish-info\\">";\n';
-  s += '      html+="<div class=\\"dish-name\\">"+escapeHtml(dish.name||"Plato")+"</div>";\n';
-  s += '      if(dish.description){html+="<div class=\\"dish-desc\\">"+escapeHtml(dish.description)+"</div>";}\n';
-  s += '      else{html+="<div class=\\"dish-desc\\">Delicioso plato preparado con ingredientes frescos.</div>";}\n';
-  s += '      html+="<div class=\\"dish-bottom\\">";\n';
-  s += '      html+="<div class=\\"dish-price\\">"+formatPrice(dish.price)+"</div>";\n';
-  s += '      html+="<button class=\\"add-btn\\" data-cat=\\""+i+"\\" data-dish=\\""+j+"\\" title=\\"Agregar\\"><svg width=\\"14\\" height=\\"14\\" viewBox=\\"0 0 24 24\\" fill=\\"none\\" stroke=\\"currentColor\\" stroke-width=\\"3\\" stroke-linecap=\\"round\\" stroke-linejoin=\\"round\\"><path d=\\"M12 5v14M5 12h14\\"/></svg>Agregar</button>";\n';
-  s += '      html+="</div></div></div>";\n';
-  s += '    });\n';
-  s += '    html+="</div></section>";\n';
-  s += '  });\n';
+  // ─── MODO CARTA (PedidosYa/Rappi horizontal carousel) ───
+  // Si THEME.cartaStyle=true: secciones con scroll horizontal (Destacados + cada categoría)
+  // Si THEME.cartaListStyle=true: lista estilo Rappi (texto izq, imagen pequeña der)
+  // Si ambos false: layout original (grid de cards verticales)
+  if (cartaStyle || cartaListStyle) {
+    // Iniciar wrapper del modo Carta
+    s += '  html+="<div class=\\"carta-wrapper\\">";\n';
+    // Construir "Destacados": tomar hasta 10 platos (con o sin imagen) de todas las categorías
+    if (cartaStyle) {
+      s += '  var destacados=[];\n';
+      s += '  RESTAURANT.categories.forEach(function(cat,ci){(cat.dishes||[]).forEach(function(dish,di){if(destacados.length<10){destacados.push({catIdx:ci,dishIdx:di,dishObj:dish,catName:cat.name});}});});\n';
+      s += '  if(destacados.length>0){\n';
+      s += '    html+="<section class=\\"carta-destacados\\" id=\\"cat-destacados\\">";\n';
+      s += '    html+="<h2 class=\\"carta-section-title\\">⭐ Destacados <span class=\\"cat-count\\">"+destacados.length+" platos</span></h2>";\n';
+      s += '    html+="<div class=\\"carta-track\\" id=\\"destacadosTrack\\">";\n';
+      s += '    destacados.forEach(function(it,idx){\n';
+      s += '      var d=it.dishObj;var letter=(d.name||"P").charAt(0).toUpperCase();\n';
+      s += '      html+="<div class=\\"carta-card\\" data-cat=\\""+it.catIdx+"\\" data-dish=\\""+it.dishIdx+"\\" data-name=\\""+escapeHtml((d.name||"").toLowerCase())+"\\" data-desc=\\""+escapeHtml((d.description||"").toLowerCase())+"\\" style=\\"transition-delay:"+(idx*40)+"ms\\">";\n';
+      s += '      html+="<div class=\\"carta-card-img-wrap\\">";\n';
+      s += '      if(idx<3){html+="<span class=\\"carta-card-featured\\">Top</span>";}\n';
+      s += '      html+="<span class=\\"carta-card-price-overlay\\">"+formatPrice(d.price)+"</span>";\n';
+      s += '      if(d.image_url){html+="<img src=\\""+escapeHtml(d.image_url)+"\\" class=\\"carta-card-img\\" alt=\\""+escapeHtml(d.name||"Plato")+"\\" data-letter=\\""+escapeHtml(letter)+"\\" loading=\\"lazy\\"/>";}\n';
+      s += '      else{html+="<div class=\\"carta-card-placeholder\\">"+escapeHtml(letter)+"</div>";}\n';
+      s += '      html+="<button class=\\"carta-card-add\\" data-cat=\\""+it.catIdx+"\\" data-dish=\\""+it.dishIdx+"\\" title=\\"Agregar\\"><svg viewBox=\\"0 0 24 24\\" fill=\\"none\\" stroke=\\"currentColor\\" stroke-width=\\"3\\" stroke-linecap=\\"round\\" stroke-linejoin=\\"round\\"><path d=\\"M12 5v14M5 12h14\\"/></svg></button>";\n';
+      s += '      html+="</div>";\n';
+      s += '      html+="<div class=\\"carta-card-info\\"><div class=\\"carta-card-name\\">"+escapeHtml(d.name||"Plato")+"</div>";\n';
+      s += '      if(d.description){html+="<div class=\\"carta-card-desc\\">"+escapeHtml(d.description)+"</div>";}\n';
+      s += '      html+="</div></div>";\n';
+      s += '    });\n';
+      s += '    html+="</section>";\n';
+      s += '  }\n';
+    }
+    // Cada categoría como carrusel horizontal (solo si cartaStyle) o lista Rappi (si cartaListStyle)
+    s += '  RESTAURANT.categories.forEach(function(cat,i){\n';
+    s += '    var catDishes=cat.dishes||[];\n';
+    s += '    if(catDishes.length===0)return;\n';
+    s += '    html+="<section class=\\"carta-category\\" id=\\"cat-"+i+"\\">";\n';
+    s += '    html+="<h2 class=\\"carta-section-title\\">"+escapeHtml(cat.name)+" <span class=\\"cat-count\\">"+catDishes.length+" platos</span></h2>";\n';
+    if (cartaStyle) {
+      // Carrusel horizontal
+      s += '    html+="<div class=\\"carta-track\\" id=\\"track-"+i+"\\">";\n';
+      s += '    catDishes.forEach(function(dish,j){\n';
+      s += '      var letter=(dish.name||"P").charAt(0).toUpperCase();\n';
+      s += '      html+="<div class=\\"carta-card\\" data-cat=\\""+i+"\\" data-dish=\\""+j+"\\" data-name=\\""+escapeHtml((dish.name||"").toLowerCase())+"\\" data-desc=\\""+escapeHtml((dish.description||"").toLowerCase())+"\\" style=\\"transition-delay:"+(j*40)+"ms\\">";\n';
+      s += '      html+="<div class=\\"carta-card-img-wrap\\">";\n';
+      s += '      html+="<span class=\\"carta-card-price-overlay\\">"+formatPrice(dish.price)+"</span>";\n';
+      s += '      if(dish.image_url){html+="<img src=\\""+escapeHtml(dish.image_url)+"\\" class=\\"carta-card-img\\" alt=\\""+escapeHtml(dish.name||"Plato")+"\\" data-letter=\\""+escapeHtml(letter)+"\\" loading=\\"lazy\\"/>";}\n';
+      s += '      else{html+="<div class=\\"carta-card-placeholder\\">"+escapeHtml(letter)+"</div>";}\n';
+      s += '      html+="<button class=\\"carta-card-add\\" data-cat=\\""+i+"\\" data-dish=\\""+j+"\\" title=\\"Agregar\\"><svg viewBox=\\"0 0 24 24\\" fill=\\"none\\" stroke=\\"currentColor\\" stroke-width=\\"3\\" stroke-linecap=\\"round\\" stroke-linejoin=\\"round\\"><path d=\\"M12 5v14M5 12h14\\"/></svg></button>";\n';
+      s += '      html+="</div>";\n';
+      s += '      html+="<div class=\\"carta-card-info\\"><div class=\\"carta-card-name\\">"+escapeHtml(dish.name||"Plato")+"</div>";\n';
+      s += '      if(dish.description){html+="<div class=\\"carta-card-desc\\">"+escapeHtml(dish.description)+"</div>";}\n';
+      s += '      html+="</div></div>";\n';
+      s += '    });\n';
+      s += '    html+="</div>";\n';
+    } else {
+      // Lista Rappi (texto izq, imagen pequeña der)
+      s += '    html+="<div class=\\"rappi-list\\">";\n';
+      s += '    catDishes.forEach(function(dish,j){\n';
+      s += '      var letter=(dish.name||"P").charAt(0).toUpperCase();\n';
+      s += '      html+="<div class=\\"rappi-item\\" data-cat=\\""+i+"\\" data-dish=\\""+j+"\\" data-name=\\""+escapeHtml((dish.name||"").toLowerCase())+"\\" data-desc=\\""+escapeHtml((dish.description||"").toLowerCase())+"\\" style=\\"transition-delay:"+(j*40)+"ms\\">";\n';
+      s += '      html+="<div class=\\"rappi-item-info\\"><div class=\\"rappi-item-name\\">"+escapeHtml(dish.name||"Plato")+"</div>";\n';
+      s += '      if(dish.description){html+="<div class=\\"rappi-item-desc\\">"+escapeHtml(dish.description)+"</div>";}\n';
+      s += '      else{html+="<div class=\\"rappi-item-desc\\">Delicioso plato preparado con ingredientes frescos.</div>";}\n';
+      s += '      html+="<div class=\\"rappi-item-price\\">"+formatPrice(dish.price)+"</div></div>";\n';
+      s += '      html+="<div class=\\"rappi-item-img-wrap\\">";\n';
+      s += '      if(dish.image_url){html+="<img src=\\""+escapeHtml(dish.image_url)+"\\" class=\\"rappi-item-img\\" alt=\\""+escapeHtml(dish.name||"Plato")+"\\" data-letter=\\""+escapeHtml(letter)+"\\" loading=\\"lazy\\"/>";}\n';
+      s += '      else{html+="<div class=\\"rappi-item-placeholder\\">"+escapeHtml(letter)+"</div>";}\n';
+      s += '      html+="<button class=\\"rappi-item-add\\" data-cat=\\""+i+"\\" data-dish=\\""+j+"\\" title=\\"Agregar\\"><svg viewBox=\\"0 0 24 24\\" fill=\\"none\\" stroke=\\"currentColor\\" stroke-width=\\"3\\" stroke-linecap=\\"round\\" stroke-linejoin=\\"round\\"><path d=\\"M12 5v14M5 12h14\\"/></svg></button>";\n';
+      s += '      html+="</div></div>";\n';
+      s += '    });\n';
+      s += '    html+="</div>";\n';
+    }
+    s += '    html+="</section>";\n';
+    s += '  });\n';
+    s += '  html+="</div>";\n'; // close carta-wrapper
+  } else {
+    // Layout original: sections con dishes-grid (PedidosYa vertical cards)
+    s += '  RESTAURANT.categories.forEach(function(cat,i){\n';
+    s += '    html+="<section class=\\"section ' + (opts.layout === 'single' ? 'single-layout' : 'two-layout') + '\\" id=\\"cat-"+i+"\\">";\n';
+    s += '    html+="<h2 class=\\"section-title\\">"+escapeHtml(cat.name)+"</h2>";\n';
+    s += '    html+="<div class=\\"dishes-grid\\">";\n';
+    s += '    cat.dishes.forEach(function(dish,j){\n';
+    s += '      html+="<div class=\\"dish\\" data-cat=\\""+i+"\\" data-dish=\\""+j+"\\" data-name=\\""+escapeHtml((dish.name||"").toLowerCase())+"\\" data-desc=\\""+escapeHtml((dish.description||"").toLowerCase())+"\\" style=\\"transition-delay:"+(j*40)+"ms\\">";\n';
+    s += '      if(THEME.imageSize!=="none"){\n';
+    s += '        html+="<div class=\\"dish-img-wrap\\">";\n';
+    s += '        html+="<span class=\\"dish-cat-badge\\">"+escapeHtml(cat.name||"Plato")+"</span>";\n';
+    s += '        if(dish.image_url){html+="<img src=\\""+escapeHtml(dish.image_url)+"\\" class=\\"dish-img\\" alt=\\""+escapeHtml(dish.name||"Plato")+"\\" data-letter=\\""+escapeHtml((dish.name||"P").charAt(0).toUpperCase())+"\\" loading=\\"lazy\\"/>";}\n';
+    s += '        else{html+="<div class=\\"dish-img-placeholder\\">"+escapeHtml((dish.name||"P").charAt(0).toUpperCase())+"</div>";}\n';
+    s += '        html+="</div>";\n';
+    s += '      }\n';
+    s += '      html+="<div class=\\"dish-info\\">";\n';
+    s += '      html+="<div class=\\"dish-name\\">"+escapeHtml(dish.name||"Plato")+"</div>";\n';
+    s += '      if(dish.description){html+="<div class=\\"dish-desc\\">"+escapeHtml(dish.description)+"</div>";}\n';
+    s += '      else{html+="<div class=\\"dish-desc\\">Delicioso plato preparado con ingredientes frescos.</div>";}\n';
+    s += '      html+="<div class=\\"dish-bottom\\">";\n';
+    s += '      html+="<div class=\\"dish-price\\">"+formatPrice(dish.price)+"</div>";\n';
+    s += '      html+="<button class=\\"add-btn\\" data-cat=\\""+i+"\\" data-dish=\\""+j+"\\" title=\\"Agregar\\"><svg width=\\"14\\" height=\\"14\\" viewBox=\\"0 0 24 24\\" fill=\\"none\\" stroke=\\"currentColor\\" stroke-width=\\"3\\" stroke-linecap=\\"round\\" stroke-linejoin=\\"round\\"><path d=\\"M12 5v14M5 12h14\\"/></svg>Agregar</button>";\n';
+    s += '      html+="</div></div></div>";\n';
+    s += '    });\n';
+    s += '    html+="</div></section>";\n';
+    s += '  });\n';
+  }
   // Footer
   s += '  html+="<div class=\\"menu-footer\\"><span>"+escapeHtml(RESTAURANT.name)+"</span>";\n';
   s += '  if(SHOW_BRANDING){html+=" · <a href=\\"https://menupro.app\\" target=\\"_blank\\">"+escapeHtml(BRANDING_TEXT||"Creado con MenuPro")+"</a>";}\n';
@@ -696,14 +859,73 @@ function buildJS(opts: JSOpts): string {
   if (showSearch) {
     s += 'var searchInput=document.getElementById("searchInput");\n';
     s += 'if(searchInput){searchInput.addEventListener("input",function(e){searchQuery=e.target.value.toLowerCase();filterDishes();});}\n';
-    s += 'function filterDishes(){var dishes=document.querySelectorAll(".dish");var anyVisible=false;dishes.forEach(function(d){var n=d.getAttribute("data-name")||"";var desc=d.getAttribute("data-desc")||"";var visible=n.indexOf(searchQuery)>=0||desc.indexOf(searchQuery)>=0;d.style.display=visible?"":"none";if(visible)anyVisible=true;});document.querySelectorAll(".no-results").forEach(function(n){n.remove();});if(!anyVisible&&searchQuery){var sections=document.querySelectorAll(".section");if(sections.length){var last=sections[sections.length-1];last.insertAdjacentHTML("afterend","<div class=\\"no-results\\">No se encontraron platos</div>");}}}\n';
+    s += 'function filterDishes(){var dishes=document.querySelectorAll(".dish, .carta-card, .rappi-item");var anyVisible=false;dishes.forEach(function(d){var n=d.getAttribute("data-name")||"";var desc=d.getAttribute("data-desc")||"";var visible=n.indexOf(searchQuery)>=0||desc.indexOf(searchQuery)>=0;d.style.display=visible?"":"none";if(visible)anyVisible=true;});document.querySelectorAll(".no-results").forEach(function(n){n.remove();});if(!anyVisible&&searchQuery){var sections=document.querySelectorAll(".section, .carta-category");if(sections.length){var last=sections[sections.length-1];last.insertAdjacentHTML("afterend","<div class=\\"no-results\\">No se encontraron platos</div>");}}}\n';
   }
 
   s += '  updateCart();\n';
   s += '}\n';
+  // ─── Auto-scroll del carrusel Destacados (solo si cartaStyle + cartaAutoscroll) ───
+  // Implementación: requestAnimationFrame loop que hace scrollLeft += speed/60 cada frame.
+  // Al llegar al final, rebota (cambia dirección).
+  // Cuando el usuario interactúa (touchstart, mousedown, wheel):
+  //   - pausa el auto-scroll durante 3s
+  //   - tras 3s sin interacción, reanuda automáticamente
+  //
+  // IMPORTANTE: cuando auto-scroll está activo, desactivamos scroll-snap-type
+  // porque el snap resetea scrollLeft al snap point más cercano y rompe el
+  // movimiento suave del auto-scroll.
+  if (cartaStyle && cartaAutoscroll) {
+    // CSS runtime: cuando auto-scroll está activo, el track #destacadosTrack
+    // no debe tener scroll-snap-type (se lo quitamos via clase .autoscroll-active)
+    s += 'var __cartaAutoscrollActive=true;\n';
+    s += 'function setupCartaAutoscroll(){\n';
+    s += '  var track=document.getElementById("destacadosTrack");\n';
+    s += '  if(!track)return;\n';
+    s += '  // Desactivar scroll-snap para que el auto-scroll funcione suavemente\n';
+    s += '  track.style.scrollSnapType="none";\n';
+    s += '  var speed=' + cartaScrollSpeed + ';\n'; // px/seg
+    s += '  var paused=false;\n';
+    s += '  var pauseTimer=null;\n';
+    s += '  var dir=1;\n'; // 1=right, -1=left (para bounce)
+    s += '  var lastTs=0;\n';
+    s += '  function tick(ts){\n';
+    s += '    if(!paused){\n';
+    s += '      if(!lastTs)lastTs=ts;\n';
+    s += '      var dt=(ts-lastTs)/1000;lastTs=ts;\n';
+    s += '      var delta=dir*speed*dt;\n';
+    s += '      var maxScroll=track.scrollWidth-track.clientWidth;\n';
+    s += '      if(maxScroll<=0){requestAnimationFrame(tick);return;}\n';
+    s += '      var newLeft=track.scrollLeft+delta;\n';
+    s += '      if(newLeft>=maxScroll){newLeft=maxScroll;dir=-1;}\n';
+    s += '      if(newLeft<=0){newLeft=0;dir=1;}\n';
+    s += '      track.scrollLeft=newLeft;\n';
+    s += '    }else{lastTs=0;}\n';
+    s += '    requestAnimationFrame(tick);\n';
+    s += '  }\n';
+    s += '  function pauseTemporarily(){\n';
+    s += '    paused=true;\n';
+    s += '    track.classList.add("paused");\n';
+    s += '    if(pauseTimer)clearTimeout(pauseTimer);\n';
+    s += '    pauseTimer=setTimeout(function(){paused=false;track.classList.remove("paused");},3000);\n';
+    s += '  }\n';
+    s += '  // Pausar en interacciones del usuario\n';
+    s += '  track.addEventListener("touchstart",pauseTemporarily,{passive:true});\n';
+    s += '  track.addEventListener("mousedown",pauseTemporarily);\n';
+    s += '  track.addEventListener("wheel",pauseTemporarily,{passive:true});\n';
+    s += '  // Pausar si el track no está visible (IntersectionObserver)\n';
+    s += '  if("IntersectionObserver" in window){\n';
+    s += '    var io=new IntersectionObserver(function(entries){entries.forEach(function(e){if(!e.isIntersecting){paused=true;}else{paused=false;lastTs=0;}});},{threshold:0.3});\n';
+    s += '    io.observe(track);\n';
+    s += '  }\n';
+    s += '  // Iniciar\n';
+    s += '  requestAnimationFrame(tick);\n';
+    s += '}\n';
+    // NOTA: setupCartaAutoscroll() se llama al final del script, después de renderApp(),
+    // porque necesita que #destacadosTrack exista en el DOM.
+  }
   // Reveal
   s += 'function setupReveal(){\n';
-  s += '  var dishes=document.querySelectorAll(".dish");\n';
+  s += '  var dishes=document.querySelectorAll(".dish, .carta-card, .rappi-item");\n';
   s += '  if(!("IntersectionObserver" in window)){dishes.forEach(function(d){d.classList.add("revealed");});return;}\n';
   s += '  var io=new IntersectionObserver(function(entries){\n';
   s += '    entries.forEach(function(e){if(e.isIntersecting){e.target.classList.add("revealed");io.unobserve(e.target);}});\n';
@@ -712,7 +934,8 @@ function buildJS(opts: JSOpts): string {
   s += '}\n';
   // Events
   s += 'function attachEvents(){\n';
-  s += '  document.querySelectorAll(".add-btn").forEach(function(btn){\n';
+  // Add buttons: incluyen .add-btn (layout original) + .carta-card-add + .rappi-item-add
+  s += '  document.querySelectorAll(".add-btn, .carta-card-add, .rappi-item-add").forEach(function(btn){\n';
   s += '    btn.addEventListener("click",function(e){\n';
   s += '      e.stopPropagation();\n';
   s += '      var catIdx=parseInt(this.dataset.cat);\n';
@@ -721,18 +944,21 @@ function buildJS(opts: JSOpts): string {
   s += '    });\n';
   s += '  });\n';
   // Dish click → abrir lightbox (si está activado) o agregar al carrito
+  // Selectores combinados: .dish (original) + .carta-card + .rappi-item
   if (showGallery) {
-    s += '  document.querySelectorAll(".dish").forEach(function(d){\n';
+    s += '  document.querySelectorAll(".dish, .carta-card, .rappi-item").forEach(function(d){\n';
     s += '    d.addEventListener("click",function(e){\n';
-    s += '      if(e.target.classList.contains("add-btn"))return;\n';
+    s += '      if(e.target.classList.contains("add-btn")||e.target.classList.contains("carta-card-add")||e.target.classList.contains("rappi-item-add"))return;\n';
+    s += '      if(e.target.closest(".carta-card-add")||e.target.closest(".rappi-item-add")||e.target.closest(".add-btn"))return;\n';
     s += '      var catIdx=parseInt(this.dataset.cat);\n';
     s += '      var dishIdx=parseInt(this.dataset.dish);\n';
     s += '      openDishLightbox(catIdx,dishIdx);\n';
     s += '    });\n';
     s += '  });\n';
   } else {
-    s += '  document.querySelectorAll(".dish").forEach(function(d){\n';
-    s += '    d.addEventListener("click",function(){\n';
+    s += '  document.querySelectorAll(".dish, .carta-card, .rappi-item").forEach(function(d){\n';
+    s += '    d.addEventListener("click",function(e){\n';
+    s += '      if(e.target.closest(".carta-card-add")||e.target.closest(".rappi-item-add")||e.target.closest(".add-btn"))return;\n';
     s += '      var catIdx=parseInt(this.dataset.cat);\n';
     s += '      var dishIdx=parseInt(this.dataset.dish);\n';
     s += '      addToCart(catIdx,dishIdx);\n';
@@ -779,15 +1005,15 @@ function buildJS(opts: JSOpts): string {
   s += '  }\n';
   // Dish image error handler — uses event delegation (clean, no nested escapes)
   // Si la imagen del plato falla al cargar, se reemplaza por un placeholder con la letra inicial
+  // Cubre: .dish-img (original) + .carta-card-img (carta carousel) + .rappi-item-img (lista Rappi)
   s += '  document.addEventListener("error",function(e){\n';
   s += '    var el=e.target;\n';
-  s += '    if(el && el.classList && el.classList.contains("dish-img")){\n';
-  s += '      var letter=el.getAttribute("data-letter")||"P";\n';
-  s += '      var div=document.createElement("div");\n';
-  s += '      div.className="dish-img-placeholder";\n';
-  s += '      div.textContent=letter;\n';
-  s += '      if(el.parentNode){el.parentNode.replaceChild(div,el);}\n';
-  s += '    }\n';
+  s += '    if(!el||!el.classList)return;\n';
+  s += '    var letter=el.getAttribute("data-letter")||"P";\n';
+  s += '    var div=document.createElement("div");\n';
+  s += '    if(el.classList.contains("dish-img")){div.className="dish-img-placeholder";div.textContent=letter;if(el.parentNode){el.parentNode.replaceChild(div,el);}}\n';
+  s += '    else if(el.classList.contains("carta-card-img")){div.className="carta-card-placeholder";div.textContent=letter;if(el.parentNode){el.parentNode.replaceChild(div,el);}}\n';
+  s += '    else if(el.classList.contains("rappi-item-img")){div.className="rappi-item-placeholder";div.textContent=letter;if(el.parentNode){el.parentNode.replaceChild(div,el);}}\n';
   s += '  },true);\n';
   s += '}\n';
 
@@ -1062,5 +1288,10 @@ function buildJS(opts: JSOpts): string {
   s += '  window.open(url,"_blank");\n';
   s += '}\n';
   s += 'renderApp();\n';
+  // Inicializar auto-scroll del carrusel Destacados DESPUÉS de renderApp
+  // (necesita que #destacadosTrack exista en el DOM)
+  if (cartaStyle && cartaAutoscroll) {
+    s += 'if(typeof setupCartaAutoscroll==="function"){setupCartaAutoscroll();}\n';
+  }
   return s;
 }

@@ -5,10 +5,6 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { Upload, X, Loader2, Image as ImageIcon, Wand2, Sparkles } from 'lucide-react';
 import type { Plan } from '@/lib/plans';
-import {
-  processImageWithBgRemoval,
-  type BgRemovalProgress,
-} from '@/lib/bg-removal';
 
 interface Props {
   initialUrl?: string;
@@ -39,7 +35,7 @@ export function ImageUploader({
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [removingBg, setRemovingBg] = useState(false);
-  const [progress, setProgress] = useState<BgRemovalProgress | null>(null);
+  const [progressMsg, setProgressMsg] = useState<string>('Procesando…');
   const [quota, setQuota] = useState<QuotaInfo | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -122,12 +118,18 @@ export function ImageUploader({
   }
 
   /**
-   * Pipeline de "Quitar fondo con un clic":
-   *  1. Verifica cuota disponible
-   *  2. Procesa client-side (IA + auto-crop + center)
-   *  3. Sube la imagen procesada (transparent=true)
-   *  4. Incrementa contador server-side
-   *  5. Reemplaza la URL
+   * Pipeline de "Quitar fondo con un clic" — SERVER-SIDE:
+   *  1. POST /api/bg-removal/process con la URL de la imagen
+   *  2. El servidor descarga la imagen, quita el fondo con IA (model medium),
+   *     auto-crop + center, y sube el resultado a Supabase Storage
+   *  3. Devuelve { url, quota }
+   *  4. Actualizamos la UI con la nueva imagen + nueva cuota
+   *
+   * Ventajas vs pipeline client-side:
+   *  - Sin descargar 50MB de WASM en el navegador
+   *  - ~1-3s en vez de 10-30s
+   *  - Funciona en cualquier dispositivo (móviles antiguos, tablets)
+   *  - El contador se incrementa automáticamente en el servidor
    */
   async function handleRemoveBackground() {
     if (!url) return;
@@ -141,30 +143,27 @@ export function ImageUploader({
     }
 
     setRemovingBg(true);
-    setProgress({ stage: 'loading-model', message: 'Cargando motor IA…' });
+    setProgressMsg('Procesando en servidor…');
 
     try {
-      // 1. Procesar imagen client-side
-      const newUrl = await processImageWithBgRemoval(url, (p) => {
-        setProgress(p);
+      const res = await fetch('/api/bg-removal/process', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageUrl: url }),
       });
-
-      // 2. Incrementar contador en el servidor
-      const useRes = await fetch('/api/bg-removal/use', { method: 'POST' });
-      const useData = await useRes.json();
-      if (!useRes.ok) {
-        // Si el server rechaza (límite alcanzado), revertimos
-        throw new Error(useData.error || 'No se pudo registrar el uso');
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'No se pudo quitar el fondo');
       }
 
-      // 3. Actualizar UI con la nueva imagen + nueva cuota
-      setUrl(newUrl);
-      onUploaded(newUrl);
+      // Actualizar UI con la nueva imagen + nueva cuota
+      setUrl(data.url);
+      onUploaded(data.url);
       setQuota({
         hasFeature: true,
-        used: useData.used,
-        limit: useData.limit,
-        remaining: useData.remaining,
+        used: data.quota.used,
+        limit: data.quota.limit,
+        remaining: data.quota.remaining,
         resetAt: quota?.resetAt ?? null,
       });
       toast.success('¡Fondo quitado y comida centrada!');
@@ -173,27 +172,12 @@ export function ImageUploader({
       toast.error(err instanceof Error ? err.message : 'Error al quitar fondo');
     } finally {
       setRemovingBg(false);
-      setProgress(null);
+      setProgressMsg('Procesando…');
     }
   }
 
   const shapeClass = shape === 'circle' ? 'rounded-full' : 'rounded-xl';
   const isCircle = shape === 'circle';
-
-  const progressLabel =
-    progress?.stage === 'loading-model'
-      ? progress.percent
-        ? `Descargando IA… ${Math.round(progress.percent)}%`
-        : 'Cargando IA…'
-      : progress?.stage === 'processing'
-        ? progress.percent
-          ? `Procesando… ${Math.round(progress.percent)}%`
-          : 'Procesando…'
-        : progress?.stage === 'cropping'
-          ? 'Centrando…'
-          : progress?.stage === 'uploading'
-            ? 'Subiendo…'
-            : 'Procesando…';
 
   return (
     <div className="flex items-start gap-3">
@@ -240,7 +224,7 @@ export function ImageUploader({
               <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm rounded-inherit">
                 <Loader2 className="w-4 h-4 text-[#d4af37] animate-spin mb-1" />
                 <span className="text-[9px] text-white/80 text-center px-1 leading-tight">
-                  {progressLabel}
+                  {progressMsg}
                 </span>
               </div>
             )}

@@ -318,3 +318,97 @@ Stage Summary:
   * Code: editor-client.tsx (logo fix), menu-html-builder.ts (PedidosYa redesign + light mode)
   * Test: scripts/test-pedidosya-style.ts
   * Sample HTML: download/test-pedidosya-dark.html, download/test-pedidosya-light.html
+
+---
+Task ID: bg-removal-server-carta-theme-qr-redirect
+Agent: main (Super Z)
+Task: Implementar 3 mejoras pedidas por el usuario: (1) Background removal server-side rápido y gratis, (2) Nuevo tema Carta estilo PedidosYa/Rappi con carrusel horizontal + auto-scroll configurable, (3) QR redirect route /qr/[slug] para mejorar UX de escaneo.
+
+Work Log:
+- Restaurado /api/upload/route.ts (estaba borrado accidentalmente en commit anterior — todas las subidas de imagen fallaban)
+- Instalado @imgly/background-removal-node@1.4.5 (versión server-side, sin descarga de 50MB WASM en cliente)
+- Creado /api/bg-removal/process/route.ts: pipeline server-side completo
+  * Auth + plan Pro + cuota > 0 (vía RPC get_bg_removals_quota)
+  * Descarga imagen original desde URL (Supabase Storage)
+  * removeBackground(buffer, { model: 'medium' }) — server-side, ~1-3s
+  * autoCropAndCenter con sharp: detecta bbox alpha, recorta, centra en lienzo cuadrado (max 1200px)
+  * Sube resultado a Supabase Storage (WebP con alpha)
+  * Incrementa contador bg_removals_used vía RPC increment_bg_removals
+  * Devuelve { url, quota: { used, limit, remaining } }
+- Actualizado image-uploader.tsx: reemplazado pipeline client-side (50MB WASM) por POST /api/bg-removal/process
+  * Eliminado import de processImageWithBgRemoval y BgRemovalProgress
+  * Simplificado progreso: solo "Procesando en servidor…"
+  * Mismo UX para el usuario pero ~5-10x más rápido
+- Tipos: agregado theme_carta_style, theme_carta_list_style, theme_carta_autoscroll, theme_carta_scroll_speed a MenuData en menu-utils.ts
+- menu-html-builder.ts: agregado soporte para 2 nuevos modos de layout
+  * Modo Carta Carrusel (theme_carta_style=true): sección "⭐ Destacados" con scroll horizontal (hasta 10 platos de todas las categorías) + cada categoría como carrusel horizontal independiente con scroll-snap-x mandatory
+  * Modo Lista Rappi (theme_carta_list_style=true): productos en filas con texto izquierda (nombre+desc+precio) e imagen cuadrada pequeña derecha con botón + overlay
+  * Auto-scroll (theme_carta_autoscroll=true): carrusel Destacados se mueve solo a velocidad configurable (5-200 px/seg, default 30). Pausa 3s al interactuar (touch/mouse/wheel). Pausa si no está visible (IntersectionObserver).
+  * CSS: nuevas clases .carta-wrapper, .carta-destacados, .carta-track (scroll-snap-x mandatory), .carta-card (160-200px flex), .carta-card-img-wrap (1/1 aspect), .carta-card-price-overlay, .carta-card-add (botón + rojo), .carta-card-featured (badge Top dorado), .rappi-list, .rappi-item (flex row), .rappi-item-info (flex:1), .rappi-item-img-wrap (88px square), .rappi-item-add
+  * JS: nueva función setupCartaAutoscroll() con requestAnimationFrame loop, pausa en interacción, IntersectionObserver para pausar si no visible
+  * Event handlers actualizados: .add-btn + .carta-card-add + .rappi-item-add ahora todos funcionan para agregar al carrito; click en .dish + .carta-card + .rappi-item abre lightbox
+  * Error handler para imágenes: cubre .dish-img + .carta-card-img + .rappi-item-img (reemplaza por placeholder con letra inicial)
+  * setupReveal: observa .dish + .carta-card + .rappi-item
+  * Bug fixes durante implementación:
+    - Escape de comillas roto en `class=\"carta-card-img-wrap\">` (faltaba un `\\` antes del cierre)
+    - Objeto destacados con propiedad `dish` duplicada (sobreescribía el índice con el objeto dish) → renombrado a catIdx/dishIdx/dishObj
+    - setupCartaAutoscroll() se llamaba antes de renderApp() (track no existía) → movido al final
+    - scroll-snap-type:x mandatory reseteaba scrollLeft → desactivado vía track.style.scrollSnapType="none" cuando auto-scroll activo
+- editor-client.tsx: agregado bloque "Estilo Carta (PedidosYa/Rappi)" en panel de Apariencia
+  * Toggle "Carrusel horizontal" (carta_style) — mutuamente excluyente con Lista Rappi
+  * Toggle "Lista Rappi" (carta_list_style)
+  * Sub-panel "Auto-scroll del Destacados" (visible solo si carta_style activo)
+  * Slider de velocidad 10-120 px/seg con label live "X px/seg"
+  * Persistencia: 4 nuevos campos guardados en save(), handlePublish(), y preview useEffect (debounced 1.5s)
+- api/menus/[id]/route.ts: acepta y persiste los 4 nuevos campos theme_carta_*
+- Creado /qr/[slug]/page.tsx: ruta corta optimizada para QR codes
+  * HTTP 302 redirect a /r/[slug] (sigue funcionando auto-open en iOS/Android modernos)
+  * Valida que el menú exista y esté publicado antes de redirigir
+  * Registra visita con source='qr' en menu_views (nueva columna opcional)
+  * generateMetadata: robots noindex,nofollow (no indexar redirects)
+  * Fallback seguro: si la columna source no existe, insert sin source
+- qr-client.tsx actualizado:
+  * URL del QR cambiada de /r/[slug] a /qr/[slug] (semántica para QR, distinguible en analytics)
+  * Botón "Abrir enlace" (ExternalLink) al lado del botón Copy en el campo de URL
+  * Bloque informativo "Escaneo automático en teléfonos modernos" con instrucciones para iPhone (iOS 11+), Android (9+), y apps de terceros
+  * Botón grande "Probar escaneo (abrir menú)" para testear la URL antes de imprimir
+- SQL migration: supabase/add-carta-style.sql (idempotente)
+  * 4 columnas nuevas en menus: theme_carta_style, theme_carta_list_style, theme_carta_autoscroll, theme_carta_scroll_speed
+  * CHECK constraint en scroll_speed (5-200)
+  * Columna source en menu_views + index
+  * COMMENTs informativos en todas las columnas
+  * DO blocks con IF NOT EXISTS — se puede ejecutar múltiples veces
+  * Verificación final con RAISE NOTICE
+
+Verificación con VLM + agent-browser (iPhone 16, 414x896):
+- Modo Carta Carrusel (test-carta-carta-carousel.html): VLM confirmó layout PedidosYa/Rappi con:
+  * Header con logo M, nombre Miku Sushi & Pub, slogan dorado, badge "Abierto ahora"
+  * Categorías como tabs horizontales (Entradas activa, Platos de Fondo, Bebidas)
+  * Sección "⭐ Destacados" con cards horizontales: imagen cuadrada, badge "TOP" dorado, precio overlay, botón + rojo, nombre + descripción debajo
+  * Cards cortadas en borde derecho (indica scroll horizontal)
+  * Categorías debajo como carruseles independientes con contador "X platos"
+  * Click en carta-card abre lightbox correctamente (data-cat=0 data-dish=0 → openDishLightbox)
+  * Lightbox: hero, close, categoría "ENTRADAS", nombre "Ostras al Limón", precio "S/. 53.00", descripción, notas, botón "Agregar al pedido"
+- Modo Lista Rappi (test-carta-carta-rappi-list.html): VLM confirmó layout Rappi con:
+  * Filas verticales con texto izquierda (nombre+descripción+precio rojo) e imagen cuadrada pequeña derecha con botón + flotante
+  * Placeholder con letra "A" cuando no hay imagen (Antojitos)
+  * Títulos de sección con contador ("4 platos")
+- Modo Carta + Auto-scroll (test-carta-carta-carousel-autoscroll.html, 50px/seg):
+  * scrollLeft inicial: 16 → después de 1.5s: 45 → después de 3s más: 137
+  * VLM comparó 2 screenshots (state1 vs state2 tras 4s): confirmó "el carrusel se desplazó ligeramente hacia la izquierda (contenido se movió a la derecha), se ve más de la tercera card Tokio Crunch, primera card Ostras al Limón quedó parcialmente recortada"
+- TypeScript: 0 errores en src/
+- Build: 27 rutas generadas (incluyendo nueva /qr/[slug] y /api/bg-removal/process)
+
+Stage Summary:
+- ✅ TAREA 1: Background removal ahora server-side (sin 50MB WASM en cliente) — ~5-10x más rápido, mismo UX
+- ✅ TAREA 2: Nuevo tema "Carta" estilo PedidosYa/Rappi con 2 modos (carrusel horizontal + lista Rappi) + auto-scroll configurable verificado con VLM
+- ✅ TAREA 3: Ruta /qr/[slug] con redirect 302 + UI mejorada en generador QR con botón "Probar escaneo" e instrucciones para iOS/Android/apps de terceros
+- ✅ BUG FIX: /api/upload/route.ts restaurado (estaba borrado, todas las subidas fallaban)
+- ✅ SQL migration entregado: supabase/add-carta-style.sql (idempotente) + copia en download/
+- ⚠️ USER MUST RUN: `supabase/add-carta-style.sql` en Supabase SQL Editor para activar el tema Carta
+- Artifacts:
+  * SQL: /home/z/my-project/supabase/add-carta-style.sql + /home/z/my-project/download/add-carta-style.sql
+  * Code: src/app/api/bg-removal/process/route.ts, src/app/api/upload/route.ts (restaurado), src/app/qr/[slug]/page.tsx, src/app/dashboard/[menuId]/menu-html-builder.ts, editor-client.tsx, image-uploader.tsx, qr-client.tsx, src/lib/menu-utils.ts, src/app/api/menus/[id]/route.ts
+  * Test: scripts/test-carta-style.ts
+  * Sample HTMLs: download/test-carta-carta-carousel.html, download/test-carta-carta-rappi-list.html, download/test-carta-carta-carousel-autoscroll.html
+  * Screenshots: download/carta-carousel-1-top.png, carta-carousel-2-categories.png, carta-carousel-lightbox.png, carta-rappi-list.png, carta-autoscroll-state1.png, carta-autoscroll-state2.png

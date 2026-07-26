@@ -99,6 +99,11 @@ export async function PUT(
     theme_rounded_corners,
     theme_dark_mode,
     theme_dish_gallery,
+    // Estilo Carta (PedidosYa/Rappi horizontal carousel)
+    theme_carta_style,
+    theme_carta_list_style,
+    theme_carta_autoscroll,
+    theme_carta_scroll_speed,
     // Redes sociales
     social_facebook,
     social_instagram,
@@ -135,6 +140,10 @@ export async function PUT(
   if (theme_rounded_corners !== undefined) updateData.theme_rounded_corners = theme_rounded_corners;
   if (theme_dark_mode !== undefined) updateData.theme_dark_mode = theme_dark_mode;
   if (theme_dish_gallery !== undefined) updateData.theme_dish_gallery = theme_dish_gallery;
+  if (theme_carta_style !== undefined) updateData.theme_carta_style = theme_carta_style;
+  if (theme_carta_list_style !== undefined) updateData.theme_carta_list_style = theme_carta_list_style;
+  if (theme_carta_autoscroll !== undefined) updateData.theme_carta_autoscroll = theme_carta_autoscroll;
+  if (theme_carta_scroll_speed !== undefined) updateData.theme_carta_scroll_speed = theme_carta_scroll_speed;
 
   // Redes sociales (todas opcionales, se guardan como null si vienen vacías)
   if (social_facebook !== undefined) updateData.social_facebook = social_facebook?.trim() || null;

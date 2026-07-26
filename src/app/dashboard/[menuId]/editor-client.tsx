@@ -47,6 +47,7 @@ import {
   Instagram,
   Youtube,
   Globe,
+  Sparkles,
 } from 'lucide-react';
 import { COLORS, CURRENCIES, type Plan } from '@/lib/plans';
 import type { MenuData, ProfileData } from '@/lib/menu-utils';
@@ -117,6 +118,11 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount }: Props)
     dark_mode: (initialMenu as any).theme_dark_mode !== false,
     dish_gallery: (initialMenu as any).theme_dish_gallery !== false,
     preset_slug: null as string | null,
+    // Estilo Carta (PedidosYa/Rappi horizontal carousel)
+    carta_style: (initialMenu as any).theme_carta_style === true,
+    carta_list_style: (initialMenu as any).theme_carta_list_style === true,
+    carta_autoscroll: (initialMenu as any).theme_carta_autoscroll === true,
+    carta_scroll_speed: (initialMenu as any).theme_carta_scroll_speed || 30,
   });
   // Estado de redes sociales
   const [socials, setSocials] = useState({
@@ -203,6 +209,10 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount }: Props)
           theme_rounded_corners: theme.rounded_corners,
           theme_dark_mode: theme.dark_mode,
           theme_dish_gallery: theme.dish_gallery,
+          theme_carta_style: theme.carta_style,
+          theme_carta_list_style: theme.carta_list_style,
+          theme_carta_autoscroll: theme.carta_autoscroll,
+          theme_carta_scroll_speed: theme.carta_scroll_speed,
           // Redes sociales
           social_facebook: socials.facebook,
           social_instagram: socials.instagram,
@@ -285,6 +295,10 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount }: Props)
         theme_rounded_corners: theme.rounded_corners,
         theme_dark_mode: theme.dark_mode,
         theme_dish_gallery: theme.dish_gallery,
+        theme_carta_style: theme.carta_style,
+        theme_carta_list_style: theme.carta_list_style,
+        theme_carta_autoscroll: theme.carta_autoscroll,
+        theme_carta_scroll_speed: theme.carta_scroll_speed,
         // Redes sociales
         social_facebook: socials.facebook || null,
         social_instagram: socials.instagram || null,
@@ -380,6 +394,10 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount }: Props)
           theme_rounded_corners: theme.rounded_corners,
           theme_dark_mode: theme.dark_mode,
           theme_dish_gallery: theme.dish_gallery,
+          theme_carta_style: theme.carta_style,
+          theme_carta_list_style: theme.carta_list_style,
+          theme_carta_autoscroll: theme.carta_autoscroll,
+          theme_carta_scroll_speed: theme.carta_scroll_speed,
           // Redes sociales
           social_facebook: socials.facebook,
           social_instagram: socials.instagram,
@@ -1413,6 +1431,77 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount }: Props)
                     value={theme.dish_gallery}
                     onChange={(v) => setTheme({ ...theme, dish_gallery: v })}
                   />
+                </div>
+
+                {/* ─── Estilo Carta (PedidosYa/Rappi horizontal carousel) ─── */}
+                <div className="mt-5 pt-5 border-t border-white/10 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-[#d4af37]" />
+                    <h3 className="text-sm font-semibold text-white/90">Estilo Carta (PedidosYa/Rappi)</h3>
+                  </div>
+                  <p className="text-xs text-white/50 leading-relaxed">
+                    Cambia el layout del menú público a carruseles horizontales estilo PedidosYa/Rappi.
+                    "Destacados" arriba + cada categoría deslizable hacia la derecha. Opcionalmente
+                    con auto-scroll configurable.
+                  </p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <ToggleRow
+                      label="Carrusel horizontal"
+                      desc="Categorías como carrusel scrollear →"
+                      value={theme.carta_style}
+                      disabled={plan.id === 'free'}
+                      onChange={(v) => {
+                        // Si activamos carta_style, desactivamos carta_list_style (mutuamente excluyentes)
+                        setTheme({ ...theme, carta_style: v, carta_list_style: v ? false : theme.carta_list_style });
+                      }}
+                    />
+                    <ToggleRow
+                      label="Lista Rappi"
+                      desc="Texto izq + imagen pequeña der"
+                      value={theme.carta_list_style}
+                      disabled={plan.id === 'free'}
+                      onChange={(v) => {
+                        // Si activamos carta_list_style, desactivamos carta_style
+                        setTheme({ ...theme, carta_list_style: v, carta_style: v ? false : theme.carta_style });
+                      }}
+                    />
+                  </div>
+                  {/* Auto-scroll (solo visible si carta_style está activo) */}
+                  {theme.carta_style && (
+                    <div className="bg-white/[0.03] border border-white/10 rounded-xl p-4 space-y-3">
+                      <ToggleRow
+                        label="Auto-scroll del Destacados"
+                        desc="Carrusel se mueve solo; pausa al tocar"
+                        value={theme.carta_autoscroll}
+                        onChange={(v) => setTheme({ ...theme, carta_autoscroll: v })}
+                      />
+                      {theme.carta_autoscroll && (
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-white/70">Velocidad del scroll</span>
+                            <span className="text-[#d4af37] font-mono font-semibold">
+                              {theme.carta_scroll_speed} px/seg
+                            </span>
+                          </div>
+                          <input
+                            type="range"
+                            min={10}
+                            max={120}
+                            step={5}
+                            value={theme.carta_scroll_speed}
+                            onChange={(e) =>
+                              setTheme({ ...theme, carta_scroll_speed: parseInt(e.target.value) })
+                            }
+                            className="w-full accent-[#d4af37] cursor-pointer"
+                          />
+                          <div className="flex justify-between text-[10px] text-white/40">
+                            <span>Lento (10)</span>
+                            <span>Rápido (120)</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex justify-end gap-2 pt-2">

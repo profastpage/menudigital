@@ -9,6 +9,8 @@ import {
   Copy,
   Crown,
   Loader2,
+  ExternalLink,
+  Smartphone,
 } from 'lucide-react';
 import QRCode from 'qrcode';
 import type { Plan } from '@/lib/plans';
@@ -31,7 +33,16 @@ export function QRClient({ menu, plan }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const origin = typeof window !== 'undefined' ? window.location.origin : '';
-  const menuUrl = `${origin}/r/${menu.slug}`;
+  // URL OPTIMIZADA PARA QR: usamos /qr/[slug] en vez de /r/[slug]
+  // Razones:
+  //   1. Distinguir en analíticas visitas vía QR (/qr/) vs visitas directas (/r/)
+  //   2. URL semántica — al ver /qr/ en un escáner queda claro que es un QR code
+  //   3. La ruta /qr/[slug] hace redirect 302 a /r/[slug] (el menú público real)
+  //      Modern browsers y escáneres nativos (iOS 11+, Android 9+) siguen el
+  //      redirect automáticamente sin que el usuario note la diferencia.
+  //   4. Si un escáner básico muestra la URL como texto, el usuario puede
+  //      copiar/pegar la URL /qr/[slug] y el redirect lo lleva al menú.
+  const menuUrl = `${origin}/qr/${menu.slug}`;
 
   useEffect(() => {
     if (!plan.limits.hasQR) {
@@ -270,7 +281,53 @@ export function QRClient({ menu, plan }: Props) {
                   >
                     <Copy className="w-4 h-4" />
                   </Button>
+                  <a
+                    href={menuUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center justify-center px-3 rounded-lg bg-[#d4af37]/15 border border-[#d4af37]/40 text-[#d4af37] hover:bg-[#d4af37]/25 transition-colors"
+                    title="Abrir enlace en nueva pestaña"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                  </a>
                 </div>
+                <p className="text-[11px] text-white/40 mt-2 leading-relaxed">
+                  Esta URL es la que contiene el QR. Al escanearlo, el menú se abre
+                  automáticamente en la mayoría de teléfonos modernos.
+                </p>
+              </div>
+
+              {/* Bloque informativo: cómo funciona el escaneo en distintos dispositivos */}
+              <div className="bg-gradient-to-br from-[#d4af37]/10 to-[#d4af37]/5 border border-[#d4af37]/25 rounded-xl p-5">
+                <div className="flex items-center gap-2 mb-3">
+                  <Smartphone className="w-4 h-4 text-[#d4af37]" />
+                  <h4 className="font-semibold text-sm text-white/90">
+                    Escaneo automático en teléfonos modernos
+                  </h4>
+                </div>
+                <ul className="space-y-2 text-xs text-white/70 leading-relaxed">
+                  <li className="flex gap-2">
+                    <span className="text-[#d4af37]">▸</span>
+                    <span><b className="text-white/90">iPhone (iOS 11+):</b> abre la app Cámara nativa y apunta al QR. Aparece una notificación con el dominio — tócala y el menú se abre directamente en Safari.</span>
+                  </li>
+                  <li className="flex gap-2">
+                    <span className="text-[#d4af37]">▸</span>
+                    <span><b className="text-white/90">Android (9+):</b> la cámara nativa reconoce QR automáticamente. Toca la notificación "Abrir en navegador" y el menú carga al instante.</span>
+                  </li>
+                  <li className="flex gap-2">
+                    <span className="text-[#d4af37]">▸</span>
+                    <span><b className="text-white/90">Apps de terceros:</b> algunas apps (como la de la imagen 3) muestran el botón "Abrir navegador". Toca ese botón — no necesitas copiar y pegar.</span>
+                  </li>
+                </ul>
+                <a
+                  href={menuUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-3 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#d4af37] text-[#1a1a2e] text-xs font-semibold hover:opacity-90 transition-opacity"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  Probar escaneo (abrir menú)
+                </a>
               </div>
 
               <div className="bg-white/[0.03] border border-white/10 rounded-xl p-5">

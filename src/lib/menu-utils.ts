@@ -28,6 +28,11 @@ export interface MenuData {
   theme_dark_mode?: boolean;
   theme_dish_gallery?: boolean;
   theme_preset_id?: string | null;
+  // Estilo Carta (PedidosYa/Rappi horizontal carousel)
+  theme_carta_style?: boolean;        // default false — modo carrusel horizontal
+  theme_carta_list_style?: boolean;   // default false — modo lista Rappi (texto izq, imagen der)
+  theme_carta_autoscroll?: boolean;   // default false — auto-scroll del carrusel Destacados
+  theme_carta_scroll_speed?: number;  // default 30 — px/seg del auto-scroll
   // Redes sociales
   social_facebook?: string | null;
   social_instagram?: string | null;
