@@ -86,6 +86,7 @@ export const PLANS: Record<PlanId, Plan> = {
       'Vista previa en vivo',
       'QR básico (solo vista web)',
       'Marca "Creado con MenuPro"',
+      '📱 App instalable (PWA) — clientes pueden agregar tu carta a su pantalla de inicio',
     ],
   },
 
@@ -138,6 +139,7 @@ export const PLANS: Record<PlanId, Plan> = {
       '100% white-label',
       'Soporte prioritario WhatsApp',
       'Tema PedidosYa/Rappi',
+      '📱 PWA optimizada — carga instantánea de la carta, soporte offline básico',
     ],
   },
 
@@ -187,6 +189,7 @@ export const PLANS: Record<PlanId, Plan> = {
       '📊 Dashboard operacional en vivo',
       '⚡ Auto-descuento de stock al facturar',
       '🚨 Alertas de stock bajo',
+      '📲 PWA del panel de mozos con modo offline (toman comandas sin internet y se sincronizan solas)',
     ],
   },
 
@@ -236,6 +239,8 @@ export const PLANS: Record<PlanId, Plan> = {
       '🔗 Integraciones API (delivery, POS externo)',
       '🎫 Boletas/facturas electrónicas (próximamente)',
       '👑 Soporte prioritario 24/7 + onboarding personalizado',
+      '📲 PWA Premium con Background Sync — comandas offline se envían automáticamente al volver la conexión',
+      '🔔 Notificaciones push para nuevos pedidos (próximamente)',
     ],
   },
 };

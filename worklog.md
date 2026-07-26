@@ -628,3 +628,67 @@ Stage Summary:
   * APIs: src/app/api/reportes/route.ts, src/app/api/mozo-panel/route.ts
   * Pages: src/app/dashboard/reportes/{page,reportes-client}.tsx, src/app/mozo/[token]/{page,mozo-client}.tsx
   * Updated: dashboard-shell.tsx (nav), comandas-client.tsx (panel mozo bloque), plans.ts (features), api/waiters/route.ts
+
+---
+Task ID: PWA-1
+Agent: Super Z (main)
+Task: Implementar PWA completa para MenuPro (todos los planes + offline premium para mozos)
+
+Work Log:
+- Confirmada migración SQL "Success. No rows returned" = CORRECTO (DDL no retorna filas)
+- Creado public/manifest.json con nombre "MenuPro", theme color naranja, íconos 72-512px, maskables, screenshots, shortcuts a /dashboard y /dashboard/menus
+- Creado public/sw.js (Service Worker v1.0.0) con estrategias:
+  * App Shell (HTML/JS/CSS): Cache First + SWR
+  * Carta pública /r/[slug]: Stale While Revalidate
+  * Imágenes: Cache First (30 días)
+  * Google Fonts: Cache First (1 año)
+  * API: Network First con fallback offline (clave para modo offline premium)
+  * Background Sync para comandas offline
+  * Push notifications preparado (futuro)
+- Creado public/offline.html con auto-retry en online
+- Creado src/components/pwa/pwa-registry.tsx (cliente):
+  * Registra SW solo en producción
+  * Captura beforeinstallprompt → banner "Instalar MenuPro" (dismissable 7 días)
+  * Detecta updates → banner "Nueva versión disponible"
+  * Detecta online/offline → banner superior amarillo
+- Creado src/hooks/use-offline-queue.ts (IndexedDB):
+  * Cola offline de comandas en DB "menupro-offline" store "pending-comandas"
+  * Auto-sync al volver online + escucha mensajes del SW (Background Sync)
+  * Reintentos con contador de attempts
+- Modificado src/app/mozo/[token]/mozo-client.tsx:
+  * Integrado hook useOfflineQueue
+  * sendComanda() ahora detecta offline → guarda en IndexedDB y muestra toast
+  * Fallback de red: si falla fetch, también guarda en cola
+  * UI: banner offline superior, indicador de online en header (punto verde/amarillo), badge de pendientes en tab Comandas, sección "En cola offline" con cards amber
+  * Botón "Enviar ahora" para sync manual
+- Actualizado src/app/layout.tsx:
+  * Metadata: manifest, appleWebApp, icons (favicon, apple-touch, 152/192)
+  * Viewport: themeColor dual (light naranja / dark negro), viewportFit cover
+  * <head> con todos los meta tags iOS/Android
+  * Montado <PwaRegistry /> global
+- Actualizado src/lib/plans.ts:
+  * Free: "App instalable (PWA) — clientes pueden agregar tu carta a su pantalla de inicio"
+  * Pro: "PWA optimizada — carga instantánea de la carta, soporte offline básico"
+  * Premium: "PWA del panel de mozos con modo offline (toman comandas sin internet y se sincronizan solas)"
+  * Full: "PWA Premium con Background Sync — comandas offline se envían automáticamente al volver la conexión" + "Notificaciones push para nuevos pedidos (próximamente)"
+- Creado scripts/gen-pwa-icons.py (PIL/Pillow) que genera 16 íconos: 72, 96, 128, 144, 152, 192, 384, 512 + maskables 192/512 + apple-touch 180 + favicons 16/32/ico + screenshots mobile/desktop
+- Verificado build con `npx next build` — SUCCESS, 39 páginas generadas
+
+Stage Summary:
+- PWA HABILITADA PARA TODOS LOS PLANES (estrategia sugerida y aplicada):
+  * FREE/PRO: PWA básica — clientes pueden instalar la carta en su pantalla de inicio desde el navegador (Chrome/Android/Edge muestran banner "Instalar"). Service worker cachea HTML/JS/CSS/imágenes → carga instantánea.
+  * PREMIUM/FULL: PWA premium + offline real para el panel de mozos. Cuando el mozo pierde internet, las comandas se guardan en IndexedDB y se envían automáticamente al volver la conexión (Background Sync). Indicador visual online/offline + sección "En cola offline" con cards amber.
+- Configuración: SOLO corre en producción (process.env.NODE_ENV !== 'production' skip). En desarrollo el SW está desactivado para no cachear.
+- Para activar: deploy a Vercel/producción → abrir en Chrome Android → aparecerá banner "Instalar MenuPro" a los 3 segundos.
+
+Artefactos producidos:
+- /home/z/my-project/public/manifest.json
+- /home/z/my-project/public/sw.js
+- /home/z/my-project/public/offline.html
+- /home/z/my-project/public/icons/ (16 archivos PNG/ICO)
+- /home/z/my-project/src/components/pwa/pwa-registry.tsx
+- /home/z/my-project/src/hooks/use-offline-queue.ts
+- /home/z/my-project/src/app/layout.tsx (actualizado)
+- /home/z/my-project/src/app/mozo/[token]/mozo-client.tsx (actualizado con offline)
+- /home/z/my-project/src/lib/plans.ts (features PWA agregadas a los 4 planes)
+- /home/z/my-project/scripts/gen-pwa-icons.py

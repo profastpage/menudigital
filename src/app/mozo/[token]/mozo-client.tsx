@@ -4,8 +4,10 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   ClipboardList, Send, Check, X, Plus, Minus, Search,
   RefreshCw, AlertCircle, Utensils, ChefHat, Clock, User,
+  WifiOff, CloudUpload, Loader2,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useOfflineQueue } from '@/hooks/use-offline-queue';
 
 interface Dish {
   id: string; name: string; price: number; description?: string; image_url?: string;
@@ -46,6 +48,10 @@ export function MozoPanel({ token, waiterName }: Props) {
   const [comandas, setComandas] = useState<Comanda[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isOnline, setIsOnline] = useState(true);
+
+  // Hook de cola offline (Premium+) — guarda comandas en IndexedDB cuando no hay red
+  const { pending, isSyncing, enqueue, syncNow, hasPending } = useOfflineQueue(token);
 
   // Carrito para crear comanda
   const [selectedMesa, setSelectedMesa] = useState<Mesa | null>(null);
@@ -82,10 +88,30 @@ export function MozoPanel({ token, waiterName }: Props) {
 
   useEffect(() => {
     load();
-    // Auto-refresh cada 20s para ver comandas activas
-    const i = setInterval(load, 20000);
+    // Auto-refresh cada 20s para ver comandas activas (solo si estamos online)
+    const i = setInterval(() => {
+      if (navigator.onLine) load();
+    }, 20000);
     return () => clearInterval(i);
   }, [load]);
+
+  // Detectar online/offline
+  useEffect(() => {
+    const update = () => setIsOnline(navigator.onLine);
+    update();
+    window.addEventListener('online', () => {
+      setIsOnline(true);
+      toast.success('🌐 Conexión restablecida');
+    });
+    window.addEventListener('offline', () => {
+      setIsOnline(false);
+      toast.warning('📡 Sin conexión — comandas se guardarán offline');
+    });
+    return () => {
+      window.removeEventListener('online', update);
+      window.removeEventListener('offline', update);
+    };
+  }, []);
 
   function addToCart(dish: Dish) {
     setCart(prev => {
@@ -125,6 +151,44 @@ export function MozoPanel({ token, waiterName }: Props) {
       return;
     }
     setSending(true);
+
+    // ─── MODO OFFLINE (Premium+) ───
+    // Si no hay conexión, guardar en cola IndexedDB y enviar cuando vuelva internet
+    if (!navigator.onLine) {
+      try {
+        const offline = await enqueue({
+          mesaId: selectedMesa.id,
+          mesaNumero: selectedMesa.name || `Mesa ${selectedMesa.number}`,
+          items: cart.map(c => ({
+            dish_id: c.dish.id,
+            nombre: c.dish.name,
+            precio: c.dish.price,
+            cantidad: c.quantity,
+            notas: c.notes || undefined,
+          })),
+          notas: orderNotes || undefined,
+          cliente: customerName || undefined,
+        });
+        toast.success(
+          `📤 Comanda guardada offline (se enviará al volver la conexión)`,
+          { duration: 4000 }
+        );
+        // Reset
+        setCart([]);
+        setSelectedMesa(null);
+        setCustomerName('');
+        setPartySize('');
+        setOrderNotes('');
+        setView('comandas');
+      } catch (err: any) {
+        toast.error(`Error guardando offline: ${err.message}`);
+      } finally {
+        setSending(false);
+      }
+      return;
+    }
+
+    // ─── MODO ONLINE (normal) ───
     try {
       const res = await fetch('/api/mozo-panel', {
         method: 'POST',
@@ -159,7 +223,32 @@ export function MozoPanel({ token, waiterName }: Props) {
       setView('comandas');
       await load();
     } catch (err: any) {
-      toast.error(err.message);
+      // Si falla la red a mitad del envío, guardar en cola offline como safety net
+      if (err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {
+        try {
+          await enqueue({
+            mesaId: selectedMesa.id,
+            mesaNumero: selectedMesa.name || `Mesa ${selectedMesa.number}`,
+            items: cart.map(c => ({
+              dish_id: c.dish.id,
+              nombre: c.dish.name,
+              precio: c.dish.price,
+              cantidad: c.quantity,
+              notas: c.notes || undefined,
+            })),
+            notas: orderNotes || undefined,
+            cliente: customerName || undefined,
+          });
+          toast.success('📤 Sin red — comanda guardada para envío automático');
+          setCart([]);
+          setSelectedMesa(null);
+          setView('comandas');
+        } catch {
+          toast.error(err.message);
+        }
+      } else {
+        toast.error(err.message);
+      }
     } finally {
       setSending(false);
     }
@@ -207,16 +296,29 @@ export function MozoPanel({ token, waiterName }: Props) {
   // ───── Layout móvil ─────
   return (
     <div className="min-h-screen bg-[#07070b] text-white pb-24">
+      {/* Banner Offline (solo si está offline) */}
+      {!isOnline && (
+        <div className="fixed top-0 left-0 right-0 z-50 bg-amber-600 text-white px-3 py-1.5 text-xs font-medium flex items-center justify-center gap-2">
+          <WifiOff className="w-3.5 h-3.5" />
+          <span>Modo offline activo — las comandas se enviarán al volver la conexión</span>
+        </div>
+      )}
+
       {/* Header */}
-      <header className="sticky top-0 z-30 bg-[#0a0a14] border-b border-white/10 px-4 py-3">
+      <header className={`sticky top-0 z-30 bg-[#0a0a14] border-b border-white/10 px-4 py-3 ${!isOnline ? 'mt-8' : ''}`}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 min-w-0">
             <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-[#9d4edd] to-[#d4af37] flex items-center justify-center text-lg flex-shrink-0">
               👨‍🍳
             </div>
             <div className="min-w-0">
-              <div className="text-sm font-bold truncate">{waiterName}</div>
-              <div className="text-[10px] text-white/40">Panel del mozo</div>
+              <div className="text-sm font-bold truncate flex items-center gap-1.5">
+                {waiterName}
+                <span className={`w-2 h-2 rounded-full ${isOnline ? 'bg-[#06d6a0]' : 'bg-amber-500'}`} />
+              </div>
+              <div className="text-[10px] text-white/40">
+                {isOnline ? 'Panel del mozo · En línea' : 'Panel del mozo · Offline'}
+              </div>
             </div>
           </div>
           <button
@@ -229,6 +331,32 @@ export function MozoPanel({ token, waiterName }: Props) {
           </button>
         </div>
       </header>
+
+      {/* Banner de cola offline pendiente */}
+      {hasPending && (
+        <div className="bg-amber-500/10 border-b border-amber-500/20 px-3 py-2 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <CloudUpload className={`w-4 h-4 text-amber-400 flex-shrink-0 ${isSyncing ? 'animate-pulse' : ''}`} />
+            <div className="min-w-0">
+              <div className="text-xs text-amber-200 font-medium">
+                {pending.length} comanda(s) en cola offline
+              </div>
+              <div className="text-[10px] text-amber-200/60 truncate">
+                {isSyncing ? 'Sincronizando...' : isOnline ? 'Toca para reintentar' : 'Esperando conexión'}
+              </div>
+            </div>
+          </div>
+          {isOnline && !isSyncing && (
+            <button
+              onClick={() => syncNow()}
+              className="px-2.5 py-1 rounded-lg bg-amber-500 text-black text-[11px] font-semibold whitespace-nowrap"
+            >
+              Enviar ahora
+            </button>
+          )}
+          {isSyncing && <Loader2 className="w-4 h-4 text-amber-400 animate-spin" />}
+        </div>
+      )}
 
       {/* Tabs superiores */}
       <div className="sticky top-[64px] z-20 bg-[#0a0a14]/95 backdrop-blur border-b border-white/5">
@@ -244,6 +372,11 @@ export function MozoPanel({ token, waiterName }: Props) {
             {comandas.length > 0 && (
               <span className="ml-1 px-1.5 py-0.5 rounded-full bg-[#9d4edd] text-white text-[9px] font-bold">
                 {comandas.length}
+              </span>
+            )}
+            {pending.length > 0 && (
+              <span className="ml-1 px-1.5 py-0.5 rounded-full bg-amber-500 text-black text-[9px] font-bold">
+                {pending.length}↑
               </span>
             )}
           </TabBtn>
@@ -406,9 +539,51 @@ export function MozoPanel({ token, waiterName }: Props) {
       {view === 'comandas' && (
         <div className="p-3 space-y-3">
           <p className="text-xs text-white/50">Comandas activas asignadas a ti</p>
-          {comandas.length === 0 ? (
+
+          {/* Comandas offline en cola */}
+          {pending.length > 0 && (
+            <div className="space-y-2">
+              <div className="text-[10px] uppercase tracking-wide text-amber-400/80 font-bold flex items-center gap-1">
+                <WifiOff className="w-3 h-3" /> En cola offline ({pending.length})
+              </div>
+              {pending.map(p => (
+                <div key={p.id} className="bg-amber-500/5 border border-amber-500/20 rounded-xl p-3">
+                  <div className="flex items-start justify-between mb-2">
+                    <div>
+                      <div className="text-sm font-bold text-amber-200">
+                        Pendiente · {p.mesaNumero}
+                      </div>
+                      <div className="text-[10px] text-amber-200/50">
+                        Guardada {new Date(p.createdAt).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}
+                      </div>
+                    </div>
+                    <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-amber-500/20 text-amber-200">
+                      {p.status === 'syncing' ? 'Enviando...' : 'Esperando'}
+                    </span>
+                  </div>
+                  <div className="space-y-0.5 mb-2">
+                    {p.items.map((it, idx) => (
+                      <div key={idx} className="flex items-center gap-2 text-xs">
+                        <span className="text-white font-bold">{it.cantidad}×</span>
+                        <span className="text-white/80 flex-1 truncate">{it.nombre}</span>
+                        <span className="text-white/40">S/ {(it.precio * it.cantidad).toFixed(2)}</span>
+                      </div>
+                    ))}
+                  </div>
+                  {p.notas && (
+                    <div className="text-[10px] text-amber-200/60 italic border-t border-amber-500/10 pt-1">
+                      Nota: {p.notas}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Comandas activas online */}
+          {comandas.length === 0 && pending.length === 0 ? (
             <p className="text-center text-white/40 text-sm py-8">No tienes comandas activas</p>
-          ) : (
+          ) : comandas.length > 0 && (
             comandas.map(c => {
               const status = STATUS_INFO[c.status];
               return (
