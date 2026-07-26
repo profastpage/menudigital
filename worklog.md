@@ -844,3 +844,49 @@ Stage Summary:
   6. `a486686` (UUID)
   7. `d8fff11` feat(plans): tier limits + white label strategy + landing improvements
   8. `aed104e` feat(landing-pro + install-app): rediseño landing con mockup premium + botón instalar app en dashboard, mozo y landing
+
+---
+Task ID: landing-minimalismo-premium
+Agent: main (Super Z)
+Task: (1) Optimizar la landing para más minimalista manteniendo el concepto, (2) evaluar si muy colorido es recomendable, (3) agregar barra de progreso de lectura + scrollbar premium, (4) recomendar o no el toggle dark/light mode.
+
+Work Log:
+- Análisis de 3 capturas del usuario con VLM: detectados problemas críticos en la comparison table mobile (texto truncado "Elegir Premi", 5 columnas en mobile = recortadas), saturación de colores (4 colores de plan simultáneos + verde esmeralda + rojo en CTA), badges tricolor redundantes en pricing.
+- Decisión de diseño: paleta unificada a 1 primario (dorado #d4af37) + neutros. Colores de plan (#9d4edd, #e63946) reservados SOLO para pricing cards individuales. Verde esmeralda (#06d6a0) solo para confirmaciones.
+- Decisión sobre dark/light mode toggle: NO implementar por ahora. Razones documentadas: (a) marca construida sobre dark theme, (b) implementar bien requiere rediseñar TODOS los componentes con design tokens (gradientes, glassmorphism, blur, overlays se rompen al invertir), (c) ROI bajo para B2B, (d) te diferencia de Rappi/PedidosYa que son light. Alternativa propuesta: armarlo como proyecto separado de 1-2 días con design tokens completos.
+
+Implementación:
+- Creado `src/components/landing/scroll-progress.tsx`: barra ultra-pro 3px con gradiente dorado→ámbar, glow sutil, spring physics, respeta prefers-reduced-motion, visible después de 60px de scroll (evita flickr).
+- Actualizado `src/app/globals.css` con custom scrollbar premium:
+  * Firefox: `scrollbar-color` thin con dorado semitransparente
+  * Webkit: thumb gradiente dorado 10px, border-radius 999px, hover más intenso
+  * Selection color dorado en todo el sitio
+- Integrado `<ScrollProgress />` en `src/app/page.tsx` (solo landing, no en dashboard que tiene su propio scroll).
+- Rediseñado `src/components/landing/comparison-table.tsx`:
+  * Desktop (md+): tabla clásica simplificada (sin colores de plan saturados, solo dorado en CTA primario)
+  * Mobile (< md): cards apiladas por plan (1 card = 1 plan con todas sus features) — soluciona el bug de "Elegir Premi" truncado
+  * Eliminado badge "COMPARATIVA DETALLADA" redundante
+  * Subheadline recortada
+  * Nota inferior simplificada
+- Simplificado `src/components/landing/pricing.tsx`:
+  * Quitados 4 chips tricolor del header (Free/Pro/Premium/Full con colores distintos)
+  * Banner inferior tricolor (púrpura-dorado-rojo) → fondo neutro + borde dorado
+  * Help cards (mesas/sucursales) ahora dorado en vez de púrpura/rojo
+  * Eliminados 2 trust signals redundantes ("Onboarding gratis", "Pagos en Soles")
+- Simplificado `src/components/landing/how-it-works.tsx`:
+  * 4 steps usaban 4 colores distintos → ahora todos dorado
+  * Eliminado "PASO 01" duplicado (ya hay número en círculo)
+  * Descripciones recortadas (de 2 líneas a 1)
+  * Icon circle reducido w-16→w-14
+- Simplificado `src/components/landing/testimonials.tsx`: badge esmeralda quitado, headline gradiente esmeralda→dorado → ahora dorado→ámbar.
+- Simplificado `src/components/landing/features.tsx`: badge "TODO LO QUE NECESITAS" quitado, subheadline recortada, import Zap eliminado (no usado).
+- Commit: `ea68591 feat(landing): scroll progress bar + custom scrollbar + minimalismo visual` (8 archivos, +287 -186 líneas)
+- Push exitoso a GitHub: `05b2bb4..ea68591 main -> main`
+- TypeScript compila sin errores en archivos modificados.
+
+Stage Summary:
+- Último commit en GitHub: `ea68591` (debería deployar en Vercel ~40s)
+- Landing ahora más minimalista y cohesiva visualmente: dorado como único color de marca, neutros para el resto
+- Comparison table mobile ahora usa cards apiladas (1 plan por card) — soluciona bug de truncado
+- ScrollProgress y custom scrollbar premium activos en toda la landing
+- NO se implementó dark/light mode toggle (explicado al usuario con razones técnicas)
