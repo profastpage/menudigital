@@ -890,3 +890,35 @@ Stage Summary:
 - Comparison table mobile ahora usa cards apiladas (1 plan por card) — soluciona bug de truncado
 - ScrollProgress y custom scrollbar premium activos en toda la landing
 - NO se implementó dark/light mode toggle (explicado al usuario con razones técnicas)
+
+---
+Task ID: favicon-update
+Agent: main (Super Z)
+Task: Actualizar favicon e iconos del proyecto con el nuevo logo enviado por el usuario (pasted_image_1785097360610.png, 56x59 RGBA). Convertir a WebP como pidió el usuario.
+
+Work Log:
+- Verificada imagen origen en /home/z/my-project/upload/pasted_image_1785097360610.png (56x59 RGBA, 886 bytes)
+- Inventario del estado actual: favicon.ico en /public/ y /public/icons/, 12 PNGs en /public/icons/, apple-touch-icon.png, logo.png, logo-192.png, manifest.json
+- Creado script /home/z/my-project/scripts/regenerate-favicons.py para regenerar TODOS los iconos a partir del logo:
+  - fit:contain sobre canvas cuadrado transparente (preserva aspect ratio 56:59)
+  - maskable con safe zone 70% sobre fondo #ff6b35
+  - WebP calidad 95 method=6 para src/app/icon.webp (favicon moderno Next.js App Router)
+- Ejecutado: 15 PNGs + 1 WebP generados correctamente
+- Detectado bug en PIL: `Image.save(format='ICO', sizes=[...])` solo embebe 16x16 (ignora el resto)
+- Creado script /home/z/my-project/scripts/build-multires-ico.py que construye el ICO binario a mano:
+  - Header (6 bytes) + directory entries (16 bytes c/u) + PNGs embebidos
+  - 6 resoluciones: 16, 32, 48, 64, 128, 256
+- Verificado: ambos .ico tienen 6 sizes embebidas correctas
+- Commit `4427c2a` y push exitoso a GitHub (origin/main sincronizado, 0 commits pendientes)
+
+Stage Summary:
+- Favicon completamente actualizado con el nuevo logo en TODOS los formatos:
+  - favicon.ico multi-res (16/32/48/64/128/256) — navegadores eligen automáticamente
+  - icon.webp en src/app/ — Next.js App Router lo sirve como favicon moderno
+  - 12 PNGs en /public/icons/ — compatibilidad cross-browser
+  - apple-touch-icon.png (180x180) con fondo sólido #ff6b35 para iOS
+  - 2 maskable icons (192/512) con safe zone para Android
+  - logo.png y logo-192.png actualizados
+- manifest.json NO requiere cambios (paths se mantienen)
+- Deploy automático a Vercel activado (~40s)
+- Scripts persistidos para futuras iteraciones: si el usuario envía otro logo, basta reemplazar /home/z/my-project/upload/pasted_image_1785097360610.png y re-ejecutar ambos scripts
