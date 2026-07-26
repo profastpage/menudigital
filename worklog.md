@@ -806,3 +806,41 @@ Stage Summary:
 - 1 archivo SQL consolidado listo para pegar en Supabase SQL Editor: `/home/z/my-project/download/fix-all-admin-issues.sql`
 - El usuario debe ejecutar ese SQL una vez en Supabase, y luego refrescar el panel super admin para ver el nuevo dropdown de planes.
 - TypeScript compila sin errores en los archivos modificados.
+
+---
+Task ID: landing-hero-cleanup
+Agent: main (Super Z)
+Task: (1) Verificar push a GitHub + deploy Vercel, (2) Resolver contradicción del botón "Instalar app" en landing pública, (3) Simplificar hero con demasiado texto.
+
+Work Log:
+- Verificado estado de git: 3 commits locales sin push (hashes UUID de commits automáticos del sistema).
+- Ejecutado `git push origin main` exitoso. GitHub quedó sincronizado con local (0 commits adelante/atrás).
+- Análisis de la "contradicción" del botón Instalar App:
+  - Revisado `src/lib/plans.ts`: el plan Free SÍ incluye PWA básica para clientes (la carta pública instalable). El plan Pro incluye PWA optimizada del dashboard. Premium+ incluye PWA con offline real para mozos.
+  - Revisado `src/app/page.tsx`: había un `<InstallAppButton variant="landing" />` en el header público, visible para CUALQUIER visitante (sin auth).
+  - Revisado `src/components/pwa/install-app-button.tsx`: la variante "landing" no valida plan, instala la PWA del dashboard.
+  - Conclusión: NO es contradicción con los planes (la carta pública siempre fue instalable), PERO sí era confuso mostrar el botón de instalación del DASHBOARD a visitantes no autenticados. La PWA del dashboard debe estar gated para usuarios logueados (Pro+).
+  - Decisión: quitar el botón del header público. La PWA de la carta pública (/r/[slug]) sigue siendo instalable a través del manifest de esa ruta. El botón del dashboard se mantiene dentro del dashboard, donde ya valida el plan y muestra badge.
+- Simplificación del hero (`src/components/landing/hero.tsx`):
+  - Eliminado "v2.0 PWA" del badge superior (ruido visual).
+  - Subheadline recortado de 2 líneas a 1: "Tu carta digital con carrito de WhatsApp en 5 minutos. Sin comisiones, sin contratos." (antes: 3 frases largas con "Hecho en Perú para restaurantes peruanos").
+  - Eliminado trust signal "Soporte en español" (redundante con resto del sitio).
+  - Reducidos márgenes: headline mb-6→mb-5, CTAs mb-8→mb-6.
+- Cambios committeados: `05b2bb4 fix(landing+hero): simplificar hero + quitar botón instalar app del header público`
+- Push exitoso a GitHub: `ee21c74..05b2bb4 main -> main`
+- TypeScript compile OK (sin errores en archivos modificados).
+
+Stage Summary:
+- Estado final de git: local y remote sincronizados, 0 commits pendientes de push.
+- Último commit en GitHub: `05b2bb4` (debería aparecer como deploy "Ready" en Vercel en ~40s).
+- Hero landing ahora más limpio y conciso (1 línea de subheadline en vez de 3).
+- Header público ya no muestra "Instalar app" — la PWA del dashboard solo se ofrece dentro del dashboard (gated por plan Pro+).
+- Lista de commits recientes para que el usuario valide en Vercel:
+  1. `05b2bb4` fix(landing+hero): simplificar hero + quitar botón instalar app del header público ← NUEVO
+  2. `ee21c74` (UUID - commit automático del sistema anterior)
+  3. `37ccfc2` (UUID - commit automático del sistema anterior)
+  4. `78c750a` (UUID - commit automático del sistema anterior)
+  5. `609b87b` feat(landing): add fastpagepro.com credit + link in footer
+  6. `a486686` (UUID)
+  7. `d8fff11` feat(plans): tier limits + white label strategy + landing improvements
+  8. `aed104e` feat(landing-pro + install-app): rediseño landing con mockup premium + botón instalar app en dashboard, mozo y landing
