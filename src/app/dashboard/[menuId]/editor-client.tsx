@@ -493,7 +493,7 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount }: Props)
     );
   }
 
-  // Helpers para gallery (hasta 5 imágenes) y options (extras/salsas)
+  // Helpers para gallery (imágenes por plato según plan) y options (extras/salsas)
   function addDishGalleryImage(catId: string, dishId: string, url: string) {
     setCategories((cs) =>
       cs.map((c) =>
@@ -503,7 +503,9 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount }: Props)
               dishes: c.dishes.map((d) => {
                 if (d.id !== dishId) return d;
                 const gallery = [...(d.gallery || [])];
-                if (gallery.length >= 5) return d; // máx 5
+                // Límite de imágenes por plato según plan: Free 1, Pro 3, Premium 5, Full 10
+                const maxImagesPerDish = plan.limits.maxImagesPerDish;
+                if (gallery.length >= maxImagesPerDish) return d;
                 // Si la primera imagen no está seteada, también la guardamos como image_url principal
                 if (!d.image && gallery.length === 0) {
                   return { ...d, image: url, gallery: [url] };
@@ -1652,12 +1654,17 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount }: Props)
                             </Button>
                           </div>
 
-                          {/* Galería — hasta 5 imágenes adicionales (carrusel tipo Instagram) */}
+                          {/* Galería — imágenes según plan (Free 1, Pro 3, Premium 5, Full 10) */}
                           <details className="bg-white/[0.02] border border-white/10 rounded-md p-2">
                             <summary className="text-xs font-semibold text-white/70 cursor-pointer hover:text-white flex items-center gap-1.5 select-none">
                               <Images className="w-3.5 h-3.5" />
-                              Galería ({(dish.gallery || []).length}/5)
+                              Galería ({(dish.gallery || []).length}/{plan.limits.maxImagesPerDish})
                               <span className="text-white/40 font-normal">· carrusel en la carta</span>
+                              {plan.id !== 'full' && (dish.gallery || []).length >= plan.limits.maxImagesPerDish && (
+                                <span className="ml-auto text-[10px] text-amber-400">
+                                  ⚡ Sube de plan para más imágenes
+                                </span>
+                              )}
                             </summary>
                             <div className="mt-2 space-y-2">
                               <div className="flex flex-wrap gap-2">
@@ -1678,7 +1685,7 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount }: Props)
                                     </button>
                                   </div>
                                 ))}
-                                {(dish.gallery || []).length < 5 && (
+                                {(dish.gallery || []).length < plan.limits.maxImagesPerDish && (
                                   <ImageUploader
                                     initialUrl=""
                                     onUploaded={(url) => addDishGalleryImage(cat.id, dish.id, url)}
@@ -1873,7 +1880,9 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount }: Props)
           </div>
           {plan.limits.hasBranding && (
             <div className="mt-3 px-3 py-2 rounded-lg bg-[#d4af37]/10 border border-[#d4af37]/30 text-xs text-[#d4af37] text-center">
-              Visible con marca "Creado con MenuPro" · Upgrade a Pro para quitarla
+              {plan.id === 'free'
+                ? 'Marca "Creado con MenuPro" visible · Sube a Premium (S/ 99/mes) para quitarla (white label)'
+                : 'Marca "Creado con MenuPro" visible · Sube a Premium (S/ 99/mes) para white label completo'}
             </div>
           )}
         </aside>

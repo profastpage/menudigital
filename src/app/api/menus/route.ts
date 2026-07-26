@@ -74,8 +74,15 @@ export async function POST(req: NextRequest) {
     .eq('user_id', user.id);
 
   if (!canCreateMenu(count || 0, plan)) {
+    // Mensaje plan-aware para upsell
+    const nextPlan = plan.id === 'free' ? 'Pro (S/ 35/mes) para 3 menús' : plan.id === 'pro' ? 'Premium (S/ 99/mes) para 10 menús' : 'Full (S/ 199/mes) para menús ilimitados';
     return NextResponse.json(
-      { error: 'Límite de menús alcanzado. Upgrade a Pro para más.' },
+      {
+        error: `Has alcanzado el límite de ${plan.limits.maxMenus} menú(s) del plan ${plan.name}. Sube a ${nextPlan}.`,
+        upgradeRequired: true,
+        currentPlan: plan.id,
+        limit: plan.limits.maxMenus,
+      },
       { status: 403 }
     );
   }

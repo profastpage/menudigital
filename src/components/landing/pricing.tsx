@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Check, Crown, Sparkles, Utensils, Building2, Zap, ArrowRight } from "lucide-react";
+import { Check, Crown, Sparkles, Utensils, Building2, Zap, ArrowRight, Star } from "lucide-react";
 
 const PLANS_LANDING = [
   {
@@ -15,7 +15,7 @@ const PLANS_LANDING = [
     features: [
       "1 menú digital",
       "Hasta 10 platos",
-      "Hasta 5 imágenes",
+      "1 foto por plato",
       "Carrito con WhatsApp",
       "URL pública /r/tu-restaurante",
       "Vista previa en vivo",
@@ -34,38 +34,39 @@ const PLANS_LANDING = [
     color: "#d4af37",
     icon: Zap,
     features: [
-      "Menús y platos ilimitados",
-      "Imágenes ilimitadas + WebP",
+      "3 menús activos",
+      "Platos ilimitados por menú",
+      "3 fotos por plato + WebP",
       '30 créditos "Quitar fondo" IA',
       "QR profesional HD + dinámico",
       "Analytics de visitas",
       "Menú multi-idioma (ES/EN)",
-      "Tema PedidosYa/Rappi",
-      "100% white-label (sin marca)",
+      "Tema PedidosYa/Rappi + colores",
+      'Marca "Creado con MenuPro"',
       "Soporte prioritario WhatsApp",
-      "📱 PWA optimizada + offline básico",
+      "📱 PWA optimizada",
     ],
     cta: "Empezar Pro",
-    href: "/register",
+    href: "/register?plan=pro",
     highlight: true,
   },
   {
     id: "premium",
     name: "Premium",
     priceMonthly: 99,
-    description: "Logística interna completa",
+    description: "Logística completa + White label",
     color: "#9d4edd",
     icon: Utensils,
     features: [
-      "Todo lo del plan Pro",
+      "10 menús activos",
+      "5 fotos por plato",
+      "✨ 100% White label (sin marca)",
       '100 créditos "Quitar fondo"',
       "🍽️ Gestión de mesas (hasta 50)",
       "👨‍🍳 Gestión de mozos (hasta 20)",
       "📋 Comandas: mesa → cocina → entrega",
       "🔥 Cocina Display en tiempo real",
       "📦 Inventario de insumos con recetas",
-      "🚨 Alertas de stock bajo",
-      "⚡ Auto-descuento de stock al facturar",
       "📲 PWA con modo offline real (mozos)",
     ],
     cta: "Empezar Premium",
@@ -76,20 +77,22 @@ const PLANS_LANDING = [
     id: "full",
     name: "Full",
     priceMonthly: 199,
-    description: "Multi-sucursal + voucher printing",
+    description: "Multi-sucursal + AI + voucher printing",
     color: "#e63946",
     icon: Crown,
     features: [
-      "Todo lo del plan Premium",
+      "✨ Menús ilimitados",
+      "✨ 10 fotos por plato",
       "✨ Quitar fondo ilimitado",
       "🏬 Multi-sucursal ilimitada",
       "🖨️ Voucher printing 1-click (POS/A4/A5)",
       "📈 Reportes avanzados multi-sucursal",
-      "🔄 Transferencia de stock",
-      "🔗 Integraciones API",
-      "👑 Onboarding personalizado",
-      "24/7 soporte prioritario",
-      "📲 PWA Premium + Background Sync",
+      "🌐 Dominio propio (midominio.com)",
+      "🤖 Auto-traducción AI (ES/EN/PT/FR/DE)",
+      "🎟️ Programa de lealtad + cupones",
+      "🔔 Notificaciones push",
+      "🔄 Transferencia de stock entre locales",
+      "👑 Onboarding personalizado 24/7",
     ],
     cta: "Empezar Full",
     href: "/register?plan=full",
@@ -101,6 +104,7 @@ export function Pricing() {
   return (
     <section id="pricing" className="py-20 md:py-28 border-t border-white/5 relative overflow-hidden">
       <div className="absolute top-1/4 right-0 w-[600px] h-[600px] bg-[#d4af37]/5 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-1/4 left-0 w-[600px] h-[600px] bg-[#9d4edd]/5 rounded-full blur-3xl pointer-events-none" />
 
       <div className="relative max-w-7xl mx-auto px-6">
         {/* Header */}
@@ -122,6 +126,19 @@ export function Pricing() {
             <p className="text-lg text-white/60 max-w-2xl mx-auto">
               Sin contratos. Cancelas cuando quieras. Pagos en Soles vía MercadoPago.
             </p>
+            {/* Quick comparison badge row */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.2 }}
+              className="mt-6 flex flex-wrap items-center justify-center gap-3 text-xs text-white/60"
+            >
+              <span className="px-3 py-1.5 rounded-full bg-white/5 border border-white/10">🆓 Free — 1 menú, 1 foto/plato</span>
+              <span className="px-3 py-1.5 rounded-full bg-[#d4af37]/10 border border-[#d4af37]/30 text-[#d4af37]">⚡ Pro — 3 menús, 3 fotos/plato</span>
+              <span className="px-3 py-1.5 rounded-full bg-[#9d4edd]/10 border border-[#9d4edd]/30 text-[#9d4edd]">👑 Premium — 10 menús, 5 fotos/plato + white label</span>
+              <span className="px-3 py-1.5 rounded-full bg-[#e63946]/10 border border-[#e63946]/30 text-[#e63946]">🏆 Full — ∞ menús, 10 fotos/plato + AI</span>
+            </motion.div>
           </motion.div>
         </div>
 
@@ -151,8 +168,8 @@ export function Pricing() {
             >
               {/* Badge */}
               {plan.highlight && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-gradient-to-r from-[#d4af37] to-[#f4d35e] text-[#1a1a2e] text-[10px] font-bold tracking-wider shadow-lg">
-                  ⭐ POPULAR
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-gradient-to-r from-[#d4af37] to-[#f4d35e] text-[#1a1a2e] text-[10px] font-bold tracking-wider shadow-lg whitespace-nowrap flex items-center gap-1">
+                  <Star className="w-3 h-3 fill-current" /> POPULAR
                 </div>
               )}
               {(plan.id === "premium" || plan.id === "full") && (
@@ -233,6 +250,34 @@ export function Pricing() {
           ))}
         </div>
 
+        {/* Upsell banner — la mayoría elige 99 o 199 */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="mt-12 rounded-3xl overflow-hidden bg-gradient-to-r from-[#9d4edd]/10 via-[#d4af37]/10 to-[#e63946]/10 border border-[#d4af37]/30 p-8 text-center relative"
+        >
+          <div className="absolute inset-0 opacity-30" style={{ background: "radial-gradient(circle at center, #d4af37 0%, transparent 60%)" }} />
+          <div className="relative">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#d4af37]/15 border border-[#d4af37]/40 text-xs font-semibold text-[#d4af37] tracking-wider mb-3">
+              ⚡ RECOMENDADO PARA RESTAURANTES EN CRECIMIENTO
+            </div>
+            <h3 className="text-2xl md:text-3xl font-bold mb-2">
+              La mayoría elige <span className="text-[#9d4edd]">Premium (S/ 99)</span> o <span className="text-[#e63946]">Full (S/ 199)</span>
+            </h3>
+            <p className="text-white/70 max-w-2xl mx-auto mb-4">
+              Por menos de <strong>S/ 4 al día</strong>, obtienes comandas, cocina display, inventario, mozos offline y white label.
+              Tu restaurante se vuelve eficiente desde el día 1.
+            </p>
+            <div className="flex flex-wrap items-center justify-center gap-3 text-xs">
+              <span className="px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-white/80">✅ Sin comisiones por venta</span>
+              <span className="px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-white/80">✅ Cancelas cuando quieras</span>
+              <span className="px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-white/80">✅ Onboarding gratis</span>
+              <span className="px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-white/80">✅ Pagos en Soles (MercadoPago)</span>
+            </div>
+          </div>
+        </motion.div>
+
         {/* Help cards — Premium / Full */}
         <div className="mt-12 grid grid-cols-1 md:grid-cols-2 gap-4">
           <motion.div
@@ -248,8 +293,8 @@ export function Pricing() {
               <div className="font-bold text-[#9d4edd] mb-1">¿Tienes mesas y mozos?</div>
               <div className="text-sm text-white/70 leading-relaxed">
                 El plan <strong>Premium (S/ 99/mes)</strong> incluye toda la logística interna: comandas
-                que van del mozo a la cocina, inventario de insumos con recetas automáticas, y cocina
-                display en tiempo real.
+                que van del mozo a la cocina, inventario de insumos con recetas automáticas, cocina
+                display en tiempo real, y <strong>white label (sin marca MenuPro)</strong>.
               </div>
             </div>
           </motion.div>
@@ -265,8 +310,8 @@ export function Pricing() {
             <div>
               <div className="font-bold text-[#e63946] mb-1">¿Tienes varias sucursales?</div>
               <div className="text-sm text-white/70 leading-relaxed">
-                El plan <strong>Full (S/ 199/mes)</strong> desbloquea multi-sucursal, voucher printing
-                1-click para POS, transferencias de stock entre locales, y reportes consolidados.
+                El plan <strong>Full (S/ 199/mes)</strong> desbloquea menús ilimitados, 10 fotos por plato,
+                multi-sucursal, voucher printing 1-click para POS, dominio propio, AI y reportes consolidados.
               </div>
             </div>
           </motion.div>

@@ -822,7 +822,7 @@ function buildJS(opts: JSOpts): string {
   }
   // Footer
   s += '  html+="<div class=\\"menu-footer\\"><span>"+escapeHtml(RESTAURANT.name)+"</span>";\n';
-  s += '  if(SHOW_BRANDING){html+=" · <a href=\\"https://menupro.app\\" target=\\"_blank\\">"+escapeHtml(BRANDING_TEXT||"Creado con MenuPro")+"</a>";}\n';
+  s += '  if(SHOW_BRANDING){html+=" · <a href=\\"https://menudigital-pro.vercel.app/\\" target=\\"_blank\\" rel=\\"noopener\\" style=\\"color:inherit;text-decoration:underline;\\" title=\\"Crea tu menú digital con MenuPro\\">"+escapeHtml(BRANDING_TEXT||"Creado con MenuPro")+"</a>";}\n';
   s += '  html+="</div>";\n';
   // Cart
   s += '  html+="<div class=\\"cart\\" id=\\"cartBar\\">";\n';

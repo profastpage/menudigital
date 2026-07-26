@@ -9,6 +9,7 @@ import {
 import { toast } from 'sonner';
 import { useOfflineQueue } from '@/hooks/use-offline-queue';
 import { InstallAppButton } from '@/components/pwa/install-app-button';
+import { type PlanId } from '@/lib/plans';
 
 interface Dish {
   id: string; name: string; price: number; description?: string; image_url?: string;
@@ -50,6 +51,7 @@ export function MozoPanel({ token, waiterName }: Props) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isOnline, setIsOnline] = useState(true);
+  const [planId, setPlanId] = useState<PlanId | undefined>(undefined);
 
   // Hook de cola offline (Premium+) — guarda comandas en IndexedDB cuando no hay red
   const { pending, isSyncing, enqueue, syncNow, hasPending } = useOfflineQueue(token);
@@ -77,6 +79,9 @@ export function MozoPanel({ token, waiterName }: Props) {
       setMesas(d.mesas || []);
       setMenu(d.menu || null);
       setComandas(d.comandas || []);
+      if (d.plan?.id) {
+        setPlanId(d.plan.id as PlanId);
+      }
       if (d.menu?.categories?.length) {
         setActiveCategory(d.menu.categories[0].id);
       }
@@ -335,6 +340,7 @@ export function MozoPanel({ token, waiterName }: Props) {
             size="sm"
             style="compact"
             showLabel={false}
+            planId={planId}
           />
         </div>
       </header>

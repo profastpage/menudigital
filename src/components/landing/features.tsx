@@ -39,8 +39,8 @@ const FEATURES = [
   },
   {
     icon: ImageIcon,
-    title: "Imágenes ilimitadas + WebP",
-    desc: "Sube fotos profesionales de tus platos. Optimización automática WebP para carga ultrarrápida en móvil.",
+    title: "Fotos profesionales + WebP",
+    desc: "Sube fotos profesionales de tus platos (1 en Free, 3 en Pro, 5 en Premium, 10 en Full). Optimización automática WebP para carga ultrarrápida en móvil.",
     color: "#118ab2",
     size: "lg",
   },

@@ -47,6 +47,8 @@ import {
   detectFileType,
 } from '@/lib/import-export';
 import { DashboardShell } from '@/components/dashboard/dashboard-shell';
+import { InstallAppButton } from '@/components/pwa/install-app-button';
+import { isPlanAtLeast, type PlanId } from '@/lib/plans';
 
 interface Props {
   user: { email: string; name: string };
@@ -422,6 +424,73 @@ export function DashboardClient({ user, plan, menus, isSuperAdmin = false }: Pro
         </div>
       )}
 
+      {/* Banner de upgrade cuando está cerca del límite de menús */}
+      {plan.limits.maxMenus !== -1 && menus.length >= plan.limits.maxMenus - 1 && (
+        <div className="mt-8 rounded-2xl overflow-hidden bg-gradient-to-r from-[#d4af37]/10 to-[#9d4edd]/10 border border-[#d4af37]/30 p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-xl bg-[#d4af37]/20 flex items-center justify-center flex-shrink-0">
+              <Crown className="w-5 h-5 text-[#d4af37]" />
+            </div>
+            <div>
+              <div className="font-bold text-white">
+                {menus.length >= plan.limits.maxMenus
+                  ? `Has alcanzado el límite de ${plan.limits.maxMenus} menú(s) del plan ${plan.name}`
+                  : `Estás usando ${menus.length} de ${plan.limits.maxMenus} menús del plan ${plan.name}`}
+              </div>
+              <div className="text-sm text-white/60 mt-0.5">
+                {plan.id === 'free' && 'Sube a Pro (S/ 35/mes) para tener 3 menús y 3 fotos por plato.'}
+                {plan.id === 'pro' && 'Sube a Premium (S/ 99/mes) para tener 10 menús, 5 fotos por plato y white label.'}
+                {plan.id === 'premium' && 'Sube a Full (S/ 199/mes) para menús ilimitados, 10 fotos por plato y multi-sucursal.'}
+              </div>
+            </div>
+          </div>
+          <Link
+            href="/dashboard/billing"
+            className="flex-shrink-0 inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#d4af37] to-[#f4d35e] text-[#1a1a2e] font-bold text-sm hover:opacity-90 transition"
+          >
+            <Sparkles className="w-4 h-4" />
+            Subir de plan
+          </Link>
+        </div>
+      )}
+
+      {/* Banner instalar app (PWA) — visible para todos, con copy según plan */}
+      <div className="mt-8 rounded-2xl overflow-hidden bg-gradient-to-r from-[#ff6b35]/10 to-[#9d4edd]/10 border border-[#ff6b35]/20 p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 rounded-xl bg-[#ff6b35]/20 flex items-center justify-center flex-shrink-0">
+            <Download className="w-5 h-5 text-[#ff6b35]" />
+          </div>
+          <div>
+            <div className="font-bold text-white flex items-center gap-2 flex-wrap">
+              Instala MenuPro en tu celular o desktop
+              <span
+                className="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider"
+                style={{
+                  background: `${plan.color}25`,
+                  color: plan.color,
+                  border: `1px solid ${plan.color}40`,
+                }}
+              >
+                Plan {plan.name}
+              </span>
+            </div>
+            <div className="text-sm text-white/60 mt-0.5">
+              {plan.id === 'free' && 'Acceso rápido desde tu pantalla de inicio. El modo offline requiere plan Premium.'}
+              {plan.id === 'pro' && 'PWA optimizada con carga instantánea. Sube a Premium para modo offline real.'}
+              {plan.id === 'premium' && 'PWA con modo offline — tus mozos pueden tomar comandas sin internet.'}
+              {plan.id === 'full' && 'PWA Premium con Background Sync — comandas offline se envían automáticamente.'}
+            </div>
+          </div>
+        </div>
+        <InstallAppButton
+          variant="dashboard"
+          size="md"
+          style="solid"
+          planId={plan.id}
+          className="flex-shrink-0"
+        />
+      </div>
+
       {/* Quick tips */}
       {menus.length > 0 && menus.length <= 2 && (
         <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -449,7 +518,7 @@ export function DashboardClient({ user, plan, menus, isSuperAdmin = false }: Pro
               Dominio propio
             </div>
             <div className="text-white/50">
-              Usa tu propio dominio con el plan Pro. Sin branding.
+              Usa tu propio dominio (midominio.com) con el plan Full. Sin branding.
             </div>
           </div>
         </div>

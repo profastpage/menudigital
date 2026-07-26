@@ -10,10 +10,15 @@ export interface Plan {
   limits: {
     maxMenus: number; // -1 = ilimitado
     maxDishesPerMenu: number;
-    maxImages: number; // -1 = ilimitado
+    maxImages: number; // imágenes totales por restaurante (-1 = ilimitado)
+    maxImagesPerDish: number; // imágenes por producto/plato
     maxCategories: number; // -1 = ilimitado
+    maxWaiters: number; // -1 = ilimitado, 0 = no disponible
+    maxTables: number; // -1 = ilimitado, 0 = no disponible
+    maxBranches: number; // -1 = ilimitado, 0 = no disponible
     hasQR: boolean;
-    hasBranding: boolean; // true = muestra marca MenuPro
+    hasBranding: boolean; // true = muestra marca "Creado con MenuPro" (con hipervínculo al landing)
+    hasWhiteLabel: boolean; // true = puede quitar la marca MenuPro (a partir de Premium)
     hasAnalytics: boolean;
     hasBgRemoval: boolean;
     bgRemovalCredits: number;
@@ -26,22 +31,31 @@ export interface Plan {
     hasKitchenDisplay: boolean; // cocina display
     hasInventory: boolean; // inventario de insumos
     hasRecipes: boolean; // recetas plato → insumos
-    maxTables: number; // -1 = ilimitado
-    maxWaiters: number; // -1 = ilimitado
+    hasReservations: boolean; // reservas online
+    hasWhatsAppOrders: boolean; // pedidos directos WhatsApp
+    hasCustomThemes: boolean; // temas personalizados (colores custom)
+    hasPwaOffline: boolean; // PWA con modo offline real para mozos
+    hasAdvancedReports: boolean; // reportes avanzados
     // Full
     hasMultiBranch: boolean; // multi-sucursal
     hasVoucherPrinting: boolean; // imprimir vouchers POS
-    hasAdvancedReports: boolean; // reportes avanzados
-    maxBranches: number; // -1 = ilimitado
+    hasOwnDomain: boolean; // dominio propio
+    hasPushNotifications: boolean; // notificaciones push
+    hasLoyaltyProgram: boolean; // programa de lealtad
+    hasAutoTranslate: boolean; // auto-traducción AI
+    hasApiAccess: boolean; // API externa
   };
   features: string[];
   highlight?: boolean;
   badge?: string;
   color: string; // hex para UI
+  /** Mensaje corto para mostrar cuando un usuario alcanza un límite (upsell) */
+  upgradeHint?: string;
 }
 
 /**
  * PLAN FREE — Adquisición + Viralidad
+ * Mostramos marca MenuPro con hipervínculo → cada QR es un lead orgánico.
  */
 export const PLANS: Record<PlanId, Plan> = {
   free: {
@@ -51,13 +65,19 @@ export const PLANS: Record<PlanId, Plan> = {
     priceMonthly: 0,
     priceUsd: 0,
     color: '#6b7280',
+    upgradeHint: 'Pasa a Pro (S/ 35/mes) para tener 3 menús, 3 fotos por plato y analytics.',
     limits: {
       maxMenus: 1,
       maxDishesPerMenu: 10,
-      maxImages: 5,
+      maxImages: 10,
+      maxImagesPerDish: 1,
       maxCategories: 3,
+      maxWaiters: 0,
+      maxTables: 0,
+      maxBranches: 0,
       hasQR: true,
       hasBranding: true,
+      hasWhiteLabel: false,
       hasAnalytics: false,
       hasBgRemoval: false,
       bgRemovalCredits: 0,
@@ -69,23 +89,29 @@ export const PLANS: Record<PlanId, Plan> = {
       hasKitchenDisplay: false,
       hasInventory: false,
       hasRecipes: false,
-      maxTables: 0,
-      maxWaiters: 0,
+      hasReservations: false,
+      hasWhatsAppOrders: true,
+      hasCustomThemes: false,
+      hasPwaOffline: false,
+      hasAdvancedReports: false,
       hasMultiBranch: false,
       hasVoucherPrinting: false,
-      hasAdvancedReports: false,
-      maxBranches: 0,
+      hasOwnDomain: false,
+      hasPushNotifications: false,
+      hasLoyaltyProgram: false,
+      hasAutoTranslate: false,
+      hasApiAccess: false,
     },
     features: [
       '1 menú activo',
       'Hasta 10 platos',
-      'Hasta 5 imágenes',
+      '1 foto por plato',
       'Hasta 3 categorías',
       'Carrito integrado con WhatsApp',
       'URL pública /r/tu-restaurante',
       'Vista previa en vivo',
       'QR básico (solo vista web)',
-      'Marca "Creado con MenuPro"',
+      'Marca "Creado con MenuPro" con hipervínculo',
       '📱 App instalable (PWA) — clientes pueden agregar tu carta a su pantalla de inicio',
     ],
   },
@@ -100,13 +126,20 @@ export const PLANS: Record<PlanId, Plan> = {
     color: '#d4af37',
     highlight: true,
     badge: 'POPULAR',
+    upgradeHint:
+      'Pasa a Premium (S/ 99/mes) para tener 10 menús, 5 fotos por plato, white label (sin marca MenuPro) y comandas para mozos.',
     limits: {
-      maxMenus: -1,
+      maxMenus: 3,
       maxDishesPerMenu: -1,
       maxImages: -1,
+      maxImagesPerDish: 3,
       maxCategories: -1,
+      maxWaiters: 0,
+      maxTables: 0,
+      maxBranches: 0,
       hasQR: true,
-      hasBranding: false,
+      hasBranding: true, // Pro MANTIENE "Creado con MenuPro" con hipervínculo — genera leads orgánicos
+      hasWhiteLabel: false, // No puede quitar la marca
       hasAnalytics: true,
       hasBgRemoval: true,
       bgRemovalCredits: 30,
@@ -118,50 +151,63 @@ export const PLANS: Record<PlanId, Plan> = {
       hasKitchenDisplay: false,
       hasInventory: false,
       hasRecipes: false,
-      maxTables: 0,
-      maxWaiters: 0,
+      hasReservations: false,
+      hasWhatsAppOrders: true,
+      hasCustomThemes: true,
+      hasPwaOffline: false,
+      hasAdvancedReports: false,
       hasMultiBranch: false,
       hasVoucherPrinting: false,
-      hasAdvancedReports: false,
-      maxBranches: 0,
+      hasOwnDomain: false,
+      hasPushNotifications: false,
+      hasLoyaltyProgram: false,
+      hasAutoTranslate: false,
+      hasApiAccess: false,
     },
     features: [
-      'Menús ilimitados',
-      'Platos ilimitados',
-      'Imágenes ilimitadas + WebP',
-      'Categorías ilimitadas + etiquetas',
-      '30 créditos "Quitar fondo" por mes',
+      '3 menús activos',
+      'Platos ilimitados por menú',
+      '3 fotos por plato + WebP',
+      'Categorías y etiquetas ilimitadas',
+      '30 créditos "Quitar fondo" IA por mes',
       'Carrito integrado con WhatsApp',
       'URL pública personalizada',
       'QR profesional HD + dinámico',
       'Analytics: visitas, clics WhatsApp, top platos',
       'Menú multi-idioma (ES/EN)',
-      '100% white-label',
-      'Soporte prioritario WhatsApp',
-      'Tema PedidosYa/Rappi',
-      '📱 PWA optimizada — carga instantánea de la carta, soporte offline básico',
+      'Tema PedidosYa/Rappi + colores personalizados',
+      'Marca "Creado con MenuPro" con hipervínculo',
+      'Soporte prioritario WhatsApp (48h)',
+      '📱 PWA optimizada — carga instantánea de la carta',
     ],
   },
 
   premium: {
     id: 'premium',
     name: 'Premium',
-    tagline: 'Logística interna completa',
+    tagline: 'Logística interna completa + White label',
     priceMonthly: 99,
     priceUsd: 26,
     mpAmount: 99,
     color: '#9d4edd',
     badge: 'PREMIUM',
+    upgradeHint:
+      'Pasa a Full (S/ 199/mes) para menús ilimitados, 10 fotos por plato, multi-sucursal y voucher printing POS.',
     limits: {
-      maxMenus: -1,
+      maxMenus: 10,
       maxDishesPerMenu: -1,
       maxImages: -1,
+      maxImagesPerDish: 5,
       maxCategories: -1,
+      maxWaiters: 20,
+      maxTables: 50,
+      maxBranches: 1,
       hasQR: true,
-      hasBranding: false,
+      hasBranding: false, // Premium YA ES white label — sin marca MenuPro
+      hasWhiteLabel: true,
       hasAnalytics: true,
       hasBgRemoval: true,
-      bgRemovalCredits: 100, // más créditos en premium
+      bgRemovalCredits: 100,
       hasMultiLanguage: true,
       hasHDQR: true,
       hasTables: true,
@@ -170,33 +216,42 @@ export const PLANS: Record<PlanId, Plan> = {
       hasKitchenDisplay: true,
       hasInventory: true,
       hasRecipes: true,
-      maxTables: 50,
-      maxWaiters: 20,
+      hasReservations: true,
+      hasWhatsAppOrders: true,
+      hasCustomThemes: true,
+      hasPwaOffline: true,
+      hasAdvancedReports: false,
       hasMultiBranch: false,
       hasVoucherPrinting: false,
-      hasAdvancedReports: false,
-      maxBranches: 1,
+      hasOwnDomain: false,
+      hasPushNotifications: false,
+      hasLoyaltyProgram: false,
+      hasAutoTranslate: false,
+      hasApiAccess: false,
     },
     features: [
       'Todo lo del plan Pro',
+      '10 menús activos',
+      '5 fotos por plato + WebP',
       '100 créditos "Quitar fondo" por mes',
+      '✨ 100% White label — sin marca MenuPro',
       '🍽️ Gestión de mesas (hasta 50)',
       '👨‍🍳 Gestión de mozos (hasta 20)',
       '📋 Comandas: mesa → mozo → cocina → entrega',
       '🔥 Cocina Display (cola de pedidos en tiempo real)',
       '📦 Inventario de insumos con stock mínimo',
       '🧾 Recetas: cada plato consume insumos automáticamente',
-      '📊 Dashboard operacional en vivo',
+      '📅 Reservas online (próximamente)',
       '⚡ Auto-descuento de stock al facturar',
       '🚨 Alertas de stock bajo',
-      '📲 PWA del panel de mozos con modo offline (toman comandas sin internet y se sincronizan solas)',
+      '📲 PWA del panel de mozos con modo offline (toman comandas sin internet)',
     ],
   },
 
   full: {
     id: 'full',
     name: 'Full',
-    tagline: 'Multi-sucursal + voucher printing',
+    tagline: 'Multi-sucursal + voucher printing + AI',
     priceMonthly: 199,
     priceUsd: 52,
     mpAmount: 199,
@@ -206,9 +261,14 @@ export const PLANS: Record<PlanId, Plan> = {
       maxMenus: -1,
       maxDishesPerMenu: -1,
       maxImages: -1,
+      maxImagesPerDish: 10,
       maxCategories: -1,
+      maxWaiters: -1,
+      maxTables: -1,
+      maxBranches: -1,
       hasQR: true,
       hasBranding: false,
+      hasWhiteLabel: true,
       hasAnalytics: true,
       hasBgRemoval: true,
       bgRemovalCredits: -1, // ilimitado
@@ -220,27 +280,37 @@ export const PLANS: Record<PlanId, Plan> = {
       hasKitchenDisplay: true,
       hasInventory: true,
       hasRecipes: true,
-      maxTables: -1,
-      maxWaiters: -1,
+      hasReservations: true,
+      hasWhatsAppOrders: true,
+      hasCustomThemes: true,
+      hasPwaOffline: true,
+      hasAdvancedReports: true,
       hasMultiBranch: true,
       hasVoucherPrinting: true,
-      hasAdvancedReports: true,
-      maxBranches: -1,
+      hasOwnDomain: true,
+      hasPushNotifications: true,
+      hasLoyaltyProgram: true,
+      hasAutoTranslate: true,
+      hasApiAccess: true,
     },
     features: [
       'Todo lo del plan Premium',
+      '✨ Menús ilimitados',
+      '✨ 10 fotos por plato',
       '✨ Quitar fondo ilimitado',
       '🏬 Multi-sucursal ilimitada',
       '🏬 Mesas y mozos ilimitados por sucursal',
       '🖨️ Voucher printing 1-click (POS 80mm / A4 / A5)',
       '📈 Reportes avanzados: ventas por mozo, plato, sucursal, hora',
-      '📱 Panel móvil para mozos (toman comandas desde su celular)',
+      '🌐 Dominio propio (midominio.com)',
+      '🤖 Auto-traducción AI (ES/EN/PT/FR/DE)',
+      '🎟️ Programa de lealtad + cupones promocionales',
+      '🔔 Notificaciones push para nuevos pedidos',
+      '📱 Panel móvil para mozos (PWA con Background Sync)',
       '🔄 Transferencia de stock entre sucursales',
       '🔗 Integraciones API (delivery, POS externo)',
       '🎫 Boletas/facturas electrónicas (próximamente)',
       '👑 Soporte prioritario 24/7 + onboarding personalizado',
-      '📲 PWA Premium con Background Sync — comandas offline se envían automáticamente al volver la conexión',
-      '🔔 Notificaciones push para nuevos pedidos (próximamente)',
     ],
   },
 };
@@ -267,6 +337,33 @@ export function canAddCategory(currentCount: number, plan: Plan): boolean {
 export function canUploadImage(currentCount: number, plan: Plan): boolean {
   if (plan.limits.maxImages === -1) return true;
   return currentCount < plan.limits.maxImages;
+}
+
+/** ¿Puede subir N imágenes a un plato? — límite por plato según el plan */
+export function canAddDishImage(currentCount: number, plan: Plan): boolean {
+  if (plan.limits.maxImagesPerDish === -1) return true;
+  return currentCount < plan.limits.maxImagesPerDish;
+}
+
+/** ¿Puede crear otro mozo? */
+export function canCreateWaiter(currentCount: number, plan: Plan): boolean {
+  if (plan.limits.maxWaiters === -1) return true;
+  if (plan.limits.maxWaiters === 0) return false;
+  return currentCount < plan.limits.maxWaiters;
+}
+
+/** ¿Puede crear otra mesa? */
+export function canCreateTable(currentCount: number, plan: Plan): boolean {
+  if (plan.limits.maxTables === -1) return true;
+  if (plan.limits.maxTables === 0) return false;
+  return currentCount < plan.limits.maxTables;
+}
+
+/** ¿Puede crear otra sucursal? */
+export function canCreateBranch(currentCount: number, plan: Plan): boolean {
+  if (plan.limits.maxBranches === -1) return true;
+  if (plan.limits.maxBranches === 0) return false;
+  return currentCount < plan.limits.maxBranches;
 }
 
 /**
@@ -313,4 +410,90 @@ export const CURRENCIES = [
   { value: 'CLP$', label: 'CLP$ Pesos Chilenos' },
   { value: 'MX$', label: 'MX$ Pesos Mexicanos' },
   { value: 'R$', label: 'R$ Reales' },
+];
+
+/**
+ * Límites comparativos para mostrar en la landing y en el dashboard.
+ * Cada fila indica el límite por plan (para que el usuario vea por qué conviene subir de tier).
+ */
+export const LIMIT_COMPARISON: Array<{
+  label: string;
+  icon: string;
+  values: [string, string, string, string]; // free, pro, premium, full
+}> = [
+  {
+    label: 'Menús activos',
+    icon: '📋',
+    values: ['1', '3', '10', '∞'],
+  },
+  {
+    label: 'Fotos por plato',
+    icon: '📸',
+    values: ['1', '3', '5', '10'],
+  },
+  {
+    label: 'Platos por menú',
+    icon: '🍽️',
+    values: ['10', '∞', '∞', '∞'],
+  },
+  {
+    label: 'Quitar fondo IA',
+    icon: '✨',
+    values: ['—', '30/mes', '100/mes', '∞'],
+  },
+  {
+    label: 'White label (sin marca)',
+    icon: '🏷️',
+    values: ['—', '—', '✓', '✓'],
+  },
+  {
+    label: 'Analytics',
+    icon: '📊',
+    values: ['—', '✓', '✓', '✓ Avanzado'],
+  },
+  {
+    label: 'Comandas + Cocina Display',
+    icon: '👨‍🍳',
+    values: ['—', '—', '✓', '✓'],
+  },
+  {
+    label: 'Mozos',
+    icon: '🧑‍🍳',
+    values: ['—', '—', '20', '∞'],
+  },
+  {
+    label: 'Mesas',
+    icon: '🪑',
+    values: ['—', '—', '50', '∞'],
+  },
+  {
+    label: 'Inventario + Recetas',
+    icon: '📦',
+    values: ['—', '—', '✓', '✓'],
+  },
+  {
+    label: 'Multi-sucursal',
+    icon: '🏬',
+    values: ['—', '—', '—', '∞'],
+  },
+  {
+    label: 'Voucher printing POS',
+    icon: '🖨️',
+    values: ['—', '—', '—', '✓'],
+  },
+  {
+    label: 'Dominio propio',
+    icon: '🌐',
+    values: ['—', '—', '—', '✓'],
+  },
+  {
+    label: 'Reportes avanzados AI',
+    icon: '🤖',
+    values: ['—', '—', '—', '✓'],
+  },
+  {
+    label: 'PWA offline (mozos)',
+    icon: '📲',
+    values: ['Básica', 'Optimizada', 'Offline real', 'Background Sync'],
+  },
 ];

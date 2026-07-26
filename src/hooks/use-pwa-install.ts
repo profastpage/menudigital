@@ -41,7 +41,7 @@ export function usePwaInstall() {
     const standalone =
       (window.matchMedia?.("(display-mode: standalone)")?.matches) ||
       (window.matchMedia?.("(display-mode: window-controls-overlay)")?.matches) ||
-      // @ts-expect-error iOS Safari
+      // iOS Safari tiene navigator.standalone (no tipado)
       (window.navigator as { standalone?: boolean })?.standalone === true;
     setIsStandalone(Boolean(standalone));
     if (standalone) {

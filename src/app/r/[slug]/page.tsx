@@ -59,15 +59,16 @@ export default async function PublicMenuPage({
     })
   );
 
-  // Determinar si mostrar branding (plan free = branding_text no null)
+  // Determinar si mostrar branding: Free y Pro muestran "Creado con MenuPro" con hipervínculo.
+  // Premium y Full son white label (sin marca).
   const { data: profile } = await supabase
     .from('profiles')
     .select('plan')
     .eq('id', menu.user_id)
     .single();
 
-  // Plan free muestra branding, Pro no
-  const showBranding = (profile?.plan || 'free') === 'free';
+  // Planes Free y Pro muestran branding (con hipervínculo al landing — genera leads orgánicos)
+  const showBranding = ['free', 'pro'].includes(profile?.plan || 'free');
 
   const fullMenu: MenuData = {
     ...menu,

@@ -204,14 +204,23 @@ export function DashboardShell({ user, plan, isSuperAdmin = false, children }: P
           </Link>
         </nav>
 
-        {/* Botón instalar app — PWA */}
+        {/* Botón instalar app — PWA plan-aware */}
         <div className="border-t border-white/10 pt-3 px-2">
           <InstallAppButton
             variant="dashboard"
             size="sm"
             style="compact"
+            planId={plan.id}
             className="w-full justify-center"
           />
+          {plan.id === 'free' && (
+            <Link
+              href="/dashboard/billing"
+              className="mt-2 block text-center text-[10px] text-[#d4af37]/80 hover:text-[#d4af37] transition"
+            >
+              ⚡ Sube a Pro para PWA optimizada →
+            </Link>
+          )}
         </div>
 
         {renderUserBlock()}
@@ -303,6 +312,7 @@ export function DashboardShell({ user, plan, isSuperAdmin = false, children }: P
                 size="sm"
                 style="ghost"
                 showLabel={false}
+                planId={plan.id}
               />
               <Button
                 variant="ghost"

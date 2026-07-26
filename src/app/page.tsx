@@ -3,7 +3,9 @@ import { Hero } from "@/components/landing/hero";
 import { TrustBar } from '@/components/landing/trust-bar';
 import { Features } from "@/components/landing/features";
 import { HowItWorks } from "@/components/landing/how-it-works";
+import { ComparisonTable } from "@/components/landing/comparison-table";
 import { Pricing } from "@/components/landing/pricing";
+import { Testimonials } from "@/components/landing/testimonials";
 import { FAQ } from "@/components/landing/faq";
 import { Footer } from "@/components/landing/footer";
 import { InstallAppButton } from "@/components/pwa/install-app-button";
@@ -21,7 +23,9 @@ export default function Home() {
           </Link>
           <nav className="hidden md:flex items-center gap-8 text-sm text-white/70">
             <a href="#features" className="hover:text-white transition">Features</a>
+            <a href="#comparativa" className="hover:text-white transition">Comparativa</a>
             <a href="#pricing" className="hover:text-white transition">Precios</a>
+            <a href="#testimonios" className="hover:text-white transition">Testimonios</a>
             <a href="#faq" className="hover:text-white transition">FAQ</a>
           </nav>
           <div className="flex items-center gap-3">
@@ -49,7 +53,9 @@ export default function Home() {
       <TrustBar />
       <Features />
       <HowItWorks />
+      <ComparisonTable />
       <Pricing />
+      <Testimonials />
       <FAQ />
       <Footer />
     </main>
