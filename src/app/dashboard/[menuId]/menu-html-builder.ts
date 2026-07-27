@@ -232,17 +232,19 @@ function buildCSS(opts: ThemeOpts): string {
 
   // Header — cuando hay cover, se superpone encima con efecto glass
   if (coverUrl) {
-    c += `.header{position:relative;z-index:2;margin-top:-140px;padding:0 24px 30px;text-align:center;}`;
-    c += '@media(min-width:600px){.header{margin-top:-180px;}}';
+    c += `.header{position:relative;z-index:2;margin-top:-180px;padding:0 24px 30px;text-align:center;}`;
+    c += '@media(min-width:600px){.header{margin-top:-220px;}}';
   } else {
     c += `.header{padding:38px 24px 30px;text-align:center;position:relative;background:linear-gradient(180deg,rgba(255,255,255,0.03) 0%,transparent 100%);border-bottom:1px solid var(--border);}`;
     c += '.header::after{content:"";position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:140px;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);}';
   }
-  c += '.logo-wrap{position:relative;display:inline-block;margin-bottom:16px;width:96px;height:96px;}';
-  c += '.logo-wrap::before{content:"";position:absolute;inset:-6px;border-radius:50%;background:conic-gradient(from 0deg,var(--accent),var(--gold),var(--accent));filter:blur(10px);opacity:0.5;z-index:0;animation:rotate 8s linear infinite;}';
+  c += '.logo-wrap{position:relative;display:inline-block;margin-bottom:18px;width:140px;height:140px;}';
+  c += '.logo-wrap::before{content:"";position:absolute;inset:-8px;border-radius:50%;background:conic-gradient(from 0deg,var(--accent),var(--gold),var(--accent));filter:blur(14px);opacity:0.55;z-index:0;animation:rotate 8s linear infinite;}';
   c += '@keyframes rotate{to{transform:rotate(360deg);}}';
-  c += `.logo{width:96px;height:96px;border-radius:50%;object-fit:cover;border:3px solid rgba(255,255,255,0.18);box-shadow:0 12px 36px rgba(0,0,0,0.55);background:var(--glass);position:absolute;inset:0;z-index:2;}`;
-  c += '.logo-placeholder{width:96px;height:96px;border-radius:50%;background:linear-gradient(135deg,var(--accent),rgba(var(--accent-rgb),0.6));display:flex;align-items:center;justify-content:center;font-size:38px;font-weight:800;color:#fff;position:absolute;inset:0;z-index:1;border:3px solid rgba(255,255,255,0.18);box-shadow:0 12px 36px rgba(0,0,0,0.55);backdrop-filter:blur(8px);}';
+  c += '.logo{width:140px;height:140px;border-radius:50%;object-fit:cover;border:4px solid rgba(255,255,255,0.2);box-shadow:0 16px 48px rgba(0,0,0,0.6);background:var(--glass);position:absolute;inset:0;z-index:2;}';
+  c += '.logo-placeholder{width:140px;height:140px;border-radius:50%;background:linear-gradient(135deg,var(--accent),rgba(var(--accent-rgb),0.6));display:flex;align-items:center;justify-content:center;font-size:54px;font-weight:800;color:#fff;position:absolute;inset:0;z-index:1;border:4px solid rgba(255,255,255,0.2);box-shadow:0 16px 48px rgba(0,0,0,0.6);backdrop-filter:blur(8px);}';
+  c += '@media(min-width:600px){.logo-wrap{width:168px;height:168px;margin-bottom:22px;}.logo,.logo-placeholder{width:168px;height:168px;font-size:64px;}}';
+  c += '@media(min-width:900px){.logo-wrap{width:184px;height:184px;}.logo,.logo-placeholder{width:184px;height:184px;font-size:72px;}}';
   c += '.restaurant-name{font-size:28px;font-weight:800;margin-bottom:6px;letter-spacing:-0.5px;color:var(--text);text-shadow:' + (coverUrl ? '0 2px 12px rgba(0,0,0,0.6)' : 'none') + ';}';
   c += '.slogan{font-size:11px;color:var(--gold);letter-spacing:4px;text-transform:uppercase;font-weight:600;margin-bottom:8px;}';
   c += '.restaurant-desc{color:' + (coverUrl && darkMode ? 'rgba(255,255,255,0.85)' : 'var(--text-soft)') + ';font-size:14px;margin-bottom:18px;max-width:440px;margin-left:auto;margin-right:auto;line-height:1.5;}';

@@ -288,12 +288,39 @@ export function MozoPanel({ token, waiterName }: Props) {
   }
 
   if (error) {
+    const isInvalidToken = /inválido|invalid|not found|no encontrado/i.test(error);
     return (
       <div className="min-h-screen bg-[#07070b] text-white flex items-center justify-center p-6">
-        <div className="text-center max-w-sm">
-          <AlertCircle className="w-10 h-10 text-red-400 mx-auto mb-3" />
-          <p className="text-white font-semibold mb-1">No se pudo cargar</p>
-          <p className="text-white/50 text-sm">{error}</p>
+        <div className="text-center max-w-sm w-full">
+          <div className="w-16 h-16 rounded-full bg-red-500/15 border border-red-500/30 flex items-center justify-center mx-auto mb-4">
+            <AlertCircle className="w-9 h-9 text-red-400" />
+          </div>
+          <h1 className="text-white text-xl font-bold mb-2">
+            {isInvalidToken ? 'Enlace inválido' : 'No se pudo cargar'}
+          </h1>
+          <p className="text-white/55 text-sm mb-6 leading-relaxed">
+            {isInvalidToken
+              ? 'Este enlace de mozo ya no es válido o fue regenerado. Solicita un enlace nuevo a tu administrador.'
+              : error}
+          </p>
+          <div className="flex flex-col gap-2.5">
+            <button
+              onClick={() => window.location.reload()}
+              className="w-full px-4 py-3 rounded-xl bg-[#9d4edd] hover:bg-[#7b2cbf] text-white text-sm font-semibold active:scale-[0.98] transition-all flex items-center justify-center gap-2 min-h-[48px]"
+            >
+              <RefreshCw className="w-4 h-4" />
+              Reintentar
+            </button>
+            <a
+              href="/"
+              className="w-full px-4 py-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white text-sm font-medium transition-all flex items-center justify-center gap-2 min-h-[48px]"
+            >
+              Ir al inicio
+            </a>
+          </div>
+          <p className="text-white/30 text-[11px] mt-6">
+            Si crees que es un error, contacta al administrador del restaurante.
+          </p>
         </div>
       </div>
     );
@@ -372,8 +399,8 @@ export function MozoPanel({ token, waiterName }: Props) {
       )}
 
       {/* Tabs superiores */}
-      <div className="sticky top-[64px] z-20 bg-[#0a0a14]/95 backdrop-blur border-b border-white/5">
-        <div className="grid grid-cols-3 px-2 py-2 gap-1">
+      <div className="sticky top-[60px] z-20 bg-[#0a0a14]/95 backdrop-blur border-b border-white/5">
+        <div className="grid grid-cols-3 px-2 py-2 gap-1.5">
           <TabBtn active={view === 'mesas'} onClick={() => setView('mesas')} icon={<Utensils className="w-4 h-4" />}>
             Mesas
           </TabBtn>
@@ -745,8 +772,8 @@ function TabBtn({ active, onClick, icon, children }: { active: boolean; onClick:
   return (
     <button
       onClick={onClick}
-      className={`flex items-center justify-center gap-1 py-2 rounded-lg text-xs transition-colors ${
-        active ? 'bg-white/10 text-white font-medium' : 'text-white/50'
+      className={`flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-lg text-xs sm:text-sm transition-colors min-h-[44px] ${
+        active ? 'bg-white/10 text-white font-medium' : 'text-white/50 hover:bg-white/5'
       }`}
     >
       {icon}
