@@ -70,16 +70,20 @@ INSERT INTO auth.users (
 -- panel de Supabase → Authentication → Users).
 
 -- Asegurar identidad en auth.identities
--- Nota: la tabla auth.identities en Supabase moderno NO tiene columna `identity_id`.
--- El sub se guarda dentro de identity_data. Columnas reales:
--- id, user_id, identity_data, provider, last_sign_in_at, created_at, updated_at
+-- Esquema REAL de auth.identities en Supabase moderno (9 columnas):
+--   provider_id (NOT NULL), user_id, identity_data, provider,
+--   last_sign_in_at, created_at, updated_at, email, id
+-- Para el provider "email", provider_id = user_id.
 INSERT INTO auth.identities (
-  id, user_id, identity_data, provider, last_sign_in_at, created_at, updated_at
+  id, user_id, identity_data, provider, provider_id, email,
+  last_sign_in_at, created_at, updated_at
 ) VALUES (
   '16b06793-5254-5994-b41c-5e96beca9813'::uuid,
   '2f2a30d8-bea6-5a5c-9787-040fe0ba1f15'::uuid,
   '{"sub":"2f2a30d8-bea6-5a5c-9787-040fe0ba1f15","email":"demo@menudigital.pro"}'::jsonb,
   'email',
+  '2f2a30d8-bea6-5a5c-9787-040fe0ba1f15',  -- provider_id = user_id para email provider
+  'demo@menudigital.pro',
   NOW(),
   NOW(),
   NOW()
