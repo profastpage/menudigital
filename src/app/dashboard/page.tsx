@@ -30,6 +30,17 @@ export default async function DashboardHomePage() {
     redirect('/login?error=account_banned');
   }
 
+  // Si el usuario no completó el onboarding Y no tiene menús, redirigir al wizard
+  // (super_admin ya fue redirigido arriba, así que aquí solo llega cliente normal)
+  const { count: menusCount } = await supabase
+    .from('menus')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', user.id);
+
+  if (!profile?.onboarding_completed_at && (menusCount || 0) === 0) {
+    redirect('/dashboard/onboarding');
+  }
+
   const plan = PLANS[profile?.plan || 'free'];
 
   // Cargar menus y views para el dashboard

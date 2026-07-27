@@ -1,5 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { NextResponse, type NextRequest } from 'next/server';
+import { sendEmail } from '@/lib/email';
+import { welcomeEmail } from '@/lib/email-templates';
 
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
@@ -58,6 +60,29 @@ export async function GET(request: NextRequest) {
           plan: 'free',
           is_active: true,
         }, { onConflict: 'id' });
+
+        // ── Enviar email de bienvenida (best-effort, no bloquea el flujo) ──
+        if (user.email) {
+          try {
+            const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || requestUrl.origin;
+            const emailContent = welcomeEmail({
+              email: user.email,
+              fullName: user.user_metadata?.full_name || user.user_metadata?.name || undefined,
+              plan: 'free',
+              dashboardUrl: `${siteUrl}/dashboard?welcome=1`,
+            });
+            await sendEmail({
+              to: user.email,
+              subject: emailContent.subject,
+              html: emailContent.html,
+              text: emailContent.text,
+              tags: ['welcome'],
+            });
+          } catch (emailErr) {
+            // El email es best-effort
+            console.warn('[auth/callback] No se pudo enviar email de bienvenida:', emailErr);
+          }
+        }
       }
 
       // Volver a leer profile (por si acabamos de crearlo)

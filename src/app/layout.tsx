@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { Toaster as SonnerToaster } from "sonner";
 import PwaRegistry from "@/components/pwa/pwa-registry";
+import { ErrorBoundary } from "@/components/error-boundary";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -103,7 +104,9 @@ export default function RootLayout({
       <body
         className={`${inter.variable} antialiased bg-[#07070b] text-white min-h-screen`}
       >
-        {children}
+        <ErrorBoundary>
+          {children}
+        </ErrorBoundary>
         <PwaRegistry />
         <SonnerToaster
           position="bottom-center"

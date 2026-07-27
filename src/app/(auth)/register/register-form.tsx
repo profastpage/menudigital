@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { Loader2, Mail, Lock, User, Eye, EyeOff } from 'lucide-react';
+import Link from 'next/link';
 
 function getPasswordStrength(pw: string) {
   let score = 0;
@@ -36,6 +37,7 @@ export function RegisterForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const router = useRouter();
 
   const strength = useMemo(() => getPasswordStrength(password), [password]);
@@ -45,6 +47,11 @@ export function RegisterForm() {
 
     if (password.length < 6) {
       toast.error('La contraseña debe tener al menos 6 caracteres');
+      return;
+    }
+
+    if (!acceptedTerms) {
+      toast.error('Debes aceptar los Términos y la Política de Privacidad para continuar');
       return;
     }
 
@@ -233,17 +240,30 @@ export function RegisterForm() {
         </Button>
       </form>
 
-      <p className="text-center text-[11px] text-white/40 leading-relaxed">
-        Al registrarte aceptas nuestros{' '}
-        <a href="#" className="text-white/60 hover:underline">
-          términos
-        </a>{' '}
-        y{' '}
-        <a href="#" className="text-white/60 hover:underline">
-          política de privacidad
-        </a>
-        .
-      </p>
+      <label className="flex items-start gap-3 text-[11px] text-white/60 leading-relaxed cursor-pointer select-none">
+        <input
+          type="checkbox"
+          checked={acceptedTerms}
+          onChange={(e) => setAcceptedTerms(e.target.checked)}
+          className="mt-0.5 h-4 w-4 rounded border-white/20 bg-white/5 accent-[#d4af37] flex-shrink-0"
+          aria-label="Aceptar términos y política de privacidad"
+        />
+        <span>
+          He leído y acepto los{' '}
+          <Link href="/legal/terminos" target="_blank" className="text-[#d4af37] hover:underline">
+            Términos de Servicio
+          </Link>
+          , la{' '}
+          <Link href="/legal/privacidad" target="_blank" className="text-[#d4af37] hover:underline">
+            Política de Privacidad
+          </Link>{' '}
+          y la{' '}
+          <Link href="/legal/reembolsos" target="_blank" className="text-[#d4af37] hover:underline">
+            Política de Reembolsos
+          </Link>
+          .
+        </span>
+      </label>
 
       <p className="text-center text-sm text-white/60 pt-1">
         ¿Ya tienes cuenta?{' '}

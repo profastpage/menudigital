@@ -57,8 +57,9 @@ export function Footer() {
         <div className="pt-8 border-t border-white/5 flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-white/40">
           <div>© {new Date().getFullYear()} MenuPro. Todos los derechos reservados.</div>
           <div className="flex items-center gap-6">
-            <a href="#" className="hover:text-white/70">Términos</a>
-            <a href="#" className="hover:text-white/70">Privacidad</a>
+            <Link href="/legal/terminos" className="hover:text-white/70 block py-2">Términos</Link>
+            <Link href="/legal/privacidad" className="hover:text-white/70 block py-2">Privacidad</Link>
+            <Link href="/legal/reembolsos" className="hover:text-white/70 block py-2">Reembolsos</Link>
             <span className="text-[#d4af37]">Hecho con ♥ en Perú</span>
           </div>
         </div>

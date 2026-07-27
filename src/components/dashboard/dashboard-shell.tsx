@@ -27,6 +27,7 @@ import {
 import type { Plan } from '@/lib/plans';
 import { isPlanAtLeast, type PlanId } from '@/lib/plans';
 import { InstallAppButton } from '@/components/pwa/install-app-button';
+import { SupportWidget } from '@/components/support/support-widget';
 
 interface NavItem {
   href: string;
@@ -53,6 +54,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: '/dashboard/inventario', label: 'Inventario', icon: Package, premium: true },
   { href: '/dashboard/reportes', label: 'Reportes', icon: TrendingUp, full: true },
   { href: '/dashboard/billing', label: 'Planes', icon: CreditCard },
+  { href: '/dashboard/ayuda', label: 'Ayuda', icon: HelpCircle },
 ];
 
 interface Props {
@@ -407,6 +409,9 @@ export function DashboardShell({ user, plan, isSuperAdmin = false, children }: P
           </div>
         </nav>
       </div>
+
+      {/* Widget flotante de soporte */}
+      <SupportWidget />
     </div>
   );
 }

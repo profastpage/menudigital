@@ -104,6 +104,76 @@ export async function cancelPreapproval(id: string): Promise<void> {
 }
 
 /**
+ * Verifica la firma HMAC de un webhook de MercadoPago.
+ *
+ * MercadoPago envía los headers:
+ *   - x-signature: "ts=...,v1=..."
+ *   - x-request-id: ID de la notificación
+ *
+ * El data.info.id es el ID del recurso (payment, subscription_preapproval, etc.)
+ *
+ * Fórmula oficial (template):
+ *   template = "id:<id>;request-id:<request_id>;ts:<ts>;"
+ *   signature = HMAC_SHA256(template, MERCADOPAGO_WEBHOOK_SECRET)
+ *
+ * Documentación oficial:
+ *   https://www.mercadopago.com.pe/developers/es/docs/your-integrations/notifications/webhooks
+ *
+ * Si MERCADOPAGO_WEBHOOK_SECRET no está configurado, devuelve true en desarrollo
+ * y false en producción (fail-closed).
+ */
+export function verifyWebhookSignature(params: {
+  signatureHeader: string | null;
+  requestIdHeader: string | null;
+  dataId: string | undefined;
+}): boolean {
+  const { signatureHeader, requestIdHeader, dataId } = params;
+  const secret = process.env.MERCADOPAGO_WEBHOOK_SECRET;
+
+  // Fail-closed en producción sin secret
+  if (!secret) {
+    if (process.env.NODE_ENV === 'production') {
+      console.error('[MP webhook] MERCADOPAGO_WEBHOOK_SECRET no configurado en producción');
+      return false;
+    }
+    // En desarrollo, permitir sin verificación
+    return true;
+  }
+
+  if (!signatureHeader || !dataId) return false;
+
+  // Parsear "ts=...,v1=..."
+  const parts = signatureHeader.split(',');
+  let ts: string | null = null;
+  let v1: string | null = null;
+  for (const part of parts) {
+    const [k, v] = part.split('=');
+    if (k?.trim() === 'ts') ts = v?.trim();
+    if (k?.trim() === 'v1') v1 = v?.trim();
+  }
+  if (!ts || !v1) return false;
+
+  // Construir template
+  const template = `id:${dataId};request-id:${requestIdHeader || ''};ts:${ts};`;
+
+  // Calcular HMAC SHA256
+  const crypto = require('crypto') as typeof import('crypto');
+  const hmac = crypto.createHmac('sha256', secret);
+  hmac.update(template);
+  const computed = hmac.digest('hex');
+
+  // Comparación time-safe
+  try {
+    const a = Buffer.from(computed, 'hex');
+    const b = Buffer.from(v1, 'hex');
+    if (a.length !== b.length) return false;
+    return crypto.timingSafeEqual(a, b);
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Mapa de estados de MercadoPago → plan.
  *
  * Estados posibles del PreApproval:
