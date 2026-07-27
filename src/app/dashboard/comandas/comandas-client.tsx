@@ -269,10 +269,10 @@ export function ComandasClient({ user, plan, isSuperAdmin, menus }: Props) {
       </div>
 
       {/* Filtros de estado */}
-      <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
+      <div className="flex gap-2 mb-6 overflow-x-auto pb-2 scrollbar-none">
         <button
           onClick={() => setFilterStatus('all')}
-          className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap ${
+          className={`px-4 py-2.5 rounded-full text-xs font-semibold whitespace-nowrap min-h-[40px] flex items-center ${
             filterStatus === 'all' ? 'bg-white/15 text-white' : 'bg-white/5 text-white/60'
           }`}
         >
@@ -285,7 +285,7 @@ export function ComandasClient({ user, plan, isSuperAdmin, menus }: Props) {
             <button
               key={s.id}
               onClick={() => setFilterStatus(s.id)}
-              className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap ${
+              className={`px-4 py-2.5 rounded-full text-xs font-semibold whitespace-nowrap min-h-[40px] flex items-center ${
                 filterStatus === s.id ? 'text-white' : 'bg-white/5 text-white/60'
               }`}
               style={filterStatus === s.id ? { background: s.color } : undefined}
@@ -542,15 +542,15 @@ export function ComandasClient({ user, plan, isSuperAdmin, menus }: Props) {
                       <div key={idx} className="bg-white/5 rounded-lg p-2 text-xs">
                         <div className="flex items-center justify-between mb-1">
                           <span className="font-medium flex-1 truncate">{item.dish.name}</span>
-                          <button onClick={() => removeFromCart(idx)} className="text-red-400 ml-2">
-                            <X className="w-3 h-3" />
+                          <button onClick={() => removeFromCart(idx)} className="text-red-400 ml-2 p-1.5 rounded hover:bg-red-500/10" aria-label="Quitar del carrito">
+                            <X className="w-3.5 h-3.5" />
                           </button>
                         </div>
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
-                            <button onClick={() => updateQty(idx, -1)} className="w-6 h-6 rounded bg-white/10">−</button>
-                            <span className="font-semibold">{item.quantity}</span>
-                            <button onClick={() => updateQty(idx, 1)} className="w-6 h-6 rounded bg-white/10">+</button>
+                            <button onClick={() => updateQty(idx, -1)} className="w-9 h-9 rounded bg-white/10 flex items-center justify-center" aria-label="Quitar uno">−</button>
+                            <span className="font-semibold w-6 text-center">{item.quantity}</span>
+                            <button onClick={() => updateQty(idx, 1)} className="w-9 h-9 rounded bg-white/10 flex items-center justify-center" aria-label="Agregar uno">+</button>
                           </div>
                           <span className="text-[#9d4edd] font-semibold">S/ {(item.dish.price * item.quantity).toFixed(2)}</span>
                         </div>
@@ -558,7 +558,7 @@ export function ComandasClient({ user, plan, isSuperAdmin, menus }: Props) {
                           value={item.notes}
                           onChange={(e) => setCart(prev => prev.map((it, i) => i === idx ? { ...it, notes: e.target.value } : it))}
                           placeholder="Notas: sin cebolla, extra picante…"
-                          className="bg-white/5 border-white/10 mt-2 text-xs h-7"
+                          className="bg-white/5 border-white/10 mt-2 text-xs h-9"
                         />
                       </div>
                     ))}

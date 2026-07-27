@@ -25,25 +25,25 @@ export function Footer() {
 
           <div>
             <h4 className="font-semibold mb-3 text-sm">Producto</h4>
-            <ul className="space-y-2 text-sm text-white/60">
-              <li><a href="#features" className="hover:text-white">Features</a></li>
-              <li><a href="#pricing" className="hover:text-white">Precios</a></li>
-              <li><a href="#faq" className="hover:text-white">FAQ</a></li>
-              <li><Link href="/register" className="hover:text-white">Crear cuenta</Link></li>
-              <li><Link href="/login" className="hover:text-white">Iniciar sesión</Link></li>
+            <ul className="space-y-1 text-sm text-white/60">
+              <li><a href="#features" className="block py-2 hover:text-white">Features</a></li>
+              <li><a href="#pricing" className="block py-2 hover:text-white">Precios</a></li>
+              <li><a href="#faq" className="block py-2 hover:text-white">FAQ</a></li>
+              <li><Link href="/register" className="block py-2 hover:text-white">Crear cuenta</Link></li>
+              <li><Link href="/login" className="block py-2 hover:text-white">Iniciar sesión</Link></li>
             </ul>
           </div>
 
           <div>
             <h4 className="font-semibold mb-3 text-sm">Contacto</h4>
-            <ul className="space-y-2 text-sm text-white/60">
+            <ul className="space-y-1 text-sm text-white/60">
               <li>
-                <a href="mailto:hola@menupro.app" className="hover:text-white">
+                <a href="mailto:hola@menupro.app" className="block py-2 hover:text-white">
                   hola@menupro.app
                 </a>
               </li>
               <li>
-                <a href="https://wa.me/51987654321" target="_blank" rel="noreferrer" className="hover:text-white">
+                <a href="https://wa.me/51987654321" target="_blank" rel="noreferrer" className="block py-2 hover:text-white">
                   WhatsApp
                 </a>
               </li>

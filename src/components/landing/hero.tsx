@@ -54,7 +54,7 @@ export function Hero() {
           </motion.div>
 
           {/* Headline */}
-          <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold leading-[1.05] mb-5 tracking-tight">
+          <h1 className="text-4xl xs:text-5xl md:text-6xl lg:text-7xl font-bold leading-[1.05] mb-5 tracking-tight break-words">
             Menús digitales
             <br />
             <span className="relative inline-block">

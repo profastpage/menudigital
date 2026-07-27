@@ -303,7 +303,7 @@ export function SuperAdminClient({ admin }: { admin: AdminInfo }) {
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-            <div className="flex items-center gap-2 px-2 sm:px-3 py-1.5 rounded-lg bg-white/5 border border-white/10">
+            <div className="hidden sm:flex items-center gap-2 px-2 sm:px-3 py-1.5 rounded-lg bg-white/5 border border-white/10">
               {/* Avatar with upload overlay — click to upload new photo */}
               <div className="relative group">
                 {currentAvatar ? (
@@ -317,7 +317,7 @@ export function SuperAdminClient({ admin }: { admin: AdminInfo }) {
                   type="button"
                   onClick={() => avatarInputRef.current?.click()}
                   disabled={avatarUploading}
-                  className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-amber-500 hover:bg-amber-400 text-black flex items-center justify-center transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-amber-500 hover:bg-amber-400 text-black flex items-center justify-center transition disabled:opacity-50 disabled:cursor-not-allowed"
                   title="Cambiar foto de perfil"
                   aria-label="Cambiar foto de perfil"
                 >
@@ -342,7 +342,7 @@ export function SuperAdminClient({ admin }: { admin: AdminInfo }) {
             </div>
             <a
               href="/dashboard"
-              className="text-[11px] sm:text-xs text-white/60 hover:text-white px-2 sm:px-3 py-1.5 rounded-lg border border-white/10 hover:bg-white/5 transition whitespace-nowrap"
+              className="hidden sm:inline-flex items-center text-[11px] sm:text-xs text-white/60 hover:text-white px-2 sm:px-3 py-2 rounded-lg border border-white/10 hover:bg-white/5 transition whitespace-nowrap min-h-[40px]"
               title="Ir al dashboard de usuario normal"
             >
               <span className="hidden sm:inline">Ver dashboard</span>
@@ -350,21 +350,49 @@ export function SuperAdminClient({ admin }: { admin: AdminInfo }) {
             </a>
             <a
               href="/"
-              className="text-[11px] sm:text-xs text-white/60 hover:text-white px-2 sm:px-3 py-1.5 rounded-lg border border-white/10 hover:bg-white/5 transition whitespace-nowrap"
+              className="hidden sm:inline-flex items-center text-[11px] sm:text-xs text-white/60 hover:text-white px-2 sm:px-3 py-2 rounded-lg border border-white/10 hover:bg-white/5 transition whitespace-nowrap min-h-[40px]"
               title="Volver a inicio"
             >
-              <Home className="w-3.5 h-3.5 sm:mr-1.5 inline" />
+              <Home className="w-3.5 h-3.5 sm:mr-1.5" />
               <span className="hidden sm:inline">Inicio</span>
             </a>
             <Button
               variant="ghost"
               size="sm"
               onClick={handleLogout}
-              className="text-red-400/70 hover:text-red-400 hover:bg-red-500/10 h-9 px-2 sm:px-3"
+              className="text-red-400/70 hover:text-red-400 hover:bg-red-500/10 h-11 w-11 sm:h-9 sm:w-auto px-2 sm:px-3"
+              aria-label="Salir"
             >
               <LogOut className="w-4 h-4" />
               <span className="hidden md:inline">Salir</span>
             </Button>
+            {/* Mobile-only dropdown for avatar/dashboard/inicio (sm:hidden) */}
+            <details className="sm:hidden relative">
+              <summary className="list-none cursor-pointer w-11 h-11 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center" aria-label="Menú">
+                <MenuIcon className="w-5 h-5 text-white/70" />
+              </summary>
+              <div className="absolute right-0 top-12 z-50 w-56 bg-[#0f0f1a] border border-white/10 rounded-xl p-2 shadow-2xl">
+                <div className="px-3 py-2 border-b border-white/5 mb-2">
+                  <div className="text-xs text-white/60 truncate">{admin.email}</div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => avatarInputRef.current?.click()}
+                  disabled={avatarUploading}
+                  className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-white/5 text-sm text-white/80 flex items-center gap-2 min-h-[44px]"
+                >
+                  <Camera className="w-4 h-4" /> Cambiar foto
+                </button>
+                <a href="/dashboard" className="block px-3 py-2.5 rounded-lg hover:bg-white/5 text-sm text-white/80 min-h-[44px] flex items-center">Ver dashboard</a>
+                <a href="/" className="block px-3 py-2.5 rounded-lg hover:bg-white/5 text-sm text-white/80 min-h-[44px] flex items-center">Inicio</a>
+                <button
+                  onClick={handleLogout}
+                  className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-red-500/10 text-sm text-red-400 flex items-center gap-2 min-h-[44px]"
+                >
+                  <LogOut className="w-4 h-4" /> Salir
+                </button>
+              </div>
+            </details>
           </div>
         </div>
       </header>
@@ -639,7 +667,7 @@ export function SuperAdminClient({ admin }: { admin: AdminInfo }) {
                             <div className="flex items-center justify-end gap-1.5">
                               <button
                                 onClick={() => handleViewUserDetail(u.id)}
-                                className="p-1.5 rounded-lg text-blue-400 hover:bg-blue-500/10 transition"
+                                className="p-2.5 rounded-lg text-blue-400 hover:bg-blue-500/10 transition"
                                 title="Ver detalle"
                                 aria-label="Ver detalle"
                               >
@@ -649,7 +677,7 @@ export function SuperAdminClient({ admin }: { admin: AdminInfo }) {
                                 <DropdownMenuTrigger asChild>
                                   <button
                                     disabled={actionLoading === `set_plan-${u.id}`}
-                                    className={`p-1.5 rounded-lg text-amber-400 hover:bg-amber-500/10 transition disabled:opacity-50 inline-flex items-center gap-1 ${
+                                    className={`p-2.5 rounded-lg text-amber-400 hover:bg-amber-500/10 transition disabled:opacity-50 inline-flex items-center gap-1 ${
                                       u.plan !== 'free' ? 'bg-amber-500/10' : ''
                                     }`}
                                     title="Cambiar plan"
@@ -732,7 +760,7 @@ export function SuperAdminClient({ admin }: { admin: AdminInfo }) {
                                 <button
                                   onClick={() => handleDeleteUser(u.id, u.email)}
                                   disabled={actionLoading === `delete_user-${u.id}`}
-                                  className="p-1.5 rounded-lg text-red-400 hover:bg-red-500/10 transition disabled:opacity-50"
+                                  className="p-2.5 rounded-lg text-red-400 hover:bg-red-500/10 transition disabled:opacity-50"
                                   title="Eliminar usuario"
                                   aria-label="Eliminar usuario"
                                 >
@@ -941,11 +969,11 @@ export function SuperAdminClient({ admin }: { admin: AdminInfo }) {
 
                 {totalPages > 1 && (
                   <div className="flex items-center justify-center gap-2 mt-6">
-                    <Button variant="ghost" size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1} className="text-white/60 h-9 w-9 p-0">
+                    <Button variant="ghost" size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1} className="text-white/60 h-11 w-11 p-0" aria-label="Página anterior">
                       <ChevronLeft className="w-4 h-4" />
                     </Button>
                     <span className="text-sm text-white/50">Página {page} de {totalPages}</span>
-                    <Button variant="ghost" size="sm" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages} className="text-white/60 h-9 w-9 p-0">
+                    <Button variant="ghost" size="sm" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages} className="text-white/60 h-11 w-11 p-0" aria-label="Página siguiente">
                       <ChevronRight className="w-4 h-4" />
                     </Button>
                   </div>

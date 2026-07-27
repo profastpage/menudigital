@@ -361,10 +361,11 @@ export function MozosClient({ user, plan, isSuperAdmin }: Props) {
                 </div>
                 <button
                   onClick={() => handleDelete(w)}
-                  className="text-white/30 hover:text-red-400 transition p-1"
+                  className="text-white/30 hover:text-red-400 transition p-2 rounded-lg hover:bg-red-500/10"
+                  aria-label={`Eliminar ${w.full_name}`}
                   title="Eliminar mozo"
                 >
-                  <Trash2 className="w-3.5 h-3.5" />
+                  <Trash2 className="w-4 h-4" />
                 </button>
               </div>
 
@@ -392,29 +393,32 @@ export function MozosClient({ user, plan, isSuperAdmin }: Props) {
               <div className="flex items-center gap-1 pt-2 border-t border-white/5">
                 <button
                   onClick={() => setShowQrFor(w)}
-                  className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-xs text-white/80 transition"
+                  className="flex-1 flex items-center justify-center gap-1 py-2.5 rounded-lg bg-white/5 hover:bg-white/10 text-xs text-white/80 transition min-h-[44px]"
+                  aria-label="Ver QR del mozo"
                   title="Ver QR del mozo"
                 >
-                  <QrCode className="w-3.5 h-3.5" />
+                  <QrCode className="w-4 h-4" />
                   QR
                 </button>
                 <button
                   onClick={() => copyMozoUrl(w)}
-                  className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-xs text-white/80 transition"
+                  className="flex-1 flex items-center justify-center gap-1 py-2.5 rounded-lg bg-white/5 hover:bg-white/10 text-xs text-white/80 transition min-h-[44px]"
+                  aria-label="Copiar URL del panel"
                   title="Copiar URL del panel"
                 >
-                  <Copy className="w-3.5 h-3.5" />
+                  <Copy className="w-4 h-4" />
                   URL
                 </button>
                 <button
                   onClick={() => handleToggleActive(w)}
-                  className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-xs text-white/80 transition"
+                  className="flex-1 flex items-center justify-center gap-1 py-2.5 rounded-lg bg-white/5 hover:bg-white/10 text-xs text-white/80 transition min-h-[44px]"
+                  aria-label={w.is_active ? 'Desactivar mozo' : 'Activar mozo'}
                   title={w.is_active ? 'Desactivar' : 'Activar'}
                 >
                   {w.is_active ? (
-                    <ToggleRight className="w-3.5 h-3.5 text-[#06d6a0]" />
+                    <ToggleRight className="w-4 h-4 text-[#06d6a0]" />
                   ) : (
-                    <ToggleLeft className="w-3.5 h-3.5 text-white/50" />
+                    <ToggleLeft className="w-4 h-4 text-white/50" />
                   )}
                 </button>
               </div>

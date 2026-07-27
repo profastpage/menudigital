@@ -303,11 +303,12 @@ function Column({
                   >
                     <button
                       onClick={() => onItemUpdate(order.id, item.id, item.status === 'listo' ? 'pendiente' : 'listo')}
-                      className={`w-6 h-6 rounded flex items-center justify-center flex-shrink-0 mt-0.5 transition ${
+                      className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 transition ${
                         item.status === 'listo'
                           ? 'bg-[#06d6a0] text-[#0a0a14]'
                           : 'bg-white/10 hover:bg-white/20'
                       }`}
+                      aria-label={item.status === 'listo' ? 'Marcar como pendiente' : 'Marcar como listo'}
                       title={item.status === 'listo' ? 'Marcar como pendiente' : 'Marcar como listo'}
                     >
                       {item.status === 'listo' && <Check className="w-4 h-4" />}

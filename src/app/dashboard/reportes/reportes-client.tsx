@@ -193,7 +193,7 @@ export function ReportesClient({ user, plan, isSuperAdmin, branches }: Props) {
             </div>
 
             {/* ───── Tabs ───── */}
-            <div className="flex gap-1 p-1 bg-white/5 rounded-xl w-fit">
+            <div className="flex gap-1 p-1 bg-white/5 rounded-xl overflow-x-auto scrollbar-none max-w-full">
               <TabBtn active={view === 'mozos'} onClick={() => setView('mozos')} icon={<Users className="w-4 h-4" />}>
                 Por mozo
               </TabBtn>
@@ -279,10 +279,9 @@ function PorMozoView({ data }: { data: DataReporte['por_mozo'] }) {
                 }`}>{i + 1}</span>
                 <span className="text-white">{m.waiter_name}</span>
               </div>
-              <div className="flex items-center gap-3 text-white/70">
-                <span className="text-xs">{m.num_comandas} comandas</span>
-                <span className="text-xs">ticket S/ {m.ticket_promedio.toFixed(2)}</span>
-                <span className="text-white font-semibold">S/ {m.total_ventas.toFixed(2)}</span>
+              <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-white/70 sm:text-xs text-[11px]">
+                <span>{m.num_comandas} comandas · ticket S/ {m.ticket_promedio.toFixed(2)}</span>
+                <span className="text-white font-semibold sm:ml-auto">S/ {m.total_ventas.toFixed(2)}</span>
               </div>
             </div>
             <div className="h-2 bg-white/5 rounded-full overflow-hidden">
@@ -387,9 +386,9 @@ function PorHoraView({ data }: { data: DataReporte['por_hora'] }) {
           </span>
         )}
       </div>
-      <div className="flex items-end gap-1 h-48">
+      <div className="flex items-end gap-1 h-48 overflow-x-auto scrollbar-none pb-2">
         {data.map(d => (
-          <div key={d.hora} className="flex-1 flex flex-col items-center gap-1 group relative">
+          <div key={d.hora} className="flex-shrink-0 w-8 flex flex-col items-center gap-1 group relative">
             <div className="text-[10px] text-white/40 opacity-0 group-hover:opacity-100 transition-opacity">
               {d.num_comandas > 0 ? `${d.num_comandas}` : ''}
             </div>

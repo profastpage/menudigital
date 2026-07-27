@@ -232,20 +232,20 @@ function buildCSS(opts: ThemeOpts): string {
 
   // Header — cuando hay cover, se superpone encima con efecto glass
   if (coverUrl) {
-    c += `.header{position:relative;z-index:2;margin-top:-180px;padding:0 24px 30px;text-align:center;}`;
-    c += '@media(min-width:600px){.header{margin-top:-220px;}}';
+    c += `.header{position:relative;z-index:2;margin-top:-200px;padding:0 24px 30px;text-align:center;}`;
+    c += '@media(min-width:600px){.header{margin-top:-240px;}}';
   } else {
     c += `.header{padding:38px 24px 30px;text-align:center;position:relative;background:linear-gradient(180deg,rgba(255,255,255,0.03) 0%,transparent 100%);border-bottom:1px solid var(--border);}`;
     c += '.header::after{content:"";position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:140px;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);}';
   }
-  c += '.logo-wrap{position:relative;display:inline-block;margin-bottom:18px;width:140px;height:140px;}';
-  c += '.logo-wrap::before{content:"";position:absolute;inset:-8px;border-radius:50%;background:conic-gradient(from 0deg,var(--accent),var(--gold),var(--accent));filter:blur(14px);opacity:0.55;z-index:0;animation:rotate 8s linear infinite;}';
+  c += '.logo-wrap{position:relative;display:inline-block;margin-bottom:22px;width:184px;height:184px;}';
+  c += '.logo-wrap::before{content:"";position:absolute;inset:-10px;border-radius:50%;background:conic-gradient(from 0deg,var(--accent),var(--gold),var(--accent));filter:blur(18px);opacity:0.55;z-index:0;animation:rotate 8s linear infinite;}';
   c += '@keyframes rotate{to{transform:rotate(360deg);}}';
-  c += '.logo{width:140px;height:140px;border-radius:50%;object-fit:cover;border:4px solid rgba(255,255,255,0.2);box-shadow:0 16px 48px rgba(0,0,0,0.6);background:var(--glass);position:absolute;inset:0;z-index:2;}';
-  c += '.logo-placeholder{width:140px;height:140px;border-radius:50%;background:linear-gradient(135deg,var(--accent),rgba(var(--accent-rgb),0.6));display:flex;align-items:center;justify-content:center;font-size:54px;font-weight:800;color:#fff;position:absolute;inset:0;z-index:1;border:4px solid rgba(255,255,255,0.2);box-shadow:0 16px 48px rgba(0,0,0,0.6);backdrop-filter:blur(8px);}';
-  c += '@media(min-width:600px){.logo-wrap{width:168px;height:168px;margin-bottom:22px;}.logo,.logo-placeholder{width:168px;height:168px;font-size:64px;}}';
-  c += '@media(min-width:900px){.logo-wrap{width:184px;height:184px;}.logo,.logo-placeholder{width:184px;height:184px;font-size:72px;}}';
-  c += '.restaurant-name{font-size:28px;font-weight:800;margin-bottom:6px;letter-spacing:-0.5px;color:var(--text);text-shadow:' + (coverUrl ? '0 2px 12px rgba(0,0,0,0.6)' : 'none') + ';}';
+  c += `.logo{width:184px;height:184px;border-radius:50%;object-fit:cover;border:5px solid rgba(255,255,255,0.2);box-shadow:0 18px 56px rgba(0,0,0,0.6);background:var(--glass);position:absolute;inset:0;z-index:2;}`;
+  c += '.logo-placeholder{width:184px;height:184px;border-radius:50%;background:linear-gradient(135deg,var(--accent),rgba(var(--accent-rgb),0.6));display:flex;align-items:center;justify-content:center;font-size:72px;font-weight:800;color:#fff;position:absolute;inset:0;z-index:1;border:5px solid rgba(255,255,255,0.2);box-shadow:0 18px 56px rgba(0,0,0,0.6);backdrop-filter:blur(8px);}';
+  c += '@media(min-width:600px){.logo-wrap{width:220px;height:220px;margin-bottom:26px;}.logo,.logo-placeholder{width:220px;height:220px;font-size:84px;}}';
+  c += '@media(min-width:900px){.logo-wrap{width:240px;height:240px;}.logo,.logo-placeholder{width:240px;height:240px;font-size:92px;}}';
+  c += '.restaurant-name{font-size:28px;font-weight:800;margin-bottom:6px;letter-spacing:-0.5px;color:var(--text);text-shadow:' + (coverUrl ? '0 2px 12px rgba(0,0,0,0.6)' : 'none') + ';overflow-wrap:anywhere;word-break:break-word;hyphens:auto;}';
   c += '.slogan{font-size:11px;color:var(--gold);letter-spacing:4px;text-transform:uppercase;font-weight:600;margin-bottom:8px;}';
   c += '.restaurant-desc{color:' + (coverUrl && darkMode ? 'rgba(255,255,255,0.85)' : 'var(--text-soft)') + ';font-size:14px;margin-bottom:18px;max-width:440px;margin-left:auto;margin-right:auto;line-height:1.5;}';
   c += '.open-badge{display:inline-flex;align-items:center;gap:7px;background:rgba(6,214,160,0.12);color:#06d6a0;padding:6px 14px;border-radius:20px;font-size:11.5px;font-weight:600;border:1px solid rgba(6,214,160,0.25);letter-spacing:0.5px;text-transform:uppercase;}';
@@ -539,7 +539,7 @@ function buildCSS(opts: ThemeOpts): string {
   c += '@media(min-width:640px){.scroll-top-btn{display:none;}}';
   // Theme toggle button — visible siempre (mobile + desktop), top-right abajo del .nav sticky
   // Diseño glassmorphism que combina con el nav. Muestra sol o luna según tema actual.
-  c += '.theme-toggle-btn{position:fixed;top:calc(12px + 56px);right:14px;width:40px;height:40px;border-radius:50%;background:var(--glass-strong);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid var(--border-strong);color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:99;box-shadow:0 4px 14px rgba(0,0,0,0.18);transition:all 0.25s cubic-bezier(0.32,0.72,0,1);-webkit-tap-highlight-color:transparent;opacity:0.9;}';
+  c += '.theme-toggle-btn{position:fixed;top:calc(12px + 50px);right:14px;width:44px;height:44px;border-radius:50%;background:var(--glass-strong);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid var(--border-strong);color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:99;box-shadow:0 4px 14px rgba(0,0,0,0.18);transition:all 0.25s cubic-bezier(0.32,0.72,0,1);-webkit-tap-highlight-color:transparent;opacity:0.9;}';
   c += '@media(hover:hover){.theme-toggle-btn:hover{transform:scale(1.08);opacity:1;background:var(--accent);color:#fff;border-color:var(--accent);}}';
   c += '.theme-toggle-btn:active{transform:scale(0.92);}';
   c += '.theme-toggle-btn svg{width:18px;height:18px;}';
