@@ -1105,3 +1105,26 @@ Stage Summary:
 - INSERT a auth.identities ahora usa solo las 8 columnas insertables.
 - Tres fixes acumulados al mismo bloque: identity_id (no existe) → provider_id (faltaba NOT NULL) → email (es generated).
 - El usuario puede volver a ejecutar el SQL sin errores en auth.users/auth.identities.
+
+---
+Task ID: mozos-seed-verify
+Agent: main
+Task: Verificar y entregar SQL seed completo para organizacion de mozos en cuenta demo
+
+Work Log:
+- Verificado esquema de tablas en supabase/add-premium-logistics.sql y mozos-mesas-migration.sql:
+  • branches (sucursales): id, owner_id, name, address, phone, is_active
+  • tables (mesas): id, owner_id, branch_id, number, name, capacity, status (table_status enum), qr_token, location, is_active
+  • waiters (mozos): id, owner_id, branch_id, auth_user_id, full_name, document_id, phone, pin, qr_token, is_active
+  • orders (comandas): id, owner_id, branch_id, table_id, waiter_id, order_number, status (order_status enum), order_type, customer_name, customer_phone, party_size, notes, subtotal, tax, tip, total, currency, sent_at, ready_at, delivered_at, invoiced_at, cancelled_at, cancel_reason
+  • order_items: id, order_id, menu_item_id, menu_item_name, menu_item_price, quantity, notes, status, prepared_by, prepared_at
+  • order_status_history: id, order_id, from_status, to_status, changed_by, notes
+  • inventory_items, inventory_movements, product_recipes, voucher_prints
+- Confirmado que seed-demo-mozos-org.sql (9798 lineas, 325KB) ya existe y esta pushed a GitHub (commit 9e29783).
+- Sincronizado a /home/z/my-project/download/seed-demo-mozos-org.sql.
+- Verificada estructura del archivo: 5 restaurantes con sucursal, mesas, mozos, insumos, recetas, comandas, items, movimientos, vouchers.
+
+Stage Summary:
+- El archivo seed-demo-mozos-org.sql está completo y listo para ejecutarse en Supabase SQL Editor.
+- Total poblado: 5 sucursales, 59 mesas, 22 mozos, 64 insumos, 71 recetas, 64 movimientos, 27 comandas, 75 items, 102 status_history, 5 vouchers.
+- Requisito previo: ejecutar antes mozos-mesas-migration.sql + add-premium-logistics.sql si no están aplicados (sino las tablas branches/tables/waiters/orders no existen).
