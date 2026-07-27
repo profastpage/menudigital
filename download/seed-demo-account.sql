@@ -70,12 +70,14 @@ INSERT INTO auth.users (
 -- panel de Supabase → Authentication → Users).
 
 -- Asegurar identidad en auth.identities
--- Esquema REAL de auth.identities en Supabase moderno (9 columnas):
---   provider_id (NOT NULL), user_id, identity_data, provider,
---   last_sign_in_at, created_at, updated_at, email, id
--- Para el provider "email", provider_id = user_id.
+-- Esquema REAL de auth.identities en Supabase moderno (8 columnas insertables):
+--   id, user_id, identity_data, provider, provider_id,
+--   last_sign_in_at, created_at, updated_at
+-- Notas:
+--   - provider_id (NOT NULL): para 'email' provider, value = user_id
+--   - email: es GENERATED column (calculada desde auth.users.email), NO se inserta
 INSERT INTO auth.identities (
-  id, user_id, identity_data, provider, provider_id, email,
+  id, user_id, identity_data, provider, provider_id,
   last_sign_in_at, created_at, updated_at
 ) VALUES (
   '16b06793-5254-5994-b41c-5e96beca9813'::uuid,
@@ -83,7 +85,6 @@ INSERT INTO auth.identities (
   '{"sub":"2f2a30d8-bea6-5a5c-9787-040fe0ba1f15","email":"demo@menudigital.pro"}'::jsonb,
   'email',
   '2f2a30d8-bea6-5a5c-9787-040fe0ba1f15',  -- provider_id = user_id para email provider
-  'demo@menudigital.pro',
   NOW(),
   NOW(),
   NOW()
