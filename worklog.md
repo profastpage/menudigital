@@ -1128,3 +1128,23 @@ Stage Summary:
 - El archivo seed-demo-mozos-org.sql está completo y listo para ejecutarse en Supabase SQL Editor.
 - Total poblado: 5 sucursales, 59 mesas, 22 mozos, 64 insumos, 71 recetas, 64 movimientos, 27 comandas, 75 items, 102 status_history, 5 vouchers.
 - Requisito previo: ejecutar antes mozos-mesas-migration.sql + add-premium-logistics.sql si no están aplicados (sino las tablas branches/tables/waiters/orders no existen).
+
+---
+Task ID: fix-tables-unique-constraint
+Agent: main
+Task: Corregir ERROR 23505 duplicate key (owner_id, number) al ejecutar seed-demo-mozos-org.sql
+
+Work Log:
+- Diagnostico: el esquema tenia UNIQUE(owner_id, number) en tabla `tables`. Como los 5 restaurantes de la cuenta demo comparten el mismo owner_id, la Mesa 1 del segundo restaurante chocaba con la Mesa 1 del primero.
+- Solucion: cambiar la restriccion a UNIQUE(owner_id, branch_id, number). Asi cada sucursal tiene su propia numeracion. Si branch_id es NULL, Postgres permite duplicados (NULL != NULL en UNIQUE).
+- Creado /home/z/my-project/supabase/fix-tables-unique-constraint.sql (migracion idempotente).
+- Actualizado /home/z/my-project/supabase/mozos-mesas-migration.sql para que futuros deploys usen la restriccion correcta desde el inicio.
+- Sincronizado a /home/z/my-project/download/.
+- Commit 19d49a3 pushed a GitHub main.
+- Aclarado al usuario: NO tengo acceso directo a Supabase via CLI/MCP. Solo puedo escribir archivos y pushearlos. El usuario debe ejecutar las migraciones manualmente en SQL Editor.
+
+Stage Summary:
+- El usuario debe ejecutar en este orden:
+  1. fix-tables-unique-constraint.sql (corrige la restriccion)
+  2. seed-demo-mozos-org.sql (re-ejecutar — ahora pasara sin error)
+- El seed es idempotente (ON CONFLICT id DO UPDATE), asi que re-ejecutar no duplicara lo ya insertado.
