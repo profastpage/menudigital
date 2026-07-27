@@ -295,7 +295,7 @@ export function BillingClient({ user, plan, isSuperAdmin = false, profile, usage
       </div>
 
       {/* Comparativa detallada */}
-      <div className="mb-10">
+      <div className="mb-10 hidden md:block">
         <h2 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6 text-center">Comparativa detallada</h2>
         <div className="overflow-x-auto rounded-2xl border border-white/10">
           <table className="w-full text-xs sm:text-sm min-w-[700px]">

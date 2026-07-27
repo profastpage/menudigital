@@ -262,7 +262,7 @@ export function DashboardShell({ user, plan, isSuperAdmin = false, children }: P
               </Link>
               <button
                 onClick={() => setDrawerOpen(false)}
-                className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center"
+                className="w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center"
                 aria-label="Cerrar menú"
               >
                 <X className="w-4 h-4" />
@@ -288,13 +288,13 @@ export function DashboardShell({ user, plan, isSuperAdmin = false, children }: P
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0 pb-24 lg:pb-0">
         {/* Mobile header (sticky) */}
-        <header className="lg:hidden border-b border-white/10 bg-[#0a0a14] backdrop-blur sticky top-0 z-40">
+        <header className="lg:hidden border-b border-white/10 bg-[#0a0a14] backdrop-blur sticky top-0 z-40 safe-top">
           <div className="px-4 py-3 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setDrawerOpen(true)}
                 aria-label="Abrir menú"
-                className="w-9 h-9 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center transition"
+                className="w-11 h-11 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center transition"
               >
                 <MenuIcon className="w-5 h-5" />
               </button>
@@ -337,7 +337,7 @@ export function DashboardShell({ user, plan, isSuperAdmin = false, children }: P
                 variant="ghost"
                 size="icon"
                 onClick={handleLogout}
-                className="text-white/60 h-9 w-9"
+                className="text-white/60 h-11 w-11"
                 aria-label="Cerrar sesión"
               >
                 <LogOut className="w-4 h-4" />
@@ -352,7 +352,7 @@ export function DashboardShell({ user, plan, isSuperAdmin = false, children }: P
 
         {/* ───────── Bottom nav mobile (fija) ───────── */}
         <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#0a0a14]/95 backdrop-blur border-t border-white/10 safe-bottom">
-          <div className="grid grid-cols-5 gap-1 px-2 py-1.5">
+          <div className="grid grid-cols-5 gap-1 px-2 py-2">
             {/* Items relevantes según plan */}
             {(() => {
               const isPremium = isPlanAtLeast(plan.id, 'premium' as PlanId);
@@ -387,7 +387,7 @@ export function DashboardShell({ user, plan, isSuperAdmin = false, children }: P
                     key={item.href}
                     href={item.href}
                     prefetch={true}
-                    className={`flex flex-col items-center gap-0.5 py-1.5 rounded-lg text-[10px] ${
+                    className={`flex flex-col items-center justify-center gap-0.5 min-h-[56px] py-1.5 rounded-lg text-[10px] ${
                       active ? 'bg-white/5 text-white font-medium' : 'text-white/50'
                     }`}
                   >
@@ -400,7 +400,7 @@ export function DashboardShell({ user, plan, isSuperAdmin = false, children }: P
             <Link
               href="/"
               prefetch={false}
-              className="flex flex-col items-center gap-0.5 py-1.5 rounded-lg text-white/50 text-[10px]"
+              className="flex flex-col items-center justify-center gap-0.5 min-h-[56px] py-1.5 rounded-lg text-white/50 text-[10px]"
             >
               <Home className="w-5 h-5" />
               Inicio

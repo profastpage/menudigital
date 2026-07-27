@@ -805,7 +805,7 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount }: Props)
       <header className="border-b border-white/10 bg-[#0a0a14] backdrop-blur sticky top-0 z-40 safe-top">
         <div className="px-3 sm:px-6 py-2.5 sm:py-3 flex items-center justify-between gap-2 sm:gap-4">
           <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
-            <a href="/dashboard" className="text-white/60 hover:text-white flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-lg hover:bg-white/5">
+            <a href="/dashboard" aria-label="Volver al dashboard" className="text-white/60 hover:text-white flex-shrink-0 w-11 h-11 sm:w-9 sm:h-9 flex items-center justify-center rounded-lg hover:bg-white/5">
               <ArrowLeft className="w-5 h-5" />
             </a>
             <div className="min-w-0 flex-1">
@@ -976,10 +976,10 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount }: Props)
                             e.stopPropagation();
                             setTheme({ ...theme, cover_url: '' });
                           }}
-                          className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/80 text-white flex items-center justify-center hover:bg-red-500 z-10"
+                          className="absolute top-2 right-2 w-9 h-9 rounded-full bg-black/80 text-white flex items-center justify-center hover:bg-red-500 z-10"
                           aria-label="Quitar cover"
                         >
-                          <X className="w-3.5 h-3.5" />
+                          <X className="w-4 h-4" />
                         </button>
                         <div className="absolute bottom-2 left-3 text-[10px] text-white/80 font-medium tracking-wide">
                           Cover activo
@@ -1599,7 +1599,8 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount }: Props)
                       variant="ghost"
                       size="icon"
                       onClick={() => removeCategory(cat.id)}
-                      className="text-white/40 hover:text-red-400 hover:bg-red-500/10 flex-shrink-0"
+                      aria-label="Eliminar categoría"
+                      className="text-white/40 hover:text-red-400 hover:bg-red-500/10 flex-shrink-0 h-11 w-11 sm:h-9 sm:w-9"
                     >
                       <Trash2 className="w-4 h-4" />
                     </Button>
@@ -1653,7 +1654,8 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount }: Props)
                               variant="ghost"
                               size="icon"
                               onClick={() => removeDish(cat.id, dish.id)}
-                              className="text-white/40 hover:text-red-400 hover:bg-red-500/10 h-9 w-9"
+                              aria-label="Eliminar plato"
+                              className="text-white/40 hover:text-red-400 hover:bg-red-500/10 h-11 w-11 sm:h-9 sm:w-9"
                             >
                               <X className="w-4 h-4" />
                             </Button>
@@ -1686,9 +1688,10 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount }: Props)
                                     <button
                                       type="button"
                                       onClick={() => removeDishGalleryImage(cat.id, dish.id, idx)}
-                                      className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white rounded-full text-[10px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                      className="absolute -top-2 -right-2 w-7 h-7 bg-red-500 text-white rounded-full text-sm flex items-center justify-center shadow-lg opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
+                                      aria-label="Quitar imagen"
                                     >
-                                      ×
+                                      <X className="w-3.5 h-3.5" />
                                     </button>
                                   </div>
                                 ))}
@@ -1756,7 +1759,8 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount }: Props)
                                       variant="ghost"
                                       size="icon"
                                       onClick={() => removeOptionGroup(cat.id, dish.id, grp.id)}
-                                      className="text-white/40 hover:text-red-400 hover:bg-red-500/10 h-8 w-8 shrink-0"
+                                      aria-label="Eliminar grupo de opciones"
+                                      className="text-white/40 hover:text-red-400 hover:bg-red-500/10 h-11 w-11 sm:h-8 sm:w-8 shrink-0"
                                     >
                                       <X className="w-3.5 h-3.5" />
                                     </Button>
@@ -1792,9 +1796,9 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount }: Props)
                                           value={it.name}
                                           onChange={(e) => updateOptionItem(cat.id, dish.id, grp.id, it.id, 'name', e.target.value)}
                                           placeholder="Nombre (ej: Ají, Papas extra)"
-                                          className="bg-white/5 border-white/10 text-white h-7 text-xs flex-1"
+                                          className="bg-white/5 border-white/10 text-white h-9 text-xs flex-1"
                                         />
-                                        <div className="relative w-20">
+                                        <div className="relative w-24 sm:w-20">
                                           <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-white/40 font-semibold">
                                             {menu.currency}
                                           </span>
@@ -1805,14 +1809,15 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount }: Props)
                                             value={it.price}
                                             onChange={(e) => updateOptionItem(cat.id, dish.id, grp.id, it.id, 'price', e.target.value)}
                                             placeholder="0.00"
-                                            className="bg-white/5 border-white/10 text-white h-7 text-xs pl-7"
+                                            className="bg-white/5 border-white/10 text-white h-9 text-xs pl-7"
                                           />
                                         </div>
                                         <Button
                                           variant="ghost"
                                           size="icon"
                                           onClick={() => removeOptionItem(cat.id, dish.id, grp.id, it.id)}
-                                          className="text-white/40 hover:text-red-400 hover:bg-red-500/10 h-7 w-7 shrink-0"
+                                          aria-label="Quitar opción"
+                                          className="text-white/40 hover:text-red-400 hover:bg-red-500/10 h-9 w-9 shrink-0"
                                         >
                                           <X className="w-3 h-3" />
                                         </Button>

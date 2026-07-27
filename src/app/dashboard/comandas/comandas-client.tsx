@@ -432,11 +432,11 @@ export function ComandasClient({ user, plan, isSuperAdmin, menus }: Props) {
 
       {/* Modal nueva comanda */}
       {showNew && (
-        <div className="fixed inset-0 z-50 flex bg-black/70 backdrop-blur-sm">
-          <div className="bg-[#0f0f1a] border-r border-white/15 w-full max-w-4xl m-auto max-h-[95vh] overflow-hidden rounded-2xl flex flex-col">
-            <div className="flex items-center justify-between p-5 border-b border-white/10">
-              <h3 className="text-lg font-bold">Nueva comanda</h3>
-              <button onClick={() => { setShowNew(false); setCart([]); }} className="text-white/40 hover:text-white">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-3 sm:p-4">
+          <div className="bg-[#0f0f1a] border border-white/15 w-full max-w-4xl max-h-[95vh] overflow-hidden rounded-2xl flex flex-col">
+            <div className="flex items-center justify-between p-4 sm:p-5 border-b border-white/10">
+              <h3 className="text-base sm:text-lg font-bold">Nueva comanda</h3>
+              <button onClick={() => { setShowNew(false); setCart([]); }} className="text-white/40 hover:text-white p-2 -mr-2 rounded-lg hover:bg-white/5" aria-label="Cerrar">
                 <X className="w-5 h-5" />
               </button>
             </div>

@@ -36,6 +36,80 @@ export function ComparisonTable() {
           transition={{ duration: 0.6 }}
           className="hidden md:block relative rounded-3xl border border-white/10 bg-white/[0.02] overflow-hidden"
         >
+          {/* ─── Mobile: cards apiladas (una por plan) ─── */}
+          <div className="md:hidden divide-y divide-white/10">
+            {PLAN_IDS.map((id) => {
+              const plan = PLANS[id];
+              return (
+                <div
+                  key={id}
+                  className="p-5"
+                  style={
+                    id === "premium" || id === "full"
+                      ? { background: `${plan.color}08` }
+                      : undefined
+                  }
+                >
+                  <div className="flex items-baseline justify-between mb-4">
+                    <div>
+                      <div className="text-xl font-bold" style={{ color: plan.color }}>
+                        {plan.name}
+                      </div>
+                      <div className="text-xs text-white/50 mt-0.5">
+                        {plan.priceMonthly === 0 ? "Gratis" : `S/ ${plan.priceMonthly}/mes`}
+                      </div>
+                    </div>
+                    {plan.highlight && (
+                      <span className="px-2 py-0.5 rounded-full bg-gradient-to-r from-[#d4af37] to-[#f4d35e] text-[#1a1a2e] text-[10px] font-bold tracking-wider">
+                        POPULAR
+                      </span>
+                    )}
+                  </div>
+                  <ul className="space-y-2">
+                    {LIMIT_COMPARISON.map((row) => {
+                      const value = row.values[PLAN_IDS.indexOf(id)];
+                      const isCheck = value === "✓";
+                      const isDash = value === "—";
+                      const isInfinite = value === "∞";
+                      return (
+                        <li key={row.label} className="flex items-center gap-2.5 text-sm">
+                          <span className="text-base flex-shrink-0">{row.icon}</span>
+                          <span className="flex-1 text-white/70">{row.label}</span>
+                          {isCheck ? (
+                            <Check className="w-4 h-4 flex-shrink-0" style={{ color: plan.color }} />
+                          ) : isDash ? (
+                            <Minus className="w-3.5 h-3.5 text-white/20 flex-shrink-0" />
+                          ) : isInfinite ? (
+                            <InfinityIcon className="w-4 h-4 flex-shrink-0" style={{ color: plan.color }} />
+                          ) : (
+                            <span className="font-bold text-sm" style={{ color: plan.color }}>
+                              {value}
+                            </span>
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                  <a
+                    href={id === "free" ? "/register" : `/register?plan=${id}`}
+                    className="mt-5 flex items-center justify-center px-4 py-3 rounded-xl text-sm font-bold transition-all min-h-[48px]"
+                    style={
+                      id === "premium" || id === "full"
+                        ? { background: `linear-gradient(to right, ${plan.color}, ${plan.color}cc)`, color: "#0a0a14" }
+                        : plan.highlight
+                          ? { background: "linear-gradient(to right, #d4af37, #f4d35e)", color: "#1a1a2e" }
+                          : { background: "rgba(255,255,255,0.05)", color: "#fff", border: "1px solid rgba(255,255,255,0.15)" }
+                    }
+                  >
+                    Elegir {plan.name}
+                  </a>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* ─── Desktop (md+): tabla grid original ─── */}
+          <div className="hidden md:block">
           {/* Header row */}
           <div className="grid grid-cols-[1.6fr_1fr_1fr_1fr_1fr] bg-white/[0.03] border-b border-white/10">
             <div className="p-5">
@@ -132,6 +206,8 @@ export function ComparisonTable() {
               );
             })}
           </div>
+          </div>
+          {/* ─── Fin desktop block ─── */}
         </motion.div>
 
         {/* ─── MOBILE: cards apiladas por plan (< md) ─── */}

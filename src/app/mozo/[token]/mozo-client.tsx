@@ -329,22 +329,22 @@ export function MozoPanel({ token, waiterName }: Props) {
   // ───── Layout móvil ─────
   return (
     <div className="min-h-screen bg-[#07070b] text-white pb-24">
-      {/* Banner Offline (solo si está offline) */}
+      {/* Banner Offline (solo si está offline) — sticky para no chocar con header */}
       {!isOnline && (
-        <div className="fixed top-0 left-0 right-0 z-50 bg-amber-600 text-white px-3 py-1.5 text-xs font-medium flex items-center justify-center gap-2">
+        <div className="sticky top-0 z-50 bg-amber-600 text-white px-3 py-2 text-xs font-medium flex items-center justify-center gap-2">
           <WifiOff className="w-3.5 h-3.5" />
           <span>Modo offline activo — las comandas se enviarán al volver la conexión</span>
         </div>
       )}
 
       {/* Header */}
-      <header className={`sticky top-0 z-30 bg-[#0a0a14] border-b border-white/10 px-4 py-3 ${!isOnline ? 'mt-8' : ''}`}>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 min-w-0">
-            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-[#9d4edd] to-[#d4af37] flex items-center justify-center text-lg flex-shrink-0">
+      <header className="sticky top-0 z-30 bg-[#0a0a14] border-b border-white/10 px-4 py-3">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <div className="w-11 h-11 rounded-lg bg-gradient-to-br from-[#9d4edd] to-[#d4af37] flex items-center justify-center text-lg flex-shrink-0">
               👨‍🍳
             </div>
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <div className="text-sm font-bold truncate flex items-center gap-1.5">
                 {waiterName}
                 <span className={`w-2 h-2 rounded-full ${isOnline ? 'bg-[#06d6a0]' : 'bg-amber-500'}`} />
@@ -357,7 +357,7 @@ export function MozoPanel({ token, waiterName }: Props) {
           <button
             onClick={load}
             disabled={loading}
-            className="w-9 h-9 rounded-lg bg-white/5 flex items-center justify-center"
+            className="w-11 h-11 rounded-lg bg-white/5 flex items-center justify-center flex-shrink-0"
             aria-label="Refrescar"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
@@ -481,7 +481,7 @@ export function MozoPanel({ token, waiterName }: Props) {
               </div>
               <button
                 onClick={() => { setSelectedMesa(null); setCart([]); }}
-                className="text-white/40 hover:text-white text-xs"
+                className="text-white/60 hover:text-white text-xs px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 min-h-[40px]"
               >
                 Cambiar
               </button>
@@ -505,18 +505,18 @@ export function MozoPanel({ token, waiterName }: Props) {
               value={searchDish}
               onChange={e => setSearchDish(e.target.value)}
               placeholder="Buscar plato..."
-              className="w-full bg-white/5 border border-white/10 rounded-xl pl-9 pr-3 py-2.5 text-sm text-white placeholder:text-white/30"
+              className="w-full bg-white/5 border border-white/10 rounded-xl pl-9 pr-3 py-3 text-sm text-white placeholder:text-white/30 min-h-[44px]"
             />
           </div>
 
           {/* Categorías scroll horizontal */}
           {menu && menu.categories.length > 1 && !searchDish && (
-            <div className="flex gap-2 overflow-x-auto pb-1 -mx-3 px-3">
+            <div className="flex gap-2 overflow-x-auto pb-1 -mx-3 px-3 scrollbar-none">
               {menu.categories.map(c => (
                 <button
                   key={c.id}
                   onClick={() => setActiveCategory(c.id)}
-                  className={`px-3 py-1.5 rounded-full text-xs whitespace-nowrap transition-colors ${
+                  className={`px-4 py-2.5 rounded-full text-xs whitespace-nowrap transition-colors min-h-[40px] flex items-center ${
                     activeCategory === c.id
                       ? 'bg-[#9d4edd] text-white'
                       : 'bg-white/5 text-white/60'
@@ -696,14 +696,14 @@ export function MozoPanel({ token, waiterName }: Props) {
           <div className="flex items-center gap-2">
             <button
               onClick={() => setCart([])}
-              className="px-3 py-2.5 rounded-xl bg-white/5 text-white/60 text-xs"
+              className="px-3 py-3 rounded-xl bg-white/5 text-white/60 text-xs min-h-[48px]"
             >
               Vaciar
             </button>
             <button
               onClick={sendComanda}
               disabled={!selectedMesa || sending}
-              className="flex-1 px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#9d4edd] to-[#d4af37] text-white font-semibold text-sm disabled:opacity-40 flex items-center justify-center gap-2"
+              className="flex-1 px-4 py-3 rounded-xl bg-gradient-to-r from-[#9d4edd] to-[#d4af37] text-white font-semibold text-sm disabled:opacity-40 flex items-center justify-center gap-2 min-h-[48px]"
             >
               {sending ? (
                 <><RefreshCw className="w-4 h-4 animate-spin" /> Enviando...</>
@@ -717,9 +717,9 @@ export function MozoPanel({ token, waiterName }: Props) {
 
       {/* ───── Modal detalle carrito ───── */}
       {cart.length > 0 && view === 'menu' && (
-        <div className="fixed bottom-[100px] left-0 right-0 z-30 px-3">
+        <div className="fixed bottom-[150px] left-0 right-0 z-30 px-3">
           <details className="bg-white/5 border border-white/10 rounded-xl">
-            <summary className="px-3 py-2 text-xs text-white/70 cursor-pointer">
+            <summary className="px-3 py-3 text-xs text-white/70 cursor-pointer min-h-[44px] flex items-center">
               Ver carrito ({cart.length})
             </summary>
             <div className="p-2 space-y-2 max-h-[40vh] overflow-y-auto">
@@ -727,14 +727,16 @@ export function MozoPanel({ token, waiterName }: Props) {
                 <div key={idx} className="flex items-center gap-2 text-xs">
                   <button
                     onClick={() => updateQty(idx, -1)}
-                    className="w-6 h-6 rounded bg-white/10 flex items-center justify-center"
+                    className="w-9 h-9 rounded bg-white/10 flex items-center justify-center flex-shrink-0"
+                    aria-label="Quitar uno"
                   >
                     <Minus className="w-3 h-3" />
                   </button>
-                  <span className="text-white font-bold w-6 text-center">{item.quantity}</span>
+                  <span className="text-white font-bold w-7 text-center">{item.quantity}</span>
                   <button
                     onClick={() => updateQty(idx, 1)}
-                    className="w-6 h-6 rounded bg-white/10 flex items-center justify-center"
+                    className="w-9 h-9 rounded bg-white/10 flex items-center justify-center flex-shrink-0"
+                    aria-label="Agregar uno"
                   >
                     <Plus className="w-3 h-3" />
                   </button>
@@ -744,7 +746,8 @@ export function MozoPanel({ token, waiterName }: Props) {
                   </div>
                   <button
                     onClick={() => removeItem(idx)}
-                    className="w-6 h-6 rounded bg-red-500/20 text-red-300 flex items-center justify-center"
+                    className="w-9 h-9 rounded bg-red-500/20 text-red-300 flex items-center justify-center flex-shrink-0"
+                    aria-label="Quitar del carrito"
                   >
                     <X className="w-3 h-3" />
                   </button>

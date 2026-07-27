@@ -249,64 +249,129 @@ export function InventarioClient({ user, plan, isSuperAdmin, menus }: Props) {
           </Button>
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-2xl border border-white/10">
-          <table className="w-full text-sm min-w-[800px]">
-            <thead>
-              <tr className="bg-white/[0.04] border-b border-white/10">
-                <th className="text-left p-3 font-semibold text-white/80">Insumo</th>
-                <th className="text-left p-3 font-semibold text-white/80">Categoría</th>
-                <th className="text-center p-3 font-semibold text-white/80">Stock actual</th>
-                <th className="text-center p-3 font-semibold text-white/80">Mín / Máx</th>
-                <th className="text-center p-3 font-semibold text-white/80">Costo unit.</th>
-                <th className="text-center p-3 font-semibold text-white/80">Proveedor</th>
-                <th className="text-center p-3 font-semibold text-white/80">Acciones</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-white/5">
-              {filteredItems.map(item => {
-                const isLow = item.stock_current <= item.stock_min;
-                return (
-                  <tr key={item.id} className={`hover:bg-white/[0.02] ${isLow ? 'bg-red-500/5' : ''}`}>
-                    <td className="p-3">
-                      <div className="font-medium">{item.name}</div>
+        <>
+          {/* ─── Mobile: cards ─── */}
+          <div className="lg:hidden space-y-3">
+            {filteredItems.map(item => {
+              const isLow = item.stock_current <= item.stock_min;
+              return (
+                <div key={item.id} className={`rounded-xl border border-white/10 p-4 ${isLow ? 'bg-red-500/5 border-red-500/20' : 'bg-white/[0.02]'}`}>
+                  <div className="flex items-start justify-between gap-2 mb-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="font-semibold truncate break-anywhere">{item.name}</div>
                       {item.sku && <div className="text-xs text-white/40">SKU: {item.sku}</div>}
-                    </td>
-                    <td className="p-3 text-white/60">{item.category || '—'}</td>
-                    <td className="p-3 text-center">
-                      <span className={`font-bold ${isLow ? 'text-red-400' : 'text-white'}`}>
-                        {item.stock_current} {item.unit}
+                      <div className="text-xs text-white/50 mt-0.5">{item.category || 'Sin categoría'}</div>
+                    </div>
+                    {isLow && (
+                      <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-red-500/15 text-red-400 text-[10px] font-semibold flex-shrink-0">
+                        <AlertTriangle className="w-3 h-3" />
+                        Stock bajo
                       </span>
-                      {isLow && <AlertTriangle className="w-3 h-3 text-red-400 inline ml-1" />}
-                    </td>
-                    <td className="p-3 text-center text-xs text-white/60">
-                      {item.stock_min} / {item.stock_max}
-                    </td>
-                    <td className="p-3 text-center text-white/60">S/ {item.cost_per_unit.toFixed(2)}</td>
-                    <td className="p-3 text-center text-white/60">{item.supplier || '—'}</td>
-                    <td className="p-3">
-                      <div className="flex gap-1 justify-center">
-                        <button
-                          onClick={() => setShowMovement(item)}
-                          className="px-2 py-1 rounded bg-[#9d4edd]/20 text-[#9d4edd] hover:bg-[#9d4edd]/30 text-xs font-semibold"
-                          title="Registrar movimiento"
-                        >
-                          <Settings className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          onClick={() => handleDeactivate(item.id)}
-                          className="p-1.5 text-white/40 hover:text-red-400"
-                          title="Desactivar"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 text-xs mb-3">
+                    <div>
+                      <div className="text-white/40">Stock actual</div>
+                      <div className={`font-bold text-base ${isLow ? 'text-red-400' : 'text-white'}`}>
+                        {item.stock_current} {item.unit}
                       </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                    </div>
+                    <div>
+                      <div className="text-white/40">Mín / Máx</div>
+                      <div className="text-white/80 font-medium">{item.stock_min} / {item.stock_max}</div>
+                    </div>
+                    <div>
+                      <div className="text-white/40">Costo unit.</div>
+                      <div className="text-white/80 font-medium">S/ {item.cost_per_unit.toFixed(2)}</div>
+                    </div>
+                    <div>
+                      <div className="text-white/40">Proveedor</div>
+                      <div className="text-white/80 font-medium truncate break-anywhere">{item.supplier || '—'}</div>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setShowMovement(item)}
+                      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg bg-[#9d4edd]/20 text-[#9d4edd] hover:bg-[#9d4edd]/30 text-xs font-semibold min-h-[44px]"
+                    >
+                      <Settings className="w-4 h-4" />
+                      Movimiento
+                    </button>
+                    <button
+                      onClick={() => handleDeactivate(item.id)}
+                      className="px-3 py-2.5 rounded-lg text-white/40 hover:text-red-400 hover:bg-red-500/10 min-h-[44px]"
+                      aria-label={`Desactivar ${item.name}`}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* ─── Desktop (lg+): tabla ─── */}
+          <div className="hidden lg:block overflow-x-auto rounded-2xl border border-white/10">
+            <table className="w-full text-sm min-w-[800px]">
+              <thead>
+                <tr className="bg-white/[0.04] border-b border-white/10">
+                  <th className="text-left p-3 font-semibold text-white/80">Insumo</th>
+                  <th className="text-left p-3 font-semibold text-white/80">Categoría</th>
+                  <th className="text-center p-3 font-semibold text-white/80">Stock actual</th>
+                  <th className="text-center p-3 font-semibold text-white/80">Mín / Máx</th>
+                  <th className="text-center p-3 font-semibold text-white/80">Costo unit.</th>
+                  <th className="text-center p-3 font-semibold text-white/80">Proveedor</th>
+                  <th className="text-center p-3 font-semibold text-white/80">Acciones</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5">
+                {filteredItems.map(item => {
+                  const isLow = item.stock_current <= item.stock_min;
+                  return (
+                    <tr key={item.id} className={`hover:bg-white/[0.02] ${isLow ? 'bg-red-500/5' : ''}`}>
+                      <td className="p-3">
+                        <div className="font-medium">{item.name}</div>
+                        {item.sku && <div className="text-xs text-white/40">SKU: {item.sku}</div>}
+                      </td>
+                      <td className="p-3 text-white/60">{item.category || '—'}</td>
+                      <td className="p-3 text-center">
+                        <span className={`font-bold ${isLow ? 'text-red-400' : 'text-white'}`}>
+                          {item.stock_current} {item.unit}
+                        </span>
+                        {isLow && <AlertTriangle className="w-3 h-3 text-red-400 inline ml-1" />}
+                      </td>
+                      <td className="p-3 text-center text-xs text-white/60">
+                        {item.stock_min} / {item.stock_max}
+                      </td>
+                      <td className="p-3 text-center text-white/60">S/ {item.cost_per_unit.toFixed(2)}</td>
+                      <td className="p-3 text-center text-white/60">{item.supplier || '—'}</td>
+                      <td className="p-3">
+                        <div className="flex gap-1 justify-center">
+                          <button
+                            onClick={() => setShowMovement(item)}
+                            className="p-2.5 rounded-lg bg-[#9d4edd]/20 text-[#9d4edd] hover:bg-[#9d4edd]/30 text-xs font-semibold"
+                            aria-label="Registrar movimiento"
+                            title="Registrar movimiento"
+                          >
+                            <Settings className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDeactivate(item.id)}
+                            className="p-2.5 rounded-lg text-white/40 hover:text-red-400 hover:bg-red-500/10"
+                            aria-label="Desactivar"
+                            title="Desactivar"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
 
       {/* Modal nuevo insumo */}

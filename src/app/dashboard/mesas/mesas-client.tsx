@@ -286,10 +286,11 @@ export function MesasClient({ user, plan, isSuperAdmin }: Props) {
                   </span>
                   <button
                     onClick={() => handleDelete(mesa.id)}
-                    className="opacity-0 group-hover:opacity-100 transition text-white/40 hover:text-red-400"
+                    className="text-white/40 hover:text-red-400 transition p-2 -mr-1 rounded-lg hover:bg-red-500/10 opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
                     title="Eliminar"
+                    aria-label={`Eliminar mesa ${mesa.number}`}
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
+                    <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
                 <div className="text-3xl font-bold text-center my-3" style={{ color: cfg.color }}>
@@ -308,7 +309,7 @@ export function MesasClient({ user, plan, isSuperAdmin }: Props) {
                 <select
                   value={mesa.status}
                   onChange={(e) => handleStatusChange(mesa.id, e.target.value as Mesa['status'])}
-                  className="w-full mt-3 bg-white/10 border border-white/20 rounded-lg px-2 py-1 text-xs text-white"
+                  className="w-full mt-3 bg-white/10 border border-white/20 rounded-lg px-3 py-2.5 text-sm text-white min-h-[40px]"
                 >
                   <option value="libre">Libre</option>
                   <option value="ocupada">Ocupada</option>

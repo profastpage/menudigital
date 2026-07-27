@@ -186,14 +186,33 @@ body {
   display: none;
 }
 
-/* ───────── Better tap targets on mobile ───────── */
+/* ───────── Better tap targets on mobile (HIG/Material = 44px) ───────── */
 @media (max-width: 768px) {
   button,
   a[role="button"],
   [data-touch-target] {
-    min-height: 36px;
-    min-width: 36px;
+    min-height: 44px;
+    min-width: 44px;
   }
+  /* Exception: tiny inline icon-only buttons inside dense toolbars can stay smaller,
+     but they must have aria-label and we bump them to 40px minimum. */
+  button[aria-label]:not(:has(span:not([class*="sr-only"]))),
+  a[role="button"][aria-label] {
+    min-height: 40px;
+    min-width: 40px;
+  }
+}
+
+/* ───────── Anti-horizontal-scroll safety net ───────── */
+html, body {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
+/* ───────── Word-break utility for long names/URLs/tokens ───────── */
+.break-anywhere {
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 /* ───────── Prevent layout shift on iOS Safari 100vh ───────── */
