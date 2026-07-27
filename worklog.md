@@ -1071,3 +1071,20 @@ Stage Summary:
 - El INSERT a auth.identities ahora usa solo columnas válidas (id, user_id, identity_data, provider, last_sign_in_at, created_at, updated_at).
 - El usuario puede volver a ejecutar el SQL en Supabase SQL Editor sin el error 42703.
 - Archivos afectados: supabase/seed-demo-account.sql, download/seed-demo-account.sql (3639 líneas cada uno).
+
+---
+Task ID: fix-identities-provider-id
+Agent: main
+Task: Corregir error `null value in column "provider_id" of relation "identities" violates not-null constraint` al inyectar seed-demo-account.sql
+
+Work Log:
+- Diagnosticado mediante el DETAIL del error. La fila failing muestra 9 valores en orden de columna del catálogo pg_attribute: provider_id, user_id, identity_data, provider, last_sign_in_at, created_at, updated_at, email, id.
+- La tabla auth.identities en Supabase moderno tiene 9 columnas, no 7. Faltaban: provider_id (NOT NULL) y email.
+- Para el provider "email", provider_id = user_id (convención GoTrue).
+- Editado /home/z/my-project/supabase/seed-demo-account.sql: añadidas columnas provider_id y email al INSERT.
+- Sincronizado a /home/z/my-project/download/seed-demo-account.sql.
+
+Stage Summary:
+- INSERT a auth.identities ahora usa las 9 columnas reales con valores correctos.
+- Commit bd36c64 pushed a GitHub main.
+- El usuario puede volver a ejecutar el SQL sin error 23502.
