@@ -1218,3 +1218,50 @@ Stage Summary:
 - Mobile UX now HIG-compliant: all interactive elements ≥44×44px on touch devices
 - All previously-invisible-on-touch buttons (group-hover patterns) now visible on mobile
 - All horizontal-overflow sources fixed (comparison table, inventario table, billing table, reportes tabs/bar chart, restaurant names)
+
+---
+Task ID: production-readiness-critical-recommended
+Agent: main (Super Z)
+Task: Implementar TODO lo crítico y recomendado para venta a clientes reales (legal, pagos, monitoreo, email, RLS, rate limiting, onboarding, help center, docs)
+
+Work Log:
+- Created /legal/terminos, /legal/privacidad, /legal/reembolsos (Ley 29733, Ley 29571)
+- Register form requires explicit checkbox acceptance of legal terms
+- Footer del landing enlaza a las 3 páginas legales
+- Added verifyWebhookSignature() in src/lib/mercadopago.ts (HMAC-SHA256, time-safe compare)
+- Updated webhook route to verify signature, fail-closed in production
+- Webhook now also sends payment-confirmed email via Resend
+- Installed @sentry/nextjs + resend packages
+- Created sentry.client.config.ts and sentry.server.config.ts (lazy init, only active if DSN env set)
+- Created instrumentation.ts for Sentry server hook
+- Created src/components/error-boundary.tsx (class component, captures errors, sends to Sentry)
+- Created src/app/global-error.tsx for catastrophic errors
+- Wrapped children in RootLayout with ErrorBoundary
+- Created src/lib/error-reporting.ts: reportError/reportMessage helpers (lazy Sentry init)
+- Created src/lib/email.ts: Resend client (dev-mode logs if no API key)
+- Created src/lib/email-templates.ts: 4 templates (welcome, payment-confirmed, payment-failed, trial-ending)
+- Updated /auth/callback to send welcome email on first sign-up
+- Created supabase/audit-rls-fix.sql: FORCE RLS on all 16 client-data tables + storage policies tightened + helper function get_waiter_id_by_token()
+- Created src/lib/rate-limit.ts: in-memory rate limiter with cleanup
+- Updated src/middleware.ts: rate limits for /api/auth (10/min), /api/upload (30/min), /api/bg-removal (5/min)
+- Webhook inline rate limit (60/min)
+- Created supabase/add-onboarding-fields.sql: profile columns (onboarding_completed_at, phone, business_name, business_type)
+- Created /api/onboarding/complete endpoint (creates menu + category + dish transactionally)
+- Created /dashboard/onboarding with 3-step wizard (business data → menu data → first dish)
+- Updated /dashboard/page.tsx to redirect users without menus to onboarding wizard
+- Created /dashboard/ayuda with searchable FAQ (5 categories, 18 questions, WhatsApp + email contact cards)
+- Created src/components/support/support-widget.tsx: floating button in all dashboard routes
+- Added 'Ayuda' to dashboard sidebar nav
+- Updated .env.example with all new env vars (MERCADOPAGO_WEBHOOK_SECRET, RESEND_API_KEY, FROM_EMAIL, NEXT_PUBLIC_SENTRY_DSN, SENTRY_DSN, SENTRY_AUTH_TOKEN)
+- Created docs/PRODUCCION-CHECKLIST.md: comprehensive step-by-step production launch guide
+- Build: 0 TypeScript errors in src/, 43 routes compiled successfully
+- Commit bef2cec pushed to GitHub main
+
+Stage Summary:
+- All 9 critical + recommended items implemented in code
+- 2 SQL migrations ready to apply (audit-rls-fix.sql + add-onboarding-fields.sql) — user must run them in Supabase SQL Editor
+- 5 new env vars documented in .env.example (MERCADOPAGO_WEBHOOK_SECRET, RESEND_API_KEY, FROM_EMAIL, NEXT_PUBLIC_SENTRY_DSN, SENTRY_DSN)
+- docs/PRODUCCION-CHECKLIST.md has detailed manual setup steps for: MercadoPago production, Resend domain verification, domain purchase, Sentry account, SUNAT facturación, Supabase backups
+- Account demo (demo@menudigital.pro / DemoMenuPro2025!) still functional for sales demos
+- New files: 22 created, 12 modified
+- All systems (Sentry, Resend, error boundary) work in "lazy" mode — code is safe to deploy even if user hasn't configured external accounts yet
