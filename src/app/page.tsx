@@ -17,14 +17,20 @@ export default function Home() {
       <header className="border-b border-white/5 backdrop-blur sticky top-0 z-50 bg-[#07070b]/80">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3">
-            <img
-              src="/logo.png"
-              alt="MenuPro"
-              width={36}
-              height={36}
-              className="rounded-lg shadow-lg shadow-[#d4af37]/20"
-              style={{ width: 36, height: 36 }}
-            />
+            <picture>
+              <source srcSet="/logo-192.webp" type="image/webp" />
+              <picture>
+              <source srcSet="/logo-192.webp" type="image/webp" />
+              <img
+                src="/logo-192.png"
+                alt="MenuPro"
+                width={36}
+                height={36}
+                className="rounded-lg shadow-lg shadow-[#d4af37]/20"
+                style={{ width: 36, height: 36 }}
+              />
+            </picture>
+            </picture>
             <span className="font-bold text-lg">MenuPro</span>
           </Link>
           <nav className="hidden md:flex items-center gap-8 text-sm text-white/70">

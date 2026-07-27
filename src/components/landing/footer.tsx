@@ -7,6 +7,8 @@ export function Footer() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-10">
           <div className="col-span-2 md:col-span-2">
             <Link href="/" className="flex items-center gap-3 mb-4">
+              <picture>
+              <source srcSet="/logo.webp" type="image/webp" />
               <img
                 src="/logo.png"
                 alt="MenuPro"
@@ -15,6 +17,7 @@ export function Footer() {
                 className="rounded-lg"
                 style={{ width: 36, height: 36 }}
               />
+            </picture>
               <span className="font-bold text-lg">MenuPro</span>
             </Link>
             <p className="text-sm text-white/50 max-w-xs leading-relaxed">

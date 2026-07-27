@@ -34,17 +34,22 @@ export function BrandLogo({
   className,
   compact = false,
 }: BrandLogoProps) {
-  const src = compact ? '/logo-192.png' : '/logo.png';
+  // WebP con fallback PNG — usamos <picture> para servir webp cuando haya soporte
+  const webpSrc = compact ? '/logo-192.webp' : '/logo.webp';
+  const pngSrc = compact ? '/logo-192.png' : '/logo.png';
   const img = (
-    <img
-      src={src}
-      alt="MenuPro"
-      width={size}
-      height={size}
-      className="rounded-lg object-contain"
-      style={{ width: size, height: size }}
-      draggable={false}
-    />
+    <picture>
+      <source srcSet={webpSrc} type="image/webp" />
+      <img
+        src={pngSrc}
+        alt="MenuPro"
+        width={size}
+        height={size}
+        className="rounded-lg object-contain"
+        style={{ width: size, height: size }}
+        draggable={false}
+      />
+    </picture>
   );
 
   const content = (

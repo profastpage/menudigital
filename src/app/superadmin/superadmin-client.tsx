@@ -279,6 +279,8 @@ export function SuperAdminClient({ admin }: { admin: AdminInfo }) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
             <div className="relative flex-shrink-0">
+              <picture>
+              <source srcSet="/logo.webp" type="image/webp" />
               <img
                 src="/logo.png"
                 alt="MenuPro"
@@ -287,6 +289,7 @@ export function SuperAdminClient({ admin }: { admin: AdminInfo }) {
                 className="rounded-xl shadow-lg shadow-amber-500/30 sm:w-10 sm:h-10"
                 style={{ width: 36, height: 36 }}
               />
+            </picture>
               <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-amber-500 border-2 border-[#0a0a14] flex items-center justify-center">
                 <Shield className="w-2 h-2 text-black" />
               </div>

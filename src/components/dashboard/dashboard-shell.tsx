@@ -182,7 +182,9 @@ export function DashboardShell({ user, plan, isSuperAdmin = false, children }: P
             prefetch={false}
             className="hover:opacity-90 transition"
           >
-            <img
+            <picture>
+              <source srcSet="/logo.webp" type="image/webp" />
+              <img
               src="/logo.png"
               alt="MenuPro"
               width={36}
@@ -190,6 +192,7 @@ export function DashboardShell({ user, plan, isSuperAdmin = false, children }: P
               className="rounded-lg"
               style={{ width: 36, height: 36 }}
             />
+            </picture>
           </Link>
           <Link
             href="/"
@@ -250,7 +253,9 @@ export function DashboardShell({ user, plan, isSuperAdmin = false, children }: P
                 onClick={() => setDrawerOpen(false)}
                 className="flex items-center gap-3"
               >
-                <img
+                <picture>
+              <source srcSet="/logo.webp" type="image/webp" />
+              <img
                   src="/logo.png"
                   alt="MenuPro"
                   width={36}
@@ -258,6 +263,7 @@ export function DashboardShell({ user, plan, isSuperAdmin = false, children }: P
                   className="rounded-lg"
                   style={{ width: 36, height: 36 }}
                 />
+            </picture>
                 <span className="font-bold">MenuPro</span>
               </Link>
               <button
@@ -299,7 +305,9 @@ export function DashboardShell({ user, plan, isSuperAdmin = false, children }: P
                 <MenuIcon className="w-5 h-5" />
               </button>
               <div className="flex items-center gap-2">
-                <img
+                <picture>
+              <source srcSet="/logo-192.webp" type="image/webp" />
+              <img
                   src="/logo-192.png"
                   alt="MenuPro"
                   width={28}
@@ -307,6 +315,7 @@ export function DashboardShell({ user, plan, isSuperAdmin = false, children }: P
                   className="rounded-lg"
                   style={{ width: 28, height: 28 }}
                 />
+            </picture>
                 <span className="font-bold text-sm">MenuPro</span>
               </div>
             </div>

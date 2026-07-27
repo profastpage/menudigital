@@ -43,7 +43,9 @@ export default async function RegisterPage() {
         <div className="relative z-10 flex flex-col justify-center px-20 py-12 text-white overflow-y-auto">
           {/* Logo */}
           <div className="flex items-center gap-3 mb-8">
-            <img
+            <picture>
+              <source srcSet="/logo.webp" type="image/webp" />
+              <img
               src="/logo.png"
               alt="MenuPro"
               width={48}
@@ -51,6 +53,7 @@ export default async function RegisterPage() {
               className="rounded-xl shadow-lg shadow-[#d4af37]/30"
               style={{ width: 48, height: 48 }}
             />
+            </picture>
             <span className="text-2xl font-bold tracking-tight">MenuPro</span>
           </div>
 
@@ -161,7 +164,9 @@ export default async function RegisterPage() {
 
           {/* Mobile logo */}
           <div className="lg:hidden flex items-center gap-3 mb-8 mt-12">
-            <img
+            <picture>
+              <source srcSet="/logo.webp" type="image/webp" />
+              <img
               src="/logo.png"
               alt="MenuPro"
               width={40}
@@ -169,6 +174,7 @@ export default async function RegisterPage() {
               className="rounded-lg"
               style={{ width: 40, height: 40 }}
             />
+            </picture>
             <span className="text-xl font-bold text-white">MenuPro</span>
           </div>
 
