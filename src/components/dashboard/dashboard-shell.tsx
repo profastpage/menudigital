@@ -12,7 +12,6 @@ import {
   LayoutDashboard,
   Crown,
   Shield,
-  Home,
   Menu as MenuIcon,
   X,
   HelpCircle,
@@ -23,6 +22,7 @@ import {
   Package,
   Lock,
   TrendingUp,
+  BookOpen,
 } from 'lucide-react';
 import type { Plan } from '@/lib/plans';
 import { isPlanAtLeast, type PlanId } from '@/lib/plans';
@@ -39,7 +39,10 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { href: '/dashboard', label: 'Mis menús', icon: LayoutDashboard },
+  // Primario: Dashboard de métricas (plan-aware)
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  // Secundario: Mis menús (gestión de cartas)
+  { href: '/dashboard/menus', label: 'Mis menús', icon: BookOpen },
   { href: '/dashboard/guia', label: 'Guía', icon: HelpCircle },
   { href: '/dashboard/analytics', label: 'Analíticas', icon: BarChart3, pro: true },
   { href: '/dashboard/domains', label: 'Dominios', icon: Globe, pro: true },
@@ -74,6 +77,7 @@ export function DashboardShell({ user, plan, isSuperAdmin = false, children }: P
 
   const isActive = (href: string) => {
     if (href === '/dashboard') return pathname === '/dashboard';
+    if (href === '/dashboard/menus') return pathname === '/dashboard/menus';
     return pathname.startsWith(href);
   };
 
@@ -178,7 +182,7 @@ export function DashboardShell({ user, plan, isSuperAdmin = false, children }: P
       <aside className="hidden lg:flex flex-col w-60 border-r border-white/10 bg-[#0a0a14] p-4 flex-shrink-0">
         <div className="flex items-center gap-3 mb-8 px-2">
           <Link
-            href="/"
+            href="/dashboard"
             prefetch={false}
             className="hover:opacity-90 transition"
           >
@@ -195,7 +199,7 @@ export function DashboardShell({ user, plan, isSuperAdmin = false, children }: P
             </picture>
           </Link>
           <Link
-            href="/"
+            href="/dashboard"
             prefetch={false}
             className="font-bold hover:text-[#d4af37] transition"
           >
@@ -206,14 +210,6 @@ export function DashboardShell({ user, plan, isSuperAdmin = false, children }: P
         <nav className="space-y-1 flex-1">
           {NAV_ITEMS.map((item) => renderItem(item))}
           {renderSuperAdminLink()}
-          <Link
-            href="/"
-            prefetch={false}
-            className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-white/40 hover:text-white hover:bg-white/5 text-sm transition-colors mt-2 border-t border-white/5 pt-3"
-          >
-            <Home className="w-4 h-4" />
-            Volver al inicio
-          </Link>
         </nav>
 
         {/* Botón instalar app — PWA plan-aware */}
@@ -248,7 +244,7 @@ export function DashboardShell({ user, plan, isSuperAdmin = false, children }: P
           <aside className="relative w-72 max-w-[80vw] bg-[#0a0a14] border-r border-white/10 p-4 flex flex-col animate-in slide-in-from-left">
             <div className="flex items-center justify-between mb-6">
               <Link
-                href="/"
+                href="/dashboard"
                 prefetch={false}
                 onClick={() => setDrawerOpen(false)}
                 className="flex items-center gap-3"
@@ -277,14 +273,6 @@ export function DashboardShell({ user, plan, isSuperAdmin = false, children }: P
             <nav className="space-y-1 flex-1">
               {NAV_ITEMS.map((item) => renderItem(item))}
               {renderSuperAdminLink()}
-              <Link
-                href="/"
-                prefetch={false}
-                onClick={() => setDrawerOpen(false)}
-                className="flex items-center gap-3 px-3 py-3 rounded-xl text-white/50 hover:text-white hover:bg-white/5 text-sm mt-2"
-              >
-                <Home className="w-4 h-4" /> Volver al inicio
-              </Link>
             </nav>
             {renderUserBlock()}
           </aside>
@@ -362,30 +350,40 @@ export function DashboardShell({ user, plan, isSuperAdmin = false, children }: P
         {/* ───────── Bottom nav mobile (fija) ───────── */}
         <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#0a0a14]/95 backdrop-blur border-t border-white/10 safe-bottom">
           <div className="grid grid-cols-5 gap-1 px-2 py-2">
-            {/* Items relevantes según plan */}
+            {/* Items relevantes según plan — Dashboard SIEMPE primero, Mis menús SIEMPE segundo */}
             {(() => {
               const isPremium = isPlanAtLeast(plan.id, 'premium' as PlanId);
               const isFull = isPlanAtLeast(plan.id, 'full' as PlanId);
               let mobileItems: NavItem[];
               if (isFull) {
                 mobileItems = [
-                  NAV_ITEMS[0], // Mis menús
+                  NAV_ITEMS.find(i => i.href === '/dashboard')!, // Dashboard
+                  NAV_ITEMS.find(i => i.href === '/dashboard/menus')!, // Mis menús
                   NAV_ITEMS.find(i => i.href === '/dashboard/comandas')!,
                   NAV_ITEMS.find(i => i.href === '/dashboard/cocina')!,
                   NAV_ITEMS.find(i => i.href === '/dashboard/reportes')!,
                 ];
               } else if (isPremium) {
                 mobileItems = [
-                  NAV_ITEMS[0], // Mis menús
+                  NAV_ITEMS.find(i => i.href === '/dashboard')!, // Dashboard
+                  NAV_ITEMS.find(i => i.href === '/dashboard/menus')!, // Mis menús
                   NAV_ITEMS.find(i => i.href === '/dashboard/comandas')!,
                   NAV_ITEMS.find(i => i.href === '/dashboard/cocina')!,
                   NAV_ITEMS.find(i => i.href === '/dashboard/billing')!,
                 ];
+              } else if (plan.id === 'pro') {
+                mobileItems = [
+                  NAV_ITEMS.find(i => i.href === '/dashboard')!, // Dashboard
+                  NAV_ITEMS.find(i => i.href === '/dashboard/menus')!, // Mis menús
+                  NAV_ITEMS.find(i => i.href === '/dashboard/analytics')!,
+                  NAV_ITEMS.find(i => i.href === '/dashboard/guia')!,
+                  NAV_ITEMS.find(i => i.href === '/dashboard/billing')!,
+                ];
               } else {
                 mobileItems = [
-                  NAV_ITEMS[0], // Mis menús
+                  NAV_ITEMS.find(i => i.href === '/dashboard')!, // Dashboard
+                  NAV_ITEMS.find(i => i.href === '/dashboard/menus')!, // Mis menús
                   NAV_ITEMS.find(i => i.href === '/dashboard/guia')!,
-                  NAV_ITEMS.find(i => i.href === '/dashboard/analytics')!,
                   NAV_ITEMS.find(i => i.href === '/dashboard/billing')!,
                 ];
               }
@@ -406,14 +404,6 @@ export function DashboardShell({ user, plan, isSuperAdmin = false, children }: P
                 );
               });
             })()}
-            <Link
-              href="/"
-              prefetch={false}
-              className="flex flex-col items-center justify-center gap-0.5 min-h-[56px] py-1.5 rounded-lg text-white/50 text-[10px]"
-            >
-              <Home className="w-5 h-5" />
-              Inicio
-            </Link>
           </div>
         </nav>
       </div>

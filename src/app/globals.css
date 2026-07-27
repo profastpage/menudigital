@@ -204,18 +204,11 @@ body {
 }
 
 /* ───────── Anti-horizontal-scroll safety net ─────────
- * NOTA: aplicar overflow-x:hidden a `html` puede romper el scroll vertical
- * en iOS Safari y Android Chrome. Lo dejamos solo en `body` y usamos `clip`
- * (no crea contexto de scrolling nuevo). NO usar `max-width:100vw` porque
- * incluye el ancho del scrollbar en desktop y genera scroll horizontal fantasma.
+ * NO usar overflow-x:hidden ni en html ni en body — en iOS Safari puede
+ * propagarse y bloquear el scroll vertical de toda la página.
+ * Si aparece scroll horizontal fantasma, lo arreglamos en el componente
+ * que lo causa (con overflow-x: clip o max-width:100% en wrappers acotados).
  */
-html {
-  overflow-x: clip;
-}
-body {
-  overflow-x: clip;
-  max-width: 100%;
-}
 
 /* ───────── Word-break utility for long names/URLs/tokens ───────── */
 .break-anywhere {
