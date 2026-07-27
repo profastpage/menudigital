@@ -1088,3 +1088,20 @@ Stage Summary:
 - INSERT a auth.identities ahora usa las 9 columnas reales con valores correctos.
 - Commit bd36c64 pushed a GitHub main.
 - El usuario puede volver a ejecutar el SQL sin error 23502.
+
+---
+Task ID: fix-identities-email-generated
+Agent: main
+Task: Corregir error `cannot insert a non-DEFAULT value into column "email" — Column "email" is a generated column`
+
+Work Log:
+- Diagnosticado: en Supabase moderno, auth.identities.email es una GENERATED column (calculada desde auth.users.email). No se puede insertar manualmente.
+- Esquema final real de auth.identities: 8 columnas insertables (id, user_id, identity_data, provider, provider_id, last_sign_in_at, created_at, updated_at) + 1 generated (email).
+- Editado /home/z/my-project/supabase/seed-demo-account.sql: quitada columna `email` y su valor del INSERT.
+- Sincronizado a /home/z/my-project/download/seed-demo-account.sql.
+- Commit d28caa7 pushed a GitHub main.
+
+Stage Summary:
+- INSERT a auth.identities ahora usa solo las 8 columnas insertables.
+- Tres fixes acumulados al mismo bloque: identity_id (no existe) → provider_id (faltaba NOT NULL) → email (es generated).
+- El usuario puede volver a ejecutar el SQL sin errores en auth.users/auth.identities.
