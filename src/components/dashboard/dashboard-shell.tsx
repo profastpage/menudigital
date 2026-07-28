@@ -395,6 +395,11 @@ export function DashboardShell({ user, plan, isSuperAdmin = false, children }: P
               }
               return mobileItems.map((item) => {
                 const active = isActive(item.href);
+                // Etiqueta corta para el bottom nav (máx ~6 caracteres)
+                // Para "Mis menús" → "Menús" (no "Mis")
+                const shortLabel = item.href === '/dashboard/menus'
+                  ? 'Menús'
+                  : item.label.split(' ')[0];
                 return (
                   <Link
                     key={item.href}
@@ -405,7 +410,7 @@ export function DashboardShell({ user, plan, isSuperAdmin = false, children }: P
                     }`}
                   >
                     <item.icon className="w-5 h-5" />
-                    {item.label.split(' ')[0]}
+                    {shortLabel}
                   </Link>
                 );
               });

@@ -164,49 +164,52 @@ export function InventarioClient({ user, plan, isSuperAdmin, menus }: Props) {
 
   return (
     <DashboardShell user={user} plan={plan} isSuperAdmin={isSuperAdmin}>
-      <div className="mb-6 flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold mb-1">Inventario</h1>
-          <p className="text-white/60 text-sm">
+      <div className="mb-5 flex items-start sm:items-center justify-between flex-wrap gap-3">
+        <div className="min-w-0 flex-1">
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold mb-1 truncate">Inventario</h1>
+          <p className="text-white/60 text-xs sm:text-sm">
             {items.length} insumos · {lowStockItems.length} con stock bajo
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap w-full sm:w-auto">
           {plan.limits.hasRecipes && (
-            <Button variant="outline" size="sm" onClick={() => setShowRecipes(true)}>
-              <BookOpen className="w-4 h-4 mr-2" />
-              Recetas ({recipes.length})
+            <Button variant="outline" size="sm" onClick={() => setShowRecipes(true)} className="text-xs sm:text-sm">
+              <BookOpen className="w-4 h-4 sm:mr-2" />
+              <span className="sm:inline">Recetas</span>
+              <span className="ml-1 hidden sm:inline">({recipes.length})</span>
             </Button>
           )}
-          <Button variant="outline" size="sm" onClick={load} disabled={loading}>
-            <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-            Refrescar
+          <Button variant="outline" size="sm" onClick={load} disabled={loading} className="text-xs sm:text-sm">
+            <RefreshCw className={`w-4 h-4 sm:mr-2 ${loading ? 'animate-spin' : ''}`} />
+            <span className="hidden sm:inline">Refrescar</span>
           </Button>
           <Button
             size="sm"
             onClick={() => setShowAdd(true)}
             style={{ background: 'linear-gradient(to right, #9d4edd, #c77dff)', color: 'white' }}
+            className="text-xs sm:text-sm flex-1 sm:flex-initial"
           >
-            <Plus className="w-4 h-4 mr-2" />
-            Nuevo insumo
+            <Plus className="w-4 h-4 sm:mr-2" />
+            <span className="sm:inline">Nuevo insumo</span>
+            <span className="sm:hidden">Nuevo</span>
           </Button>
         </div>
       </div>
 
       {/* Alertas de stock bajo */}
       {lowStockItems.length > 0 && (
-        <div className="bg-red-500/10 border border-red-500/40 rounded-2xl p-4 mb-6">
-          <div className="flex items-start gap-3">
-            <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
-            <div className="flex-1">
-              <div className="font-semibold text-red-400 mb-2">
+        <div className="bg-red-500/10 border border-red-500/40 rounded-xl sm:rounded-2xl p-3 sm:p-4 mb-4 sm:mb-6">
+          <div className="flex items-start gap-2 sm:gap-3">
+            <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5 text-red-400 flex-shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <div className="font-semibold text-red-400 text-sm sm:base mb-2">
                 {lowStockItems.length} {lowStockItems.length === 1 ? 'insumo requiere reposición' : 'insumos requieren reposición'}
               </div>
               <div className="space-y-1">
                 {lowStockItems.slice(0, 5).map(item => (
-                  <div key={item.id} className="text-sm flex justify-between">
-                    <span>{item.name}</span>
-                    <span className="text-red-300">
+                  <div key={item.id} className="text-xs sm:text-sm flex justify-between gap-2">
+                    <span className="truncate">{item.name}</span>
+                    <span className="text-red-300 flex-shrink-0 whitespace-nowrap">
                       {item.stock_current} {item.unit} (mín: {item.stock_min})
                     </span>
                   </div>
@@ -221,16 +224,16 @@ export function InventarioClient({ user, plan, isSuperAdmin, menus }: Props) {
       )}
 
       {/* Filtros */}
-      <div className="flex gap-2 mb-4">
+      <div className="flex flex-wrap gap-2 mb-4">
         <button
           onClick={() => setFilter('all')}
-          className={`px-3 py-1.5 rounded-full text-xs font-semibold ${filter === 'all' ? 'bg-white/15 text-white' : 'bg-white/5 text-white/60'}`}
+          className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap ${filter === 'all' ? 'bg-white/15 text-white' : 'bg-white/5 text-white/60'}`}
         >
           Todos ({items.length})
         </button>
         <button
           onClick={() => setFilter('low')}
-          className={`px-3 py-1.5 rounded-full text-xs font-semibold ${filter === 'low' ? 'bg-red-500/20 text-red-400' : 'bg-white/5 text-white/60'}`}
+          className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap ${filter === 'low' ? 'bg-red-500/20 text-red-400' : 'bg-white/5 text-white/60'}`}
         >
           Stock bajo ({lowStockItems.length})
         </button>
@@ -251,55 +254,68 @@ export function InventarioClient({ user, plan, isSuperAdmin, menus }: Props) {
       ) : (
         <>
           {/* ─── Mobile: cards ─── */}
-          <div className="lg:hidden space-y-3">
+          <div className="lg:hidden space-y-2.5">
             {filteredItems.map(item => {
               const isLow = item.stock_current <= item.stock_min;
               return (
-                <div key={item.id} className={`rounded-xl border border-white/10 p-4 ${isLow ? 'bg-red-500/5 border-red-500/20' : 'bg-white/[0.02]'}`}>
-                  <div className="flex items-start justify-between gap-2 mb-3">
+                <div key={item.id} className={`rounded-xl border p-3 ${isLow ? 'bg-red-500/5 border-red-500/20' : 'bg-white/[0.02] border-white/10'}`}>
+                  {/* Fila 1: nombre + badge */}
+                  <div className="flex items-start justify-between gap-2 mb-2">
                     <div className="min-w-0 flex-1">
-                      <div className="font-semibold truncate break-anywhere">{item.name}</div>
-                      {item.sku && <div className="text-xs text-white/40">SKU: {item.sku}</div>}
-                      <div className="text-xs text-white/50 mt-0.5">{item.category || 'Sin categoría'}</div>
+                      <div className="font-semibold text-sm leading-tight break-words">{item.name}</div>
+                      <div className="text-[11px] text-white/40 mt-0.5 flex items-center gap-1.5 flex-wrap">
+                        {item.sku && <span className="truncate">SKU: {item.sku}</span>}
+                        {item.sku && item.category && <span className="text-white/20">·</span>}
+                        <span className="truncate">{item.category || 'Sin categoría'}</span>
+                      </div>
                     </div>
                     {isLow && (
-                      <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-red-500/15 text-red-400 text-[10px] font-semibold flex-shrink-0">
-                        <AlertTriangle className="w-3 h-3" />
-                        Stock bajo
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-red-500/15 text-red-400 text-[9px] font-semibold flex-shrink-0">
+                        <AlertTriangle className="w-2.5 h-2.5" />
+                        Bajo
                       </span>
                     )}
                   </div>
-                  <div className="grid grid-cols-2 gap-3 text-xs mb-3">
-                    <div>
-                      <div className="text-white/40">Stock actual</div>
-                      <div className={`font-bold text-base ${isLow ? 'text-red-400' : 'text-white'}`}>
-                        {item.stock_current} {item.unit}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-white/40">Mín / Máx</div>
-                      <div className="text-white/80 font-medium">{item.stock_min} / {item.stock_max}</div>
-                    </div>
-                    <div>
-                      <div className="text-white/40">Costo unit.</div>
-                      <div className="text-white/80 font-medium">S/ {item.cost_per_unit.toFixed(2)}</div>
-                    </div>
-                    <div>
-                      <div className="text-white/40">Proveedor</div>
-                      <div className="text-white/80 font-medium truncate break-anywhere">{item.supplier || '—'}</div>
-                    </div>
+
+                  {/* Fila 2: stock destacado + datos clave en línea (flex-wrap para que no se desordene) */}
+                  <div className="flex items-baseline gap-2 mb-2 flex-wrap">
+                    <span className={`font-bold text-lg leading-none ${isLow ? 'text-red-400' : 'text-white'}`}>
+                      {item.stock_current}
+                    </span>
+                    <span className="text-xs text-white/50">{item.unit}</span>
+                    <span className="text-white/20 text-xs">·</span>
+                    <span className="text-xs text-white/50">
+                      min <span className="text-white/80">{item.stock_min}</span>
+                    </span>
+                    <span className="text-white/20 text-xs">·</span>
+                    <span className="text-xs text-white/50">
+                      max <span className="text-white/80">{item.stock_max}</span>
+                    </span>
+                    <span className="text-white/20 text-xs">·</span>
+                    <span className="text-xs text-white/50">
+                      S/ <span className="text-white/80">{item.cost_per_unit.toFixed(2)}</span>
+                    </span>
                   </div>
+
+                  {/* Fila 3: proveedor (solo si existe, en una línea) */}
+                  {item.supplier && (
+                    <div className="text-[11px] text-white/40 mb-2 truncate">
+                      Proveedor: <span className="text-white/60">{item.supplier}</span>
+                    </div>
+                  )}
+
+                  {/* Fila 4: acciones */}
                   <div className="flex gap-2">
                     <button
                       onClick={() => setShowMovement(item)}
-                      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg bg-[#9d4edd]/20 text-[#9d4edd] hover:bg-[#9d4edd]/30 text-xs font-semibold min-h-[44px]"
+                      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-[#9d4edd]/20 text-[#9d4edd] hover:bg-[#9d4edd]/30 text-xs font-semibold min-h-[40px]"
                     >
-                      <Settings className="w-4 h-4" />
+                      <Settings className="w-3.5 h-3.5" />
                       Movimiento
                     </button>
                     <button
                       onClick={() => handleDeactivate(item.id)}
-                      className="px-3 py-2.5 rounded-lg text-white/40 hover:text-red-400 hover:bg-red-500/10 min-h-[44px]"
+                      className="px-3 py-2 rounded-lg text-white/40 hover:text-red-400 hover:bg-red-500/10 min-h-[40px]"
                       aria-label={`Desactivar ${item.name}`}
                     >
                       <Trash2 className="w-4 h-4" />
