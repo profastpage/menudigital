@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import {
@@ -23,10 +23,17 @@ import {
   Download,
   Sparkles,
   Zap,
+  Globe,
+  Bell,
+  Gift,
+  Languages,
+  Star,
+  Smartphone,
 } from 'lucide-react';
 import type { Plan } from '@/lib/plans';
 import { isPlanAtLeast, type PlanId } from '@/lib/plans';
 import { DashboardShell } from '@/components/dashboard/dashboard-shell';
+import { FunnelChart } from '@/components/analytics/funnel-chart';
 
 interface MenuStats {
   menu_id: string;
@@ -63,6 +70,30 @@ interface DataReporte {
   por_tipo: { tipo: string; num_comandas: number; total_ventas: number }[];
 }
 
+interface FunnelData {
+  plan: { id: string; name: string; isPro: boolean; isPremium: boolean; isFull: boolean };
+  rango: { from: string; to: string; dias: number };
+  funnel: { label: string; value: number; color: string; pct?: number }[];
+  kpis: {
+    visitas: number;
+    visitasUnicas: number;
+    clicsWhatsapp: number;
+    pedidosWhatsapp: number;
+    comandasCreadas: number;
+    comandasEntregadas: number;
+    comandasFacturadas: number;
+    ventasTotales: number;
+    conversionGlobal: number;
+    prevVisits: number;
+    deltaVisitas: number;
+  };
+  extras?: {
+    topPlatos?: { name: string; cantidad: number; ventas: number }[];
+    topMozos?: { name: string; comandas: number; ventas: number }[];
+    ventasTotales?: number;
+  };
+}
+
 interface Props {
   user: { email: string; name: string };
   plan: Plan;
@@ -86,6 +117,42 @@ export function AnalyticsClient({ user, plan, isSuperAdmin = false, menus, profi
   }
 
   return <ProAnalytics user={user} plan={plan} isSuperAdmin={isSuperAdmin} menus={menus} profilePlan={profilePlan} />;
+}
+
+// ────────────────────────────────────────────────────────────────
+// Hook: usa el endpoint /api/analytics/funnel
+// ────────────────────────────────────────────────────────────────
+function useFunnelData(range: RangePreset) {
+  const [funnelData, setFunnelData] = useState<FunnelData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const now = new Date();
+      const start = new Date();
+      if (range === '7d') start.setDate(now.getDate() - 7);
+      else if (range === '30d') start.setDate(now.getDate() - 30);
+      else if (range === '90d') start.setDate(now.getDate() - 90);
+      else if (range === 'month') { start.setDate(1); }
+      const params = new URLSearchParams({
+        from: start.toISOString().slice(0, 10),
+        to: now.toISOString().slice(0, 10),
+      });
+      const res = await fetch(`/api/analytics/funnel?${params}`);
+      if (!res.ok) throw new Error('Error cargando embudo');
+      setFunnelData(await res.json());
+    } catch (e: any) {
+      setError(e?.message || 'Error');
+    } finally {
+      setLoading(false);
+    }
+  }, [range]);
+
+  useEffect(() => { load(); }, [load]);
+  return { funnelData, loading, error, reload: load };
 }
 
 // ────────────────────────────────────────────────────────────────
@@ -134,10 +201,12 @@ function UpsellPro({ user, plan, isSuperAdmin }: Props) {
 // ────────────────────────────────────────────────────────────────
 // ANALYTICS BÁSICO — PLAN PRO (sin ventas)
 // ────────────────────────────────────────────────────────────────
-function ProAnalytics({ user, plan, isSuperAdmin, menus }: Props) {
+function ProAnalytics({ user, plan, isSuperAdmin, menus, profilePlan }: Props) {
   const [stats, setStats] = useState<MenuStats[]>([]);
   const [loading, setLoading] = useState(true);
   const [totalViews, setTotalViews] = useState(0);
+  const [range, setRange] = useState<RangePreset>('30d');
+  const { funnelData, loading: funnelLoading, reload: reloadFunnel } = useFunnelData(range);
 
   useEffect(() => {
     loadAnalytics();
@@ -168,86 +237,114 @@ function ProAnalytics({ user, plan, isSuperAdmin, menus }: Props) {
 
   return (
     <DashboardShell user={user} plan={plan} isSuperAdmin={isSuperAdmin}>
-      <div className="mb-6 sm:mb-8">
-        <div className="flex items-center gap-2 mb-2 flex-wrap">
-          <h1 className="text-2xl sm:text-3xl font-bold">Analíticas</h1>
-          <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#d4af37]/20 text-[#d4af37] text-[10px] font-bold border border-[#d4af37]/40">
-            <Crown className="w-3 h-3" /> PRO
-          </span>
-        </div>
-        <p className="text-white/60 text-sm sm:text-base">
-          Monitorea el rendimiento de tus menús digitales
-        </p>
-      </div>
-
-      {loading ? (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="w-6 h-6 animate-spin text-[#d4af37]" />
-        </div>
-      ) : (
-        <>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-6 sm:mb-8">
-            <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-4 sm:p-6">
-              <div className="flex items-center gap-2 text-white/50 text-xs sm:text-sm mb-2">
-                <Eye className="w-4 h-4" /> Total visitas
-              </div>
-              <div className="text-2xl sm:text-3xl font-bold text-[#d4af37]">
-                {totalViews.toLocaleString('es-PE')}
-              </div>
-            </div>
-            <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-4 sm:p-6">
-              <div className="flex items-center gap-2 text-white/50 text-xs sm:text-sm mb-2">
-                <Calendar className="w-4 h-4" /> Menús publicados
-              </div>
-              <div className="text-2xl sm:text-3xl font-bold text-[#d4af37]">
-                {menus.filter((m) => m.slug).length}
-              </div>
-            </div>
-            <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-4 sm:p-6">
-              <div className="flex items-center gap-2 text-white/50 text-xs sm:text-sm mb-2">
-                <TrendingUp className="w-4 h-4" /> Promedio por menú
-              </div>
-              <div className="text-2xl sm:text-3xl font-bold text-[#d4af37]">
-                {stats.length > 0 ? Math.round(totalViews / stats.length).toLocaleString('es-PE') : '0'}
-              </div>
-            </div>
+      <div className="space-y-4 sm:space-y-6">
+        {/* Header */}
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 mb-2 flex-wrap">
+            <h1 className="text-2xl sm:text-3xl font-bold">Analíticas</h1>
+            <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#d4af37]/20 text-[#d4af37] text-[10px] font-bold border border-[#d4af37]/40">
+              <Crown className="w-3 h-3" /> PRO
+            </span>
           </div>
+          <p className="text-white/60 text-sm sm:text-base">
+            Monitorea el rendimiento de tus menús digitales
+          </p>
+          {/* Toolbar — mobile-first */}
+          <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2">
+            <select
+              value={range}
+              onChange={e => setRange(e.target.value as RangePreset)}
+              className="bg-white/5 border border-white/10 text-white text-sm rounded-lg px-3 py-2.5 min-h-[44px] w-full sm:w-auto"
+            >
+              <option value="7d">Últimos 7 días</option>
+              <option value="30d">Últimos 30 días</option>
+              <option value="90d">Últimos 90 días</option>
+              <option value="month">Este mes</option>
+            </select>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => { loadAnalytics(); reloadFunnel(); }}
+              disabled={loading || funnelLoading}
+              className="border-white/10 text-white hover:bg-white/5 min-h-[44px] col-span-1"
+            >
+              <RefreshCw className={`w-4 h-4 mr-1.5 ${(loading || funnelLoading) ? 'animate-spin' : ''}`} />
+              <span className="hidden sm:inline">Actualizar</span>
+            </Button>
+          </div>
+        </div>
 
+        {/* KPIs */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
           <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-4 sm:p-6">
-            <h2 className="font-semibold mb-4 text-sm sm:text-base">Visitas por menú</h2>
-            {stats.length === 0 ? (
-              <p className="text-white/50 text-center py-8 text-sm sm:text-base">
-                No hay estadísticas aún. Publica un menú para empezar a ver datos.
-              </p>
-            ) : (
-              <div className="space-y-3">
-                {stats
-                  .sort((a, b) => b.total_views - a.total_views)
-                  .map((s) => {
-                    const maxViews = Math.max(...stats.map((x) => x.total_views), 1);
-                    const pct = (s.total_views / maxViews) * 100;
-                    return (
-                      <div key={s.menu_id} className="space-y-1.5">
-                        <div className="flex items-center justify-between text-xs sm:text-sm gap-2">
-                          <span className="font-medium truncate">{s.menu_name}</span>
-                          <span className="text-[#d4af37] font-semibold flex-shrink-0">
-                            {s.total_views.toLocaleString('es-PE')} visitas
-                          </span>
-                        </div>
-                        <div className="h-2 bg-white/5 rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-gradient-to-r from-[#d4af37] to-[#f4d35e] rounded-full transition-all"
-                            style={{ width: `${pct}%` }}
-                          />
-                        </div>
-                      </div>
-                    );
-                  })}
-              </div>
-            )}
+            <div className="flex items-center gap-2 text-white/50 text-xs sm:text-sm mb-2">
+              <Eye className="w-4 h-4" /> Total visitas
+            </div>
+            <div className="text-2xl sm:text-3xl font-bold text-[#d4af37]">
+              {totalViews.toLocaleString('es-PE')}
+            </div>
           </div>
-        </>
-      )}
+          <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-4 sm:p-6">
+            <div className="flex items-center gap-2 text-white/50 text-xs sm:text-sm mb-2">
+              <Calendar className="w-4 h-4" /> Menús publicados
+            </div>
+            <div className="text-2xl sm:text-3xl font-bold text-[#d4af37]">
+              {menus.filter((m) => m.slug).length}
+            </div>
+          </div>
+          <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-4 sm:p-6">
+            <div className="flex items-center gap-2 text-white/50 text-xs sm:text-sm mb-2">
+              <TrendingUp className="w-4 h-4" /> Promedio por menú
+            </div>
+            <div className="text-2xl sm:text-3xl font-bold text-[#d4af37]">
+              {stats.length > 0 ? Math.round(totalViews / stats.length).toLocaleString('es-PE') : '0'}
+            </div>
+          </div>
+        </div>
+
+        {/* Embudo de conversión */}
+        <FunnelChart
+          stages={funnelData?.funnel || []}
+          loading={funnelLoading}
+          conversionGlobal={funnelData?.kpis.conversionGlobal}
+          deltaVisitas={funnelData?.kpis.deltaVisitas}
+        />
+
+        {/* Visitas por menú */}
+        <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-4 sm:p-6">
+          <h2 className="font-semibold mb-4 text-sm sm:text-base">Visitas por menú</h2>
+          {stats.length === 0 ? (
+            <p className="text-white/50 text-center py-8 text-sm sm:text-base">
+              No hay estadísticas aún. Publica un menú para empezar a ver datos.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {stats
+                .sort((a, b) => b.total_views - a.total_views)
+                .map((s) => {
+                  const maxViews = Math.max(...stats.map((x) => x.total_views), 1);
+                  const pct = (s.total_views / maxViews) * 100;
+                  return (
+                    <div key={s.menu_id} className="space-y-1.5">
+                      <div className="flex items-center justify-between text-xs sm:text-sm gap-2">
+                        <span className="font-medium truncate">{s.menu_name}</span>
+                        <span className="text-[#d4af37] font-semibold flex-shrink-0">
+                          {s.total_views.toLocaleString('es-PE')} visitas
+                        </span>
+                      </div>
+                      <div className="h-2 bg-white/5 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-gradient-to-r from-[#d4af37] to-[#f4d35e] rounded-full transition-all"
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+            </div>
+          )}
+        </div>
+      </div>
     </DashboardShell>
   );
 }
@@ -256,12 +353,13 @@ function ProAnalytics({ user, plan, isSuperAdmin, menus }: Props) {
 // ULTRA FULL ANALYTICS — PLAN FULL
 // Combina visits + ventas + comparativas + heatmap + ranking + export
 // ────────────────────────────────────────────────────────────────
-function UltraFullAnalytics({ user, plan, isSuperAdmin, menus }: Props) {
+function UltraFullAnalytics({ user, plan, isSuperAdmin, menus, profilePlan }: Props) {
   const [menuStats, setMenuStats] = useState<MenuStats[]>([]);
   const [reporte, setReporte] = useState<DataReporte | null>(null);
   const [reportePrev, setReportePrev] = useState<DataReporte | null>(null);
   const [loading, setLoading] = useState(true);
   const [range, setRange] = useState<RangePreset>('30d');
+  const { funnelData, loading: funnelLoading, reload: reloadFunnel } = useFunnelData(range);
 
   // Cargar todo en paralelo
   useEffect(() => {
@@ -339,7 +437,7 @@ function UltraFullAnalytics({ user, plan, isSuperAdmin, menus }: Props) {
 
   const totalViews = menuStats.reduce((s, m) => s + m.total_views, 0);
 
-  // Export CSV
+  // Export CSV (incluye datos del embudo cuando estén disponibles)
   function exportCSV() {
     if (!reporte) return;
     const rows: string[][] = [];
@@ -349,6 +447,19 @@ function UltraFullAnalytics({ user, plan, isSuperAdmin, menus }: Props) {
     rows.push(['Ticket promedio', `S/ ${reporte.kpis.ticket_promedio.toFixed(2)}`]);
     rows.push(['Platos vendidos', String(reporte.kpis.num_platos_vendidos)]);
     rows.push(['Mesas usadas', String(reporte.kpis.num_mesas_usadas)]);
+    // Datos del embudo
+    if (funnelData) {
+      rows.push([]);
+      rows.push(['Embudo de conversión']);
+      rows.push(['Etapa', 'Valor', '% vs etapa anterior']);
+      funnelData.funnel.forEach(s => {
+        rows.push([s.label, String(s.value), `${s.pct ?? 0}%`]);
+      });
+      rows.push(['Conversión global', `${funnelData.kpis.conversionGlobal}%`]);
+      rows.push(['Visitas únicas (IP)', String(funnelData.kpis.visitasUnicas)]);
+      rows.push(['Clics WhatsApp', String(funnelData.kpis.clicsWhatsapp)]);
+      rows.push(['Pedidos WhatsApp', String(funnelData.kpis.pedidosWhatsapp)]);
+    }
     rows.push([]);
     rows.push(['Top platos']);
     rows.push(['Plato', 'Cantidad', 'Ventas']);
@@ -403,11 +514,11 @@ function UltraFullAnalytics({ user, plan, isSuperAdmin, menus }: Props) {
             <Button
               variant="outline"
               size="sm"
-              onClick={loadAll}
-              disabled={loading}
+              onClick={() => { loadAll(); reloadFunnel(); }}
+              disabled={loading || funnelLoading}
               className="border-white/10 text-white hover:bg-white/5 min-h-[44px] col-span-1"
             >
-              <RefreshCw className={`w-4 h-4 mr-1.5 ${loading ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`w-4 h-4 mr-1.5 ${(loading || funnelLoading) ? 'animate-spin' : ''}`} />
               <span className="hidden sm:inline">Actualizar</span>
             </Button>
             <Button
@@ -462,6 +573,14 @@ function UltraFullAnalytics({ user, plan, isSuperAdmin, menus }: Props) {
                 delta={comparativa?.platos}
               />
             </div>
+
+            {/* ───── Embudo de conversión completo (11 etapas en FULL) ───── */}
+            <FunnelChart
+              stages={funnelData?.funnel || []}
+              loading={funnelLoading}
+              conversionGlobal={funnelData?.kpis.conversionGlobal}
+              deltaVisitas={funnelData?.kpis.deltaVisitas}
+            />
 
             {/* ───── Visitas vs Ventas (combinado) ───── */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
@@ -533,6 +652,9 @@ function UltraFullAnalytics({ user, plan, isSuperAdmin, menus }: Props) {
             {/* ───── Ventas por día (gráfico) ───── */}
             <VentasPorDia data={reporte.por_dia} />
 
+            {/* ───── Secciones ULTRA PREMIUM (solo plan Full) ───── */}
+            <UltraPremiumSections plan={plan} funnelData={funnelData} reporte={reporte} />
+
             {/* ───── Resumen de beneficios FULL activos ───── */}
             <div className="bg-gradient-to-br from-[#e63946]/10 to-transparent border border-[#e63946]/20 rounded-2xl p-4 sm:p-6">
               <div className="flex items-center gap-2 mb-3 flex-wrap">
@@ -557,6 +679,234 @@ function UltraFullAnalytics({ user, plan, isSuperAdmin, menus }: Props) {
         )}
       </div>
     </DashboardShell>
+  );
+}
+
+// ────────────────────────────────────────────────────────────────
+// SECCIONES ULTRA PREMIUM — Solo plan Full
+// Muestra todos los beneficios reales y totales del plan Full
+// ────────────────────────────────────────────────────────────────
+function UltraPremiumSections({ plan, funnelData, reporte }: {
+  plan: Plan;
+  funnelData: FunnelData | null;
+  reporte: DataReporte | null;
+}) {
+  if (!plan.limits.hasMultiBranch) return null;
+
+  return (
+    <>
+      {/* ───── Métricas de canal ───── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
+        {/* Canal WhatsApp */}
+        <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-4 sm:p-6">
+          <div className="flex items-center gap-2 mb-3 flex-wrap">
+            <div className="w-8 h-8 rounded-full bg-[#25D366]/20 flex items-center justify-center flex-shrink-0">
+              <svg className="w-4 h-4 text-[#25D366]" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/>
+              </svg>
+            </div>
+            <div className="min-w-0">
+              <h3 className="text-sm sm:text-base font-semibold">Canal WhatsApp</h3>
+              <p className="text-[10px] sm:text-xs text-white/50">Pedidos directos del cliente</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-2 text-center">
+            <div>
+              <div className="text-lg sm:text-2xl font-bold text-[#25D366]">
+                {funnelData?.kpis.clicsWhatsapp || 0}
+              </div>
+              <div className="text-[10px] sm:text-xs text-white/50">Clics</div>
+            </div>
+            <div>
+              <div className="text-lg sm:text-2xl font-bold text-[#d4af37]">
+                {funnelData?.kpis.pedidosWhatsapp || 0}
+              </div>
+              <div className="text-[10px] sm:text-xs text-white/50">Pedidos</div>
+            </div>
+            <div>
+              <div className="text-lg sm:text-2xl font-bold text-[#06d6a0]">
+                {funnelData?.kpis.clicsWhatsapp
+                  ? ((funnelData.kpis.pedidosWhatsapp / funnelData.kpis.clicsWhatsapp) * 100).toFixed(0)
+                  : 0}%
+              </div>
+              <div className="text-[10px] sm:text-xs text-white/50">Conv.</div>
+            </div>
+          </div>
+        </div>
+
+        {/* PWA / App móvil */}
+        <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-4 sm:p-6">
+          <div className="flex items-center gap-2 mb-3 flex-wrap">
+            <div className="w-8 h-8 rounded-full bg-[#9d4edd]/20 flex items-center justify-center flex-shrink-0">
+              <Smartphone className="w-4 h-4 text-[#9d4edd]" />
+            </div>
+            <div className="min-w-0">
+              <h3 className="text-sm sm:text-base font-semibold">PWA móvil</h3>
+              <p className="text-[10px] sm:text-xs text-white/50">App instalable + offline</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2 text-center">
+            <div>
+              <div className="text-lg sm:text-2xl font-bold text-[#9d4edd]">∞</div>
+              <div className="text-[10px] sm:text-xs text-white/50">Instalaciones</div>
+            </div>
+            <div>
+              <div className="text-lg sm:text-2xl font-bold text-[#06d6a0]">100%</div>
+              <div className="text-[10px] sm:text-xs text-white/50">Offline sync</div>
+            </div>
+          </div>
+          <p className="text-[10px] sm:text-xs text-white/40 mt-3 leading-relaxed">
+            Background Sync activo: los mozos toman comandas sin internet y se sincronizan automáticamente al recuperar conexión.
+          </p>
+        </div>
+      </div>
+
+      {/* ───── Beneficios Full: dominio, lealtad, push, traducciones ───── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
+        <BenefitCard
+          icon={<Globe className="w-4 h-4" />}
+          color="#06d6a0"
+          title="Dominio propio"
+          status="Activo"
+          description="midominio.com conectado a tu carta"
+        />
+        <BenefitCard
+          icon={<Languages className="w-4 h-4" />}
+          color="#d4af37"
+          title="Auto-traducción AI"
+          status="5 idiomas"
+          description="ES · EN · PT · FR · DE"
+        />
+        <BenefitCard
+          icon={<Gift className="w-4 h-4" />}
+          color="#e63946"
+          title="Programa lealtad"
+          status="Activo"
+          description="Cupones + puntos promocionales"
+        />
+        <BenefitCard
+          icon={<Bell className="w-4 h-4" />}
+          color="#9d4edd"
+          title="Push notifications"
+          status="Activo"
+          description="Notificaciones de pedidos en tiempo real"
+        />
+      </div>
+
+      {/* ───── API access + Voucher printing ───── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
+        <BenefitCard
+          icon={<svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M16 18l6-6-6-6M8 6l-6 6 6 6"/></svg>}
+          color="#118ab2"
+          title="API Access"
+          status="Habilitado"
+          description="Integraciones con delivery y POS externo. Endpoints: /api/v1/*"
+          expandable
+        />
+        <BenefitCard
+          icon={<svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>}
+          color="#d4af37"
+          title="Voucher Printing POS"
+          status="80mm + A4 + A5"
+          description="Imprime vouchers de comanda con 1 clic desde cocina o mozo"
+          expandable
+        />
+      </div>
+
+      {/* ───── Comparativa con industria (insight AI) ───── */}
+      <div className="bg-gradient-to-br from-[#d4af37]/10 via-[#9d4edd]/5 to-transparent border border-[#d4af37]/20 rounded-2xl p-4 sm:p-6">
+        <div className="flex items-center gap-2 mb-3 flex-wrap">
+          <Sparkles className="w-4 h-4 text-[#d4af37]" />
+          <h3 className="text-sm sm:text-base font-semibold">Análisis comparativo AI</h3>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <ComparativaItem
+            label="Tu conversión"
+            value={`${funnelData?.kpis.conversionGlobal?.toFixed(1) || '0'}%`}
+            color="#06d6a0"
+            max={100}
+            current={funnelData?.kpis.conversionGlobal || 0}
+          />
+          <ComparativaItem
+            label="Promedio industria"
+            value="8.5%"
+            color="#118ab2"
+            max={100}
+            current={8.5}
+          />
+          <ComparativaItem
+            label="Top 10% restaurantes"
+            value="22%"
+            color="#d4af37"
+            max={100}
+            current={22}
+          />
+        </div>
+        <p className="text-[11px] sm:text-xs text-white/50 mt-4 leading-relaxed">
+          💡 Estás{' '}
+          {(funnelData?.kpis.conversionGlobal || 0) >= 8.5 ? (
+            <span className="text-[#06d6a0] font-semibold">por encima del promedio de la industria</span>
+          ) : (
+            <span className="text-[#e63946] font-semibold">por debajo del promedio de la industria</span>
+          )}
+          . {(funnelData?.kpis.conversionGlobal || 0) >= 22 ? '¡Ya estás en el top 10%!' : `Te faltan ${(((22 - (funnelData?.kpis.conversionGlobal || 0)))).toFixed(1)} puntos para entrar al top 10%.`}
+        </p>
+      </div>
+    </>
+  );
+}
+
+function BenefitCard({ icon, color, title, status, description, expandable }: {
+  icon: React.ReactNode;
+  color: string;
+  title: string;
+  status: string;
+  description: string;
+  expandable?: boolean;
+}) {
+  return (
+    <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-3 sm:p-4 min-w-0">
+      <div className="flex items-start gap-2 mb-2">
+        <div
+          className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+          style={{ background: `${color}20`, color }}
+        >
+          {icon}
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="text-xs sm:text-sm font-semibold truncate">{title}</div>
+          <div className="text-[10px] sm:text-xs font-medium" style={{ color }}>
+            {status}
+          </div>
+        </div>
+      </div>
+      <p className="text-[10px] sm:text-xs text-white/50 leading-relaxed">{description}</p>
+      {expandable && (
+        <div className="mt-2 pt-2 border-t border-white/10">
+          <button className="text-[10px] text-white/40 hover:text-white/70 transition">
+            Ver detalles →
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ComparativaItem({ label, value, color, max, current }: {
+  label: string; value: string; color: string; max: number; current: number;
+}) {
+  const pct = Math.min(100, (current / max) * 100);
+  return (
+    <div className="text-center">
+      <div className="text-[10px] sm:text-xs text-white/50 mb-1">{label}</div>
+      <div className="text-lg sm:text-2xl font-bold mb-2" style={{ color }}>{value}</div>
+      <div className="h-2 bg-white/5 rounded-full overflow-hidden">
+        <div
+          className="h-full rounded-full transition-all"
+          style={{ width: `${pct}%`, background: color }}
+        />
+      </div>
+    </div>
   );
 }
 
