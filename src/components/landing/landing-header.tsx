@@ -104,7 +104,7 @@ export function LandingHeader() {
           </Link>
           <Link
             href="/register"
-            className="text-sm font-semibold px-4 py-2 rounded-lg bg-white/10 hover:bg-white/15 border border-white/15 hover:border-white/25 text-white transition-all backdrop-blur-sm shadow-sm hover:shadow-md hover:-translate-y-0.5"
+            className="text-sm font-bold px-4 py-2 rounded-lg bg-gradient-to-r from-[#d4af37] to-[#f4d35e] text-[#0a0a14] hover:opacity-90 transition-opacity shadow-md shadow-amber-500/20"
           >
             Empezar gratis
           </Link>
@@ -114,13 +114,13 @@ export function LandingHeader() {
         <div className="md:hidden flex items-center gap-2 flex-shrink-0">
           <Link
             href="/register"
-            className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 border border-white/15 text-white transition-colors"
+            className="text-xs font-bold px-3.5 py-2 rounded-lg bg-gradient-to-r from-[#d4af37] to-[#f4d35e] text-[#0a0a14] hover:opacity-90 transition-opacity shadow-md shadow-amber-500/20"
           >
             Empezar gratis
           </Link>
           <button
             onClick={() => setMobileOpen(true)}
-            className="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-white/5 text-white transition-colors"
+            className="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-white/5 text-white transition-colors border border-white/15"
             aria-label="Abrir menú"
           >
             <Menu className="w-5 h-5" />
@@ -166,18 +166,18 @@ export function LandingHeader() {
             </nav>
 
             {/* CTAs en el footer del sheet */}
-            <div className="p-4 border-t border-white/5 space-y-2">
+            <div className="p-4 border-t border-white/5 space-y-2.5">
               <Link
                 href="/login"
                 onClick={() => setMobileOpen(false)}
-                className="block w-full text-center py-3 rounded-lg text-white/80 hover:text-white hover:bg-white/5 border border-white/10 transition-colors text-sm font-medium"
+                className="block w-full text-center py-3 rounded-xl text-white border-2 border-white/25 hover:border-white/40 hover:bg-white/5 transition-colors text-sm font-semibold"
               >
                 Iniciar sesión
               </Link>
               <Link
                 href="/register"
                 onClick={() => setMobileOpen(false)}
-                className="block w-full text-center py-3 rounded-lg bg-white/10 hover:bg-white/15 border border-white/15 text-white transition-colors text-sm font-semibold"
+                className="block w-full text-center py-3 rounded-xl bg-gradient-to-r from-[#d4af37] to-[#f4d35e] text-[#0a0a14] hover:opacity-90 transition-opacity text-sm font-bold shadow-lg shadow-amber-500/20"
               >
                 Empezar gratis
               </Link>

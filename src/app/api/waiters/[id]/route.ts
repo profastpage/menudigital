@@ -18,6 +18,25 @@ export async function PATCH(
   if (body.phone !== undefined) update.phone = body.phone;
   if (body.pin !== undefined) update.pin = body.pin;
   if (body.is_active !== undefined) update.is_active = body.is_active;
+  // Password management:
+  //  - body.password = string → set new password
+  //  - body.password = null/'' → clear password (panel vuelve a ser público)
+  //  - body.password === undefined → no tocar la password existente
+  if (body.password !== undefined) {
+    update.password = typeof body.password === 'string' && body.password.length > 0
+      ? body.password
+      : null;
+  }
+  // Reset password: generate a random 6-char alphanumeric
+  if (body.reset_password === true) {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let pwd = '';
+    const buf = randomBytes(6);
+    for (let i = 0; i < 6; i++) {
+      pwd += chars[buf[i] % chars.length];
+    }
+    update.password = pwd;
+  }
 
   // Regenerar qr_token: el cliente pasa { regenerate_qr: true }
   if (body.regenerate_qr === true) {

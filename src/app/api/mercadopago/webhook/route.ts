@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { createServiceClient } from '@/lib/supabase/service';
 import { getPreapproval, preapprovalStatusToPlan, verifyWebhookSignature } from '@/lib/mercadopago';
 import { sendEmail } from '@/lib/email';
 import { paymentConfirmedEmail } from '@/lib/email-templates';
 import { getClientIP, rateLimitResponse, RATE_LIMITS } from '@/lib/rate-limit';
+import { PLANS } from '@/lib/plans';
 
 /**
  * POST /api/mercadopago/webhook
@@ -111,6 +113,87 @@ export async function POST(req: NextRequest) {
         .eq('id', userId);
 
       console.log(`[MP webhook] ✅ Usuario ${userId} → plan=${plan} status=${info.status}`);
+
+      // ─── Notificación al super admin (solo cuando se autoriza el pago) ───
+      // Usamos service client para bypass RLS en admin_notifications (no hay
+      // sesión de admin en el contexto del webhook).
+      if (info.status === 'authorized') {
+        try {
+          const serviceClient = createServiceClient();
+          const planConfig = PLANS[plan];
+          const planName = planConfig?.name || plan.toUpperCase();
+          const amount = planConfig?.mpAmount || 0;
+          const currency = process.env.MERCADOPAGO_CURRENCY_ID || 'PEN';
+          const currencySymbol = currency === 'PEN' ? 'S/' : currency === 'USD' ? '$' : currency + ' ';
+
+          // Buscar datos del usuario para incluir en la notificación
+          const { data: clientProfile } = await supabase
+            .from('profiles')
+            .select('email, full_name')
+            .eq('id', userId)
+            .single();
+
+          const clientEmail = clientProfile?.email || info.payerEmail || '—';
+          const clientName = clientProfile?.full_name || '—';
+          const now = new Date();
+          const dateStr = now.toLocaleString('es-PE', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            timeZone: 'America/Lima',
+          });
+
+          const notifPayload = {
+            type: 'new_subscription',
+            title: `Nueva suscripción ${planName.toUpperCase()}`,
+            message: `${clientName} (${clientEmail}) acaba de pagar ${currencySymbol}${amount.toFixed(2)} por el plan ${planName}. Fecha: ${dateStr}.`,
+            metadata: {
+              plan,
+              plan_name: planName,
+              amount,
+              currency,
+              user_email: clientEmail,
+              user_name: clientName,
+              user_id: userId,
+              mp_preapproval_id: dataId,
+              mp_status: info.status,
+              next_payment_date: info.nextPaymentDate || null,
+              current_period_end: currentPeriodEnd,
+              payment_date: now.toISOString(),
+            },
+            level: 'success',
+            related_user_id: userId,
+            // target_admin_id: NULL → notificación para todos los super admins
+          };
+
+          if (serviceClient) {
+            const { error: notifErr } = await (serviceClient
+              .from('admin_notifications') as any)
+              .insert(notifPayload);
+            if (notifErr) {
+              console.warn('[MP webhook] No se pudo insertar admin_notification:', notifErr.message);
+            } else {
+              console.log('[MP webhook] 🔔 Notificación al super admin insertada');
+            }
+          } else {
+            // Fallback: usar el cliente normal (anon) — puede fallar si RLS bloquea.
+            // Lo intentamos igual como best-effort.
+            const { error: notifErr } = await (supabase
+              .from('admin_notifications') as any)
+              .insert(notifPayload);
+            if (notifErr) {
+              console.warn('[MP webhook] SUPABASE_SERVICE_ROLE_KEY no configurada o RLS bloqueó insert:', notifErr.message);
+              console.warn('[MP webhook] 💡 Para habilitar notificaciones al admin, configura SUPABASE_SERVICE_ROLE_KEY en Vercel.');
+            } else {
+              console.log('[MP webhook] 🔔 Notificación al super admin insertada (vía cliente anónimo)');
+            }
+          }
+        } catch (notifErr) {
+          console.warn('[MP webhook] Error insertando notificación al admin:', notifErr);
+        }
+      }
 
       // Enviar email de confirmación si el pago fue autorizado
       if (info.status === 'authorized' && info.payerEmail) {

@@ -15,6 +15,11 @@ import {
   ToggleRight,
   Crown,
   AlertCircle,
+  Eye,
+  EyeOff,
+  KeyRound,
+  Shuffle,
+  Lock,
 } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -31,6 +36,7 @@ interface Waiter {
   document_id: string | null;
   phone: string | null;
   pin: string | null;
+  password: string | null;
   is_active: boolean;
   qr_token: string | null;
   created_at: string;
@@ -52,7 +58,14 @@ export function MozosClient({ user, plan, isSuperAdmin }: Props) {
     document_id: '',
     phone: '',
     pin: '',
+    password: '',
   });
+  const [showPwdNew, setShowPwdNew] = useState(false);
+  const [showPwdRow, setShowPwdRow] = useState<Record<string, boolean>>({});
+  const [editingPwd, setEditingPwd] = useState<Waiter | null>(null);
+  const [editPwdValue, setEditPwdValue] = useState('');
+  const [showEditPwd, setShowEditPwd] = useState(false);
+  const [pwdSaving, setPwdSaving] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -112,6 +125,7 @@ export function MozosClient({ user, plan, isSuperAdmin }: Props) {
           document_id: newMozo.document_id.trim() || undefined,
           phone: newMozo.phone.trim() || undefined,
           pin: newMozo.pin.trim() || undefined,
+          password: newMozo.password.trim() || undefined,
         }),
       });
       if (!res.ok) {
@@ -119,7 +133,8 @@ export function MozosClient({ user, plan, isSuperAdmin }: Props) {
         throw new Error(e.error || 'Error');
       }
       toast.success('Mozo creado');
-      setNewMozo({ full_name: '', document_id: '', phone: '', pin: '' });
+      setNewMozo({ full_name: '', document_id: '', phone: '', pin: '', password: '' });
+      setShowPwdNew(false);
       setShowAdd(false);
       load();
     } catch (err) {
@@ -185,6 +200,81 @@ export function MozosClient({ user, plan, isSuperAdmin }: Props) {
     const url = `${window.location.origin}/mozo/${w.qr_token}`;
     navigator.clipboard.writeText(url);
     toast.success('URL del panel del mozo copiada');
+  }
+
+  // ─── Password management ─────────────────────────────────
+  async function handleResetPassword(w: Waiter) {
+    if (!confirm(`¿Generar una nueva contraseña aleatoria para ${w.full_name}? El mozo deberá usar la nueva contraseña la próxima vez que abra su panel.`)) return;
+    try {
+      const res = await fetch(`/api/waiters/${w.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reset_password: true }),
+      });
+      if (!res.ok) {
+        const e = await res.json();
+        throw new Error(e.error || 'Error');
+      }
+      const data = await res.json();
+      const newPwd = data.waiter?.password;
+      toast.success(`Nueva contraseña: ${newPwd}`);
+      // Copiar al portapapeles automáticamente
+      if (newPwd && navigator.clipboard) {
+        navigator.clipboard.writeText(newPwd).catch(() => {});
+      }
+      load();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Error');
+    }
+  }
+
+  async function handleClearPassword(w: Waiter) {
+    if (!confirm(`¿Quitar la contraseña de ${w.full_name}? El panel del mozo volverá a ser público (solo con el QR).`)) return;
+    try {
+      const res = await fetch(`/api/waiters/${w.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: '' }),
+      });
+      if (!res.ok) {
+        const e = await res.json();
+        throw new Error(e.error || 'Error');
+      }
+      toast.success('Contraseña eliminada — el panel es público ahora');
+      load();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Error');
+    }
+  }
+
+  async function handleSavePassword() {
+    if (!editingPwd) return;
+    setPwdSaving(true);
+    try {
+      const res = await fetch(`/api/waiters/${editingPwd.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: editPwdValue }),
+      });
+      if (!res.ok) {
+        const e = await res.json();
+        throw new Error(e.error || 'Error');
+      }
+      toast.success(editPwdValue ? 'Contraseña actualizada' : 'Contraseña eliminada');
+      setEditingPwd(null);
+      setEditPwdValue('');
+      load();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Error');
+    } finally {
+      setPwdSaving(false);
+    }
+  }
+
+  function openEditPwd(w: Waiter) {
+    setEditingPwd(w);
+    setEditPwdValue(w.password || '');
+    setShowEditPwd(false);
   }
 
   // Stats
@@ -387,6 +477,39 @@ export function MozosClient({ user, plan, isSuperAdmin }: Props) {
                   <span className="text-white/40">PIN:</span>
                   <span className="font-mono font-semibold">{w.pin || '—'}</span>
                 </div>
+                {/* Contraseña */}
+                <div className="flex items-center gap-2 pt-1.5 border-t border-white/5">
+                  <KeyRound className="w-3 h-3 text-white/40 flex-shrink-0" />
+                  <span className="text-white/40 flex-shrink-0">Clave:</span>
+                  {w.password ? (
+                    <>
+                      <span className="font-mono font-semibold text-white/90 truncate flex-1 min-w-0">
+                        {showPwdRow[w.id] ? w.password : '•'.repeat(Math.min(w.password.length, 10))}
+                      </span>
+                      <button
+                        onClick={() => setShowPwdRow((p) => ({ ...p, [w.id]: !p[w.id] }))}
+                        className="text-white/50 hover:text-white transition p-1"
+                        title={showPwdRow[w.id] ? 'Ocultar' : 'Ver'}
+                        aria-label={showPwdRow[w.id] ? 'Ocultar contraseña' : 'Ver contraseña'}
+                      >
+                        {showPwdRow[w.id] ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                      </button>
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(w.password || '');
+                          toast.success('Contraseña copiada');
+                        }}
+                        className="text-white/50 hover:text-white transition p-1"
+                        title="Copiar"
+                        aria-label="Copiar contraseña"
+                      >
+                        <Copy className="w-3.5 h-3.5" />
+                      </button>
+                    </>
+                  ) : (
+                    <span className="text-white/40 italic text-[10px]">Sin contraseña (público vía QR)</span>
+                  )}
+                </div>
               </div>
 
               {/* Acciones */}
@@ -408,6 +531,15 @@ export function MozosClient({ user, plan, isSuperAdmin }: Props) {
                 >
                   <Copy className="w-4 h-4" />
                   URL
+                </button>
+                <button
+                  onClick={() => openEditPwd(w)}
+                  className="flex-1 flex items-center justify-center gap-1 py-2.5 rounded-lg bg-white/5 hover:bg-white/10 text-xs text-white/80 transition min-h-[44px]"
+                  aria-label="Editar contraseña"
+                  title="Editar contraseña"
+                >
+                  <KeyRound className="w-4 h-4" />
+                  Clave
                 </button>
                 <button
                   onClick={() => handleToggleActive(w)}
@@ -481,6 +613,37 @@ export function MozosClient({ user, plan, isSuperAdmin }: Props) {
                 />
                 <p className="text-[10px] text-white/40 mt-1">
                   PIN para login rápido en POS. El mozo también podrá acceder vía QR sin PIN.
+                </p>
+              </div>
+
+              <div>
+                <Label className="flex items-center justify-between">
+                  <span>Contraseña del panel (opcional)</span>
+                </Label>
+                <div className="relative">
+                  <Input
+                    type={showPwdNew ? 'text' : 'password'}
+                    value={newMozo.password}
+                    onChange={(e) => setNewMozo({ ...newMozo, password: e.target.value })}
+                    placeholder="Déjalo vacío para acceso público solo con QR"
+                    className="bg-white/5 border-white/10 font-mono pr-10"
+                    autoComplete="new-password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPwdNew((v) => !v)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-white/50 hover:text-white p-1"
+                    aria-label={showPwdNew ? 'Ocultar contraseña' : 'Ver contraseña'}
+                  >
+                    {showPwdNew ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+                <p className="text-[10px] text-white/40 mt-1 flex items-start gap-1">
+                  <Lock className="w-3 h-3 flex-shrink-0 mt-0.5" />
+                  <span>
+                    Si la estableces, el mozo deberá ingresarla al abrir su panel. Útil si el QR puede ser compartido.
+                    El panel siempre es accesible sin login de admin.
+                  </span>
                 </p>
               </div>
 
@@ -583,6 +746,106 @@ export function MozosClient({ user, plan, isSuperAdmin }: Props) {
             <p className="text-[10px] text-white/40 text-center mt-3">
               El mozo abre este QR desde su celular para tomar comandas sin login.
             </p>
+          </div>
+        </div>
+      )}
+      {/* ───────── Modal: Editar contraseña del mozo ───────── */}
+      {editingPwd && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-[#0f0f1a] border border-white/15 rounded-2xl p-6 w-full max-w-md">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-lg font-bold flex items-center gap-2">
+                  <KeyRound className="w-5 h-5 text-[#9d4edd]" />
+                  Contraseña de {editingPwd.full_name}
+                </h3>
+                <p className="text-xs text-white/50 mt-0.5">
+                  El mozo deberá ingresar esta contraseña al abrir su panel.
+                </p>
+              </div>
+              <button
+                onClick={() => { setEditingPwd(null); setEditPwdValue(''); }}
+                className="text-white/40 hover:text-white"
+                aria-label="Cerrar"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <Label>Contraseña</Label>
+                <div className="relative">
+                  <Input
+                    type={showEditPwd ? 'text' : 'password'}
+                    value={editPwdValue}
+                    onChange={(e) => setEditPwdValue(e.target.value)}
+                    placeholder="Vacío = sin contraseña (público)"
+                    className="bg-white/5 border-white/10 font-mono pr-10"
+                    autoFocus
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowEditPwd((v) => !v)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-white/50 hover:text-white p-1"
+                    aria-label={showEditPwd ? 'Ocultar' : 'Ver'}
+                  >
+                    {showEditPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+                <p className="text-[10px] text-white/40 mt-1">
+                  Déjalo vacío y guarda para quitar la contraseña (panel vuelve a ser público vía QR).
+                </p>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => handleResetPassword(editingPwd)}
+                  className="flex-1 bg-transparent border-white/20 text-xs"
+                >
+                  <Shuffle className="w-3.5 h-3.5 mr-1.5" />
+                  Generar aleatoria
+                </Button>
+                {editingPwd.password && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      if (confirm(`¿Quitar la contraseña de ${editingPwd.full_name}?`)) {
+                        setEditPwdValue('');
+                      }
+                    }}
+                    className="flex-1 bg-transparent border-red-500/30 text-red-400 hover:bg-red-500/10 text-xs"
+                  >
+                    <X className="w-3.5 h-3.5 mr-1.5" />
+                    Limpiar
+                  </Button>
+                )}
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => { setEditingPwd(null); setEditPwdValue(''); }}
+                  className="flex-1 bg-transparent border-white/20"
+                  disabled={pwdSaving}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  type="button"
+                  onClick={handleSavePassword}
+                  className="flex-1"
+                  style={{ background: '#9d4edd', color: 'white' }}
+                  disabled={pwdSaving}
+                >
+                  {pwdSaving ? 'Guardando…' : 'Guardar'}
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
       )}

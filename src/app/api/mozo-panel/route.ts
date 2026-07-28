@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
   const url = new URL(req.url);
   const token = url.searchParams.get('token');
 
-  if (!token || !token.startsWith('wt-')) {
+  if (!token || token.length < 16) {
     return NextResponse.json({ error: 'Token inválido' }, { status: 400 });
   }
 
@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
   const { data: waiter, error: wErr } = await supabase
     .from('waiters')
     .select(`
-      id, full_name, owner_id, branch_id, is_active, pin,
+      id, full_name, owner_id, branch_id, is_active, pin, password,
       branch:branches(id, name)
     `)
     .eq('qr_token', token)
@@ -37,6 +37,20 @@ export async function GET(req: NextRequest) {
   }
   if (!waiter.is_active) {
     return NextResponse.json({ error: 'Mozo inactivo. Contacta al administrador.' }, { status: 403 });
+  }
+
+  // Si el mozo tiene contraseña configurada, validarla.
+  // El cliente la envía como header X-Mozo-Password (seteado después de pedirlo en UI).
+  // Si no coincide o no se envía, devolvemos 401 con requiresPassword:true para que
+  // el cliente muestre el formulario de contraseña.
+  if (waiter.password) {
+    const provided = req.headers.get('x-mozo-password') || url.searchParams.get('pwd');
+    if (provided !== waiter.password) {
+      return NextResponse.json(
+        { error: 'Contraseña requerida', requiresPassword: true },
+        { status: 401 }
+      );
+    }
   }
 
   // Validar plan del dueño
@@ -98,6 +112,7 @@ export async function GET(req: NextRequest) {
       id: waiter.id,
       full_name: waiter.full_name,
       has_pin: Boolean(waiter.pin),
+      has_password: Boolean(waiter.password),
       branch: waiter.branch,
     },
     mesas: mesas || [],
@@ -127,7 +142,7 @@ export async function POST(req: NextRequest) {
   // Resolver mozo
   const { data: waiter, error: wErr } = await supabase
     .from('waiters')
-    .select('id, owner_id, branch_id, full_name, is_active, pin')
+    .select('id, owner_id, branch_id, full_name, is_active, pin, password')
     .eq('qr_token', token)
     .single();
 
@@ -136,6 +151,17 @@ export async function POST(req: NextRequest) {
   }
   if (!waiter.is_active) {
     return NextResponse.json({ error: 'Mozo inactivo' }, { status: 403 });
+  }
+
+  // Validar contraseña si está configurada
+  if (waiter.password) {
+    const provided = req.headers.get('x-mozo-password') || body.pwd;
+    if (provided !== waiter.password) {
+      return NextResponse.json(
+        { error: 'Contraseña requerida', requiresPassword: true },
+        { status: 401 }
+      );
+    }
   }
 
   // Validar plan
@@ -242,11 +268,22 @@ export async function PATCH(req: NextRequest) {
   // Resolver mozo
   const { data: waiter } = await supabase
     .from('waiters')
-    .select('id, owner_id, full_name')
+    .select('id, owner_id, full_name, password')
     .eq('qr_token', token)
     .single();
 
   if (!waiter) return NextResponse.json({ error: 'Token inválido' }, { status: 404 });
+
+  // Validar contraseña si está configurada
+  if (waiter.password) {
+    const provided = req.headers.get('x-mozo-password') || body.pwd;
+    if (provided !== waiter.password) {
+      return NextResponse.json(
+        { error: 'Contraseña requerida', requiresPassword: true },
+        { status: 401 }
+      );
+    }
+  }
 
   // Validar que la comanda es del mozo
   const { data: order } = await supabase

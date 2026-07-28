@@ -44,6 +44,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
+import { AdminNotificationsBell } from '@/components/admin/notifications-bell';
 
 interface AdminInfo {
   email: string;
@@ -306,6 +307,9 @@ export function SuperAdminClient({ admin }: { admin: AdminInfo }) {
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+            {/* 🔔 Notificaciones push (nuevas suscripciones/pagos) */}
+            <AdminNotificationsBell />
+
             <div className="hidden sm:flex items-center gap-2 px-2 sm:px-3 py-1.5 rounded-lg bg-white/5 border border-white/10">
               {/* Avatar with upload overlay — click to upload new photo */}
               <div className="relative group">

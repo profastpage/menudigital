@@ -21,7 +21,7 @@ export async function GET() {
 
   const { data, error } = await supabase
     .from('waiters')
-    .select('id, full_name, document_id, phone, pin, is_active, qr_token, created_at')
+    .select('id, full_name, document_id, phone, pin, is_active, qr_token, password, created_at')
     .eq('owner_id', user.id)
     .order('full_name', { ascending: true });
 
@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json();
-  const { full_name, document_id, phone, pin } = body;
+  const { full_name, document_id, phone, pin, password } = body;
 
   if (!full_name || typeof full_name !== 'string') {
     return NextResponse.json({ error: 'Nombre del mozo es requerido' }, { status: 400 });
@@ -74,6 +74,7 @@ export async function POST(req: NextRequest) {
       document_id: document_id || null,
       phone: phone || null,
       pin: pin || null,
+      password: password || null,
       qr_token: randomBytes(24).toString('hex'), // QR token auto-generado para acceso móvil sin login
     })
     .select()

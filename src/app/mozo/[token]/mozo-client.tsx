@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import {  ClipboardList, Send, Check, X, Plus, Minus, Search,
   RefreshCw, AlertCircle, Utensils, ChefHat, Clock, User,
   WifiOff, CloudUpload, Loader2,
+  Lock, Eye, EyeOff, ArrowRight,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useOfflineQueue } from '@/hooks/use-offline-queue';
@@ -56,6 +57,25 @@ export function MozoPanel({ token, waiterName }: Props) {
   const [planId, setPlanId] = useState<PlanId | undefined>(undefined);
   const [tutorialOpen, setTutorialOpen] = useState(false);
 
+  // ─── Password gate state ─────────────────────────────────
+  // Si el mozo tiene contraseña configurada, el API devuelve 401 con
+  // requiresPassword:true. Mostramos un formulario para ingresarla.
+  const [needsPassword, setNeedsPassword] = useState(false);
+  const [pwdInput, setPwdInput] = useState('');
+  const [showPwd, setShowPwd] = useState(false);
+  const [pwdError, setPwdError] = useState<string | null>(null);
+  const [pwdSubmitting, setPwdSubmitting] = useState(false);
+  // La contraseña validada se guarda en memoria (y sessionStorage) para
+  // no volver a pedirla en cada auto-refresh.
+  const [mozoPassword, setMozoPassword] = useState<string | null>(() => {
+    if (typeof window === 'undefined') return null;
+    try {
+      return sessionStorage.getItem(`menupro_mozo_pwd_${token}`);
+    } catch {
+      return null;
+    }
+  });
+
   // Hook de cola offline (Premium+) — guarda comandas en IndexedDB cuando no hay red
   const { pending, isSyncing, enqueue, syncNow, hasPending } = useOfflineQueue(token);
 
@@ -88,12 +108,24 @@ export function MozoPanel({ token, waiterName }: Props) {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/mozo-panel?token=${encodeURIComponent(token)}`);
+      const headers: Record<string, string> = {};
+      if (mozoPassword) headers['x-mozo-password'] = mozoPassword;
+      const res = await fetch(`/api/mozo-panel?token=${encodeURIComponent(token)}`, { headers });
+      if (res.status === 401) {
+        const d = await res.json().catch(() => ({}));
+        if (d.requiresPassword) {
+          setNeedsPassword(true);
+          setLoading(false);
+          return;
+        }
+        throw new Error(d.error || 'No autorizado');
+      }
       if (!res.ok) {
         const d = await res.json().catch(() => ({}));
         throw new Error(d.error || 'Error cargando datos');
       }
       const d = await res.json();
+      setNeedsPassword(false);
       setMesas(d.mesas || []);
       setMenu(d.menu || null);
       setComandas(d.comandas || []);
@@ -108,7 +140,7 @@ export function MozoPanel({ token, waiterName }: Props) {
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [token, mozoPassword]);
 
   useEffect(() => {
     load();
@@ -216,7 +248,10 @@ export function MozoPanel({ token, waiterName }: Props) {
     try {
       const res = await fetch('/api/mozo-panel', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(mozoPassword ? { 'x-mozo-password': mozoPassword } : {}),
+        },
         body: JSON.stringify({
           token,
           table_id: selectedMesa.id,
@@ -282,7 +317,10 @@ export function MozoPanel({ token, waiterName }: Props) {
     try {
       const res = await fetch('/api/mozo-panel', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(mozoPassword ? { 'x-mozo-password': mozoPassword } : {}),
+        },
         body: JSON.stringify({ token, order_id: orderId, action }),
       });
       if (!res.ok) {
@@ -297,10 +335,127 @@ export function MozoPanel({ token, waiterName }: Props) {
   }
 
   // ───── Loading ─────
-  if (loading && mesas.length === 0) {
+  if (loading && mesas.length === 0 && !needsPassword) {
     return (
       <div className="min-h-screen bg-[#07070b] text-white flex items-center justify-center">
         <RefreshCw className="w-6 h-6 animate-spin text-white/40" />
+      </div>
+    );
+  }
+
+  // ───── Password gate ─────
+  if (needsPassword) {
+    const submitPwd = async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!pwdInput) return;
+      setPwdSubmitting(true);
+      setPwdError(null);
+      try {
+        // Hacemos un fetch de prueba para validar la contraseña antes de guardarla.
+        const res = await fetch(`/api/mozo-panel?token=${encodeURIComponent(token)}`, {
+          headers: { 'x-mozo-password': pwdInput },
+        });
+        if (res.status === 401) {
+          const d = await res.json().catch(() => ({}));
+          if (d.requiresPassword) {
+            setPwdError('Contraseña incorrecta');
+            return;
+          }
+          throw new Error(d.error || 'Error');
+        }
+        if (!res.ok) {
+          const d = await res.json().catch(() => ({}));
+          throw new Error(d.error || 'Error');
+        }
+        // Contraseña válida — guardarla y disparar reload
+        setMozoPassword(pwdInput);
+        try {
+          sessionStorage.setItem(`menupro_mozo_pwd_${token}`, pwdInput);
+        } catch {
+          /* ignore */
+        }
+        setNeedsPassword(false);
+        setPwdInput('');
+        // El useEffect de load() se disparará porque mozoPassword cambió
+      } catch (err: any) {
+        setPwdError(err.message || 'Error');
+      } finally {
+        setPwdSubmitting(false);
+      }
+    };
+
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#07070b] via-[#0a0a14] to-[#0f0a1a] text-white flex items-center justify-center p-4">
+        <div className="w-full max-w-sm">
+          {/* Logo + título */}
+          <div className="text-center mb-6">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#9d4edd] to-[#c77dff] flex items-center justify-center mx-auto mb-4 shadow-lg shadow-[#9d4edd]/30">
+              <Lock className="w-8 h-8 text-white" />
+            </div>
+            <h1 className="text-2xl font-bold mb-1">Panel protegido</h1>
+            <p className="text-white/60 text-sm">
+              Hola <span className="font-semibold text-white">{waiterName}</span>, ingresa tu contraseña para acceder a tu panel de mozo.
+            </p>
+          </div>
+
+          {/* Formulario */}
+          <form
+            onSubmit={submitPwd}
+            className="bg-white/[0.04] border border-white/10 rounded-2xl p-5 space-y-3 backdrop-blur-sm"
+          >
+            <div>
+              <label className="text-xs text-white/50 font-medium mb-1.5 block">
+                Contraseña
+              </label>
+              <div className="relative">
+                <input
+                  type={showPwd ? 'text' : 'password'}
+                  value={pwdInput}
+                  onChange={(e) => setPwdInput(e.target.value)}
+                  placeholder="Tu contraseña"
+                  className="w-full bg-white/5 border border-white/15 rounded-lg px-3 py-3 pr-11 text-white placeholder-white/30 focus:border-[#9d4edd] focus:outline-none focus:ring-1 focus:ring-[#9d4edd]/50 transition"
+                  autoFocus
+                  autoComplete="current-password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPwd((v) => !v)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-white/50 hover:text-white transition"
+                  aria-label={showPwd ? 'Ocultar' : 'Ver'}
+                  tabIndex={-1}
+                >
+                  {showPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+
+            {pwdError && (
+              <div className="flex items-center gap-2 text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
+                <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                <span>{pwdError}</span>
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={pwdSubmitting || !pwdInput}
+              className="w-full py-3 rounded-lg bg-gradient-to-r from-[#9d4edd] to-[#c77dff] text-white font-semibold text-sm hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              {pwdSubmitting ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <>
+                  Ingresar
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
+            </button>
+          </form>
+
+          <p className="text-center text-xs text-white/40 mt-4 leading-relaxed">
+            ¿No tienes tu contraseña? Pídesela al administrador del restaurante.
+          </p>
+        </div>
       </div>
     );
   }
