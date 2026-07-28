@@ -1265,3 +1265,49 @@ Stage Summary:
 - Account demo (demo@menudigital.pro / DemoMenuPro2025!) still functional for sales demos
 - New files: 22 created, 12 modified
 - All systems (Sentry, Resend, error boundary) work in "lazy" mode — code is safe to deploy even if user hasn't configured external accounts yet
+
+---
+Task ID: ux-fixes-and-migrations
+Agent: main (Super Z)
+Task: Aplicar migraciones Supabase + arreglar UX (FAB soporte, chips comandas, márgenes reportes) + analytics ULTRA FULL para plan Full + pushear todo
+
+Work Log:
+- Aplicadas 2 migraciones a Supabase producción vía pooler psycopg2:
+  • audit-rls-fix.sql: FORCE RLS en 14 tablas, storage policies, helper get_waiter_id_by_token()
+  • add-onboarding-fields.sql: 4 columnas onboarding en profiles
+  Verificación: 14/14 tablas con RLS, 4/4 columnas presentes
+- SupportWidget refactorizado:
+  • Removido FAB flotante amarillo (causaba overlap con bottom nav en móvil)
+  • 2 variantes: 'icon' (h-11 w-11, mismo tamaño que InstallAppButton y Logout en header móvil) y 'sidebar' (full-width en desktop)
+  • Popup se abre abajo (móvil) o arriba+izquierda (sidebar) con cierre al click fuera + Escape
+  • Eliminada entrada 'Ayuda' del sidebar (redundante)
+- Comandas filter chips: cambiado overflow-x-auto → flex-wrap. Los 6 chips (Todas/Borrador/Enviada/En prep/Lista/Entregada/Facturada) ahora se ven TODOS en móvil sin scroll horizontal ni texto cortado.
+- Reportes header mobile-first:
+  • Stack vertical en móvil con grid grid-cols-2 + botón col-span-2
+  • Selects w-full sm:w-auto con min-h-[44px] y truncate
+  • 'Todas las sucursales' ya NO se sale del viewport
+  • KpiCard: padding y font responsive (p-3 sm:p-4, text-base sm:text-xl)
+  • TabBtn: agregado flex-shrink-0 + min-h-[40px] + whitespace-nowrap + text-xs sm:text-sm
+  • Tabs container: -mx-4 px-4 sm:mx-0 para usar todo el ancho móvil
+- Analytics ULTRA FULL para plan Full:
+  • Refactorizado analytics-client en 3 modos: UpsellPro / ProAnalytics / UltraFullAnalytics
+  • UltraFullAnalytics combina visits + ventas + comparativas:
+    - 4 KPI cards con % delta vs período anterior (verde/rojo, TrendingUp/Down)
+    - Visitas vs Top 5 platos vendidos (2 cols)
+    - Heatmap por hora (grid 6/12/24 cols responsive, color-coded: azul/dorado/rojo)
+    - Ranking mozos + Sucursales (2 cols)
+    - Ventas por día (bar chart)
+    - Export CSV (KPIs + top platos + ranking mozos)
+    - Badge 'FULL · TODOS LOS BENEFICIOS' + grid de 16 beneficios activos
+  • Carga paralela de /api/menus + /api/reportes (actual + período anterior)
+  • Selector rango: 7d/30d/90d/mes
+- Tailwind config: agregado gridTemplateColumns.24 para heatmap desktop
+- TypeScript: 0 errores en src/
+- Build Next.js: compilación exitosa (28.8s Turbopack)
+- Commit 01b6537 pushed a GitHub main (bef2cec..01b6537)
+
+Stage Summary:
+- 3 issues UX críticos resueltos: FAB amarillo que solapaba bottom nav (ahora inline mismo tamaño), chips comandas que se cortaban (ahora flex-wrap), selects reportes que se salían del viewport (ahora stack vertical mobile-first).
+- Analytics plan Full ahora es ULTRA FULL: 4 KPIs con comparativa, heatmap, ranking, export CSV, badge de beneficios. Antes era el mismo dashboard básico que Pro.
+- 2 migraciones aplicadas directamente a producción Supabase (RLS + onboarding fields). 14/14 tablas con RLS, 4/4 columnas onboarding presentes.
+- Working tree clean. Todo pusheado a main.
