@@ -56,7 +56,8 @@ export async function GET(req: NextRequest) {
     .gte('created_at', startDate.toISOString())
     .lte('created_at', endDate.toISOString());
 
-  // Visitas únicas por IP
+  // Visitas únicas por IP — usar count head + group por IP vía RPC sería ideal,
+  // pero para mantenerlo simple hacemos select solo de ip (columna ligera)
   const { data: uniqueIpRows } = await supabase
     .from('menu_views')
     .select('ip')
@@ -65,7 +66,31 @@ export async function GET(req: NextRequest) {
 
   const uniqueIps = new Set((uniqueIpRows || []).map(r => r.ip || 'unknown')).size;
 
-  // ───── 2. Pedidos por canal (si Premium+) ─────
+  // ───── 2. Clics WhatsApp REALES (de whatsapp_clicks table) ─────
+  // Tracking real vía pixel en menú público (POST /api/track/whatsapp-click)
+  // Reemplaza la antigua estimación del 25% — ahora es 100% real.
+  const { count: realWhatsappClicks } = await supabase
+    .from('whatsapp_clicks')
+    .select('id', { count: 'exact', head: true })
+    .gte('created_at', startDate.toISOString())
+    .lte('created_at', endDate.toISOString());
+
+  // Tambien clics por source (cart vs social)
+  const { data: clickBySourceRows } = await supabase
+    .from('whatsapp_clicks')
+    .select('source')
+    .gte('created_at', startDate.toISOString())
+    .lte('created_at', endDate.toISOString());
+
+  const clicksBySource = (clickBySourceRows || []).reduce((acc: { cart: number; social: number; direct: number }, r: any) => {
+    const s = r.source || 'direct';
+    if (s === 'cart') acc.cart++;
+    else if (s === 'social') acc.social++;
+    else acc.direct++;
+    return acc;
+  }, { cart: 0, social: 0, direct: 0 });
+
+  // ───── 3. Pedidos por canal (si Premium+) ─────
   let ordersData: any[] = [];
   if (isPremium) {
     const { data: ords } = await supabase
@@ -81,16 +106,20 @@ export async function GET(req: NextRequest) {
   const visits = totalViews || 0;
   const uniqueVisits = uniqueIps;
 
-  // Clics WhatsApp estimados: si el menú tiene whatsapp visible, asumimos 25% de visitas hacen clic
+  // Clics WhatsApp REALES (ya no estimación 25%)
+  const whatsappClicks = realWhatsappClicks || 0;
+
+  // WhatsApp orders estimadas (60% de clics → pedidos efectivos)
+  // (se mantiene estimación porque no podemos saber si el cliente efectivamente
+  //  envió el mensaje en WhatsApp — solo sabemos que hizo clic)
+  const whatsappOrders = Math.floor(whatsappClicks * 0.6);
+
+  // Verificar si el menú tiene WhatsApp configurado (para saber si mostrar etapa)
   const { data: menusWithWhatsapp } = await supabase
     .from('menus')
     .select('id, name, whatsapp, social_whatsapp')
     .eq('user_id', user.id);
   const menusWhatsapp = (menusWithWhatsapp || []).filter(m => m.whatsapp || m.social_whatsapp).length;
-  const whatsappClicks = Math.floor(visits * (menusWhatsapp > 0 ? 0.25 : 0));
-
-  // WhatsApp orders estimadas (60% de clics → pedidos efectivos)
-  const whatsappOrders = Math.floor(whatsappClicks * 0.6);
 
   let comandasCreadas = 0;
   let comandasEnviadas = 0;
@@ -221,6 +250,17 @@ export async function GET(req: NextRequest) {
     .gte('created_at', prevStart.toISOString())
     .lt('created_at', prevEnd.toISOString());
 
+  // Previous period WhatsApp clicks for delta
+  const { count: prevWhatsappClicks } = await supabase
+    .from('whatsapp_clicks')
+    .select('id', { count: 'exact', head: true })
+    .gte('created_at', prevStart.toISOString())
+    .lt('created_at', prevEnd.toISOString());
+
+  const deltaWhatsappClicks = whatsappClicks > 0 && (prevWhatsappClicks || 0) > 0
+    ? Number((((whatsappClicks - (prevWhatsappClicks || 0)) / (prevWhatsappClicks || 1)) * 100).toFixed(1))
+    : 0;
+
   return NextResponse.json({
     plan: { id: planId, name: plan.name, isPro, isPremium, isFull },
     rango: {
@@ -233,6 +273,9 @@ export async function GET(req: NextRequest) {
       visitas: visits,
       visitasUnicas: uniqueVisits,
       clicsWhatsapp: whatsappClicks,
+      clicsWhatsappPorSource: clicksBySource,
+      prevWhatsappClicks: prevWhatsappClicks || 0,
+      deltaWhatsappClicks,
       pedidosWhatsapp: whatsappOrders,
       comandasCreadas,
       comandasEntregadas,

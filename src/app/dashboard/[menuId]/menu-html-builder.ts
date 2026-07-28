@@ -712,7 +712,7 @@ function buildJS(opts: JSOpts): string {
   s += '  if(RESTAURANT.social_web)socials.push({type:"web",value:RESTAURANT.social_web});\n';
   s += '  if(socials.length>0){\n';
   s += '    html+="<div class=\\"socials\\">";\n';
-  s += '    socials.forEach(function(s){var url=normalizeSocialUrl(s.value,s.type);html+="<a class=\\"social-link\\" href=\\""+escapeHtml(url)+"\\" target=\\"_blank\\" rel=\\"noopener noreferrer\\" aria-label=\\""+escapeHtml(s.type)+"\\">"+svgIcon(s.type)+"</a>";});\n';
+  s += '    socials.forEach(function(s){var url=normalizeSocialUrl(s.value,s.type);var extra=s.type==="whatsapp"?" data-wa-track=\\"1\\"":"";html+="<a class=\\"social-link\\" href=\\""+escapeHtml(url)+"\\" target=\\"_blank\\" rel=\\"noopener noreferrer\\" aria-label=\\""+escapeHtml(s.type)+"\\""+extra+">"+svgIcon(s.type)+"</a>";});\n';
   s += '    html+="</div>";\n';
   s += '  }\n';
   s += '  html+="</header>";\n';
@@ -988,6 +988,8 @@ function buildJS(opts: JSOpts): string {
   s += '  document.getElementById("closeBtn").addEventListener("click",closeModal);\n';
   s += '  document.getElementById("waBtn").addEventListener("click",sendWhatsApp);\n';
   s += '  document.getElementById("modal").addEventListener("click",function(e){if(e.target===this)closeModal();});\n';
+  // Tracking clics en ícono WhatsApp del header social (no abre carrito, va directo a wa.me)
+  s += '  document.querySelectorAll("a[data-wa-track]").forEach(function(a){a.addEventListener("click",function(){try{if(navigator&&navigator.sendBeacon){navigator.sendBeacon("/api/track/whatsapp-click",new Blob([JSON.stringify({menu_id:RESTAURANT.id,source:"social"})],{type:"application/json"}));}}catch(e){}});});\n';
   s += '  window.addEventListener("scroll",updateActiveNav,{passive:true});\n';
   // Scroll-to-top button: show after 600px scroll, hide when modal is open (via CSS :has)
   s += '  var scrollTopBtn=document.getElementById("scrollTopBtn");\n';
@@ -1295,6 +1297,8 @@ function buildJS(opts: JSOpts): string {
   s += '  msg+="\\n*TOTAL: "+formatPrice(total)+"*\\n\\n";\n';
   s += '  msg+="Hola, quisiera confirmar este pedido por favor.";\n';
   s += '  var url="https://wa.me/"+RESTAURANT.whatsapp+"?text="+encodeURIComponent(msg);\n';
+  // Tracking REAL del clic WhatsApp (fire-and-forget vía sendBeacon antes de abrir wa.me)
+  s += '  try{if(navigator&&navigator.sendBeacon){navigator.sendBeacon("/api/track/whatsapp-click",new Blob([JSON.stringify({menu_id:RESTAURANT.id,source:"cart"})],{type:"application/json"}));}else{var x=new XMLHttpRequest();x.open("POST","/api/track/whatsapp-click",true);x.setRequestHeader("Content-Type","application/json");x.send(JSON.stringify({menu_id:RESTAURANT.id,source:"cart"}));}}catch(e){}\n';
   s += '  window.open(url,"_blank");\n';
   s += '}\n';
   s += 'renderApp();\n';

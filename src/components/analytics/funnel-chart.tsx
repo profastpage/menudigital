@@ -20,9 +20,13 @@ interface Props {
   loading?: boolean;
   conversionGlobal?: number;
   deltaVisitas?: number;
+  /** Clics WhatsApp reales desglosados por source (cart = botón Enviar Pedido, social = ícono header) */
+  clicksBySource?: { cart: number; social: number; direct: number };
+  /** Delta % vs período anterior en clics WhatsApp */
+  deltaWhatsappClicks?: number;
 }
 
-export function FunnelChart({ stages, loading, conversionGlobal, deltaVisitas }: Props) {
+export function FunnelChart({ stages, loading, conversionGlobal, deltaVisitas, clicksBySource, deltaWhatsappClicks }: Props) {
   if (loading) {
     return (
       <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-4 sm:p-6">
@@ -51,24 +55,63 @@ export function FunnelChart({ stages, loading, conversionGlobal, deltaVisitas }:
             <path d="M3 4h18l-7 9v7l-4 2v-9z" />
           </svg>
           <div className="min-w-0">
-            <h3 className="text-sm sm:text-base font-semibold">Embudo de conversión</h3>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h3 className="text-sm sm:text-base font-semibold">Embudo de conversión</h3>
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-[#25D366]/15 text-[#25D366] border border-[#25D366]/30">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#25D366] animate-pulse" />
+                TRACKING REAL
+              </span>
+            </div>
             <p className="text-[10px] sm:text-xs text-white/50">
               {stages.length} etapas · conversión global{' '}
               <span className="text-[#d4af37] font-semibold">{conversionGlobal?.toFixed(1) || '0'}%</span>
             </p>
           </div>
         </div>
-        {deltaVisitas !== undefined && (
-          <div className={`flex items-center gap-1 text-xs flex-shrink-0 ${deltaVisitas >= 0 ? 'text-[#06d6a0]' : 'text-[#e63946]'}`}>
-            <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              {deltaVisitas >= 0
-                ? <path d="M3 17l6-6 4 4 8-8M21 7v6h-6" />
-                : <path d="M3 7l6 6 4-4 8 8M21 17v-6h-6" />}
-            </svg>
-            {Math.abs(deltaVisitas)}% vs período anterior
-          </div>
-        )}
+        <div className="flex items-center gap-3 flex-shrink-0">
+          {deltaWhatsappClicks !== undefined && (
+            <div className={`flex items-center gap-1 text-xs ${deltaWhatsappClicks >= 0 ? 'text-[#06d6a0]' : 'text-[#e63946]'}`} title="Clics WhatsApp vs período anterior">
+              <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm-2 15l-5-5 1.4-1.4L10 14.2l7.6-7.6L19 8l-9 9z"/></svg>
+              <span className="font-semibold">{deltaWhatsappClicks >= 0 ? '+' : ''}{deltaWhatsappClicks}%</span>
+              <span className="text-white/40">WA</span>
+            </div>
+          )}
+          {deltaVisitas !== undefined && (
+            <div className={`flex items-center gap-1 text-xs ${deltaVisitas >= 0 ? 'text-[#06d6a0]' : 'text-[#e63946]'}`}>
+              <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                {deltaVisitas >= 0
+                  ? <path d="M3 17l6-6 4 4 8-8M21 7v6h-6" />
+                  : <path d="M3 7l6 6 4-4 8 8M21 17v-6h-6" />}
+              </svg>
+              {Math.abs(deltaVisitas)}% vs período anterior
+            </div>
+          )}
+        </div>
       </div>
+
+      {/* Desglose de clics WhatsApp por source (si hay datos reales) */}
+      {clicksBySource && (clicksBySource.cart + clicksBySource.social + clicksBySource.direct) > 0 && (
+        <div className="mb-4 p-3 rounded-xl bg-[#25D366]/8 border border-[#25D366]/20">
+          <div className="flex items-center gap-2 mb-2">
+            <svg className="w-3.5 h-3.5 text-[#25D366]" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.149-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51l-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347"/></svg>
+            <span className="text-[11px] sm:text-xs font-semibold text-[#25D366]">Clics WhatsApp reales por origen</span>
+          </div>
+          <div className="grid grid-cols-3 gap-2 text-center">
+            <div>
+              <div className="text-base sm:text-lg font-bold text-white">{clicksBySource.cart}</div>
+              <div className="text-[9px] sm:text-[10px] text-white/50">Botón Enviar Pedido</div>
+            </div>
+            <div>
+              <div className="text-base sm:text-lg font-bold text-white">{clicksBySource.social}</div>
+              <div className="text-[9px] sm:text-[10px] text-white/50">Ícono social header</div>
+            </div>
+            <div>
+              <div className="text-base sm:text-lg font-bold text-white">{clicksBySource.direct}</div>
+              <div className="text-[9px] sm:text-[10px] text-white/50">Otros</div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="space-y-2 sm:space-y-3">
         {stages.map((stage, i) => {

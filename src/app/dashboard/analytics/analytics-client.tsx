@@ -78,6 +78,9 @@ interface FunnelData {
     visitas: number;
     visitasUnicas: number;
     clicsWhatsapp: number;
+    clicsWhatsappPorSource?: { cart: number; social: number; direct: number };
+    prevWhatsappClicks?: number;
+    deltaWhatsappClicks?: number;
     pedidosWhatsapp: number;
     comandasCreadas: number;
     comandasEntregadas: number;
@@ -308,6 +311,8 @@ function ProAnalytics({ user, plan, isSuperAdmin, menus, profilePlan }: Props) {
           loading={funnelLoading}
           conversionGlobal={funnelData?.kpis.conversionGlobal}
           deltaVisitas={funnelData?.kpis.deltaVisitas}
+          clicksBySource={funnelData?.kpis.clicsWhatsappPorSource}
+          deltaWhatsappClicks={funnelData?.kpis.deltaWhatsappClicks}
         />
 
         {/* Visitas por menú */}
@@ -580,6 +585,8 @@ function UltraFullAnalytics({ user, plan, isSuperAdmin, menus, profilePlan }: Pr
               loading={funnelLoading}
               conversionGlobal={funnelData?.kpis.conversionGlobal}
               deltaVisitas={funnelData?.kpis.deltaVisitas}
+              clicksBySource={funnelData?.kpis.clicsWhatsappPorSource}
+              deltaWhatsappClicks={funnelData?.kpis.deltaWhatsappClicks}
             />
 
             {/* ───── Visitas vs Ventas (combinado) ───── */}
