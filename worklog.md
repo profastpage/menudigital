@@ -1311,3 +1311,47 @@ Stage Summary:
 - Analytics plan Full ahora es ULTRA FULL: 4 KPIs con comparativa, heatmap, ranking, export CSV, badge de beneficios. Antes era el mismo dashboard básico que Pro.
 - 2 migraciones aplicadas directamente a producción Supabase (RLS + onboarding fields). 14/14 tablas con RLS, 4/4 columnas onboarding presentes.
 - Working tree clean. Todo pusheado a main.
+
+---
+Task ID: funnel-and-ultra-premium
+Agent: main (Super Z)
+Task: Agregar gráfico de embudo plan-aware + secciones ultra premium para plan Full
+
+Work Log:
+- Creado endpoint /api/analytics/funnel que devuelve etapas según plan:
+  • FREE/PRO: Visitas → Únicas → Clics WhatsApp → Pedidos WhatsApp (4 etapas)
+  • PREMIUM: agrega 5 etapas (Comandas creadas → Enviadas → En prep → Listas → Entregadas) = 9 etapas
+  • FULL: agrega Facturadas = 11 etapas + extras (topPlatos, topMozos, ventasTotales)
+- Endpoint consulta menu_views (visitas), orders (comandas), order_items (platos), waiters (mozos)
+- Calcula % de conversión etapa por etapa + comparativa con período anterior
+- Creado componente FunnelChart (src/components/analytics/funnel-chart.tsx):
+  • Barra horizontal centrada que se estrecha por % de conversión
+  • Mobile-first: max-width 100%, NUNCA se sale del viewport
+  • Insight automático: detecta la mayor caída entre etapas y la reporta
+  • Muestra conversión global + delta vs período anterior (verde/rojo)
+  • Cada barra tiene color único, gradiente y glow
+- ProAnalytics mejorado:
+  • Agregado embudo de 4 etapas
+  • Agregado toolbar con selector de rango (7d/30d/90d/mes)
+  • Botón Actualizar recarga tanto menús como embudo
+- UltraFullAnalytics mejorado:
+  • Agregado embudo completo de 11 etapas
+  • Agregadas 4 secciones ULTRA PREMIUM nuevas:
+    1. Canal WhatsApp: 3 KPIs (clics/pedidos/conversión)
+    2. PWA móvil: instalaciones ∞ + offline sync 100%
+    3. 4 BenefitCards: Dominio propio, Auto-traducción AI (5 idiomas),
+       Programa lealtad, Push notifications
+    4. API Access + Voucher Printing POS (cards expandibles)
+    5. Análisis comparativo AI: Tu conversión vs industria (8.5%) vs top 10% (22%)
+       con insight de gap en puntos porcentuales
+- Export CSV ahora incluye todas las etapas del embudo + conversión global
+- TypeScript: 0 errores en src/
+- Commit 17260e9 pushed a GitHub main (01b6537..17260e9)
+
+Stage Summary:
+- Embudo plan-aware funcional: cada plan ve un embudo más profundo según su nivel.
+  FREE muestra upsell a Pro, PRO ve 4 etapas, PREMIUM ve 9, FULL ve 11.
+- Secciones ULTRA PREMIUM solo visibles para plan Full: muestran TODOS los
+  beneficios reales del plan (dominio, traducciones, lealtad, push, API, voucher).
+- Insight AI comparativo contra benchmarks de la industria.
+- Mobile-first 100%: todos los grids son responsive, nada se sale del viewport.
