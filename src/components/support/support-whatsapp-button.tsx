@@ -3,7 +3,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { MessageCircle, X, Sparkles, Clock, CheckCircle2 } from 'lucide-react';
+import { X, Sparkles, Clock, CheckCircle2 } from 'lucide-react';
+import { WhatsAppIcon } from '@/components/support/whatsapp-icon';
 
 /**
  * Botón flotante sticky de WhatsApp para soporte al cliente.
@@ -178,7 +179,7 @@ export function SupportWhatsAppButton({
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-11 h-11 rounded-full bg-white/20 flex items-center justify-center">
-                    <MessageCircle className="w-6 h-6" />
+                    <WhatsAppIcon className="w-6 h-6" fillColor="white" />
                   </div>
                   <div>
                     <div className="font-bold text-base">Soporte MenuPro</div>
@@ -222,7 +223,7 @@ export function SupportWhatsAppButton({
                 onClick={handleClick}
                 className="w-full bg-[#25D366] hover:bg-[#1fae57] text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition active:scale-[0.98] min-h-[44px]"
               >
-                <MessageCircle className="w-5 h-5" />
+                <WhatsAppIcon className="w-5 h-5" fillColor="white" />
                 {hasWhatsappAccess ? 'Abrir WhatsApp' : 'Ver planes Premium'}
               </button>
 
@@ -249,7 +250,7 @@ export function SupportWhatsAppButton({
           {open ? (
             <X className="w-7 h-7 text-white relative z-10" />
           ) : (
-            <MessageCircle className="w-7 h-7 text-white relative z-10" />
+            <WhatsAppIcon className="w-8 h-8 relative z-10" fillColor="white" />
           )}
           {/* Badge "online" */}
           {!open && (

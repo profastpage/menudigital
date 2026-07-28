@@ -3,7 +3,6 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import {
-  MessageCircle,
   Mail,
   Search,
   ChevronDown,
@@ -14,7 +13,9 @@ import {
   Users,
   Image as ImageIcon,
   QrCode,
+  HelpCircle,
 } from 'lucide-react';
+import { WhatsAppIcon } from '@/components/support/whatsapp-icon';
 
 interface FaqItem {
   q: string;
@@ -23,7 +24,7 @@ interface FaqItem {
 
 interface FaqCategory {
   title: string;
-  icon: typeof MessageCircle;
+  icon: typeof HelpCircle;
   items: FaqItem[];
 }
 
@@ -179,7 +180,7 @@ export function AyudaClient() {
             className="flex items-center gap-4 p-5 bg-gradient-to-br from-[#25D366]/10 to-[#128C7E]/5 border border-[#25D366]/30 rounded-xl hover:bg-[#25D366]/10 transition group"
           >
             <div className="w-12 h-12 rounded-full bg-[#25D366]/20 flex items-center justify-center flex-shrink-0">
-              <MessageCircle className="w-6 h-6 text-[#25D366]" />
+              <WhatsAppIcon className="w-7 h-7" fillColor="#25D366" />
             </div>
             <div className="flex-1 min-w-0">
               <div className="font-semibold text-white">WhatsApp</div>
@@ -213,7 +214,7 @@ export function AyudaClient() {
               rel="noreferrer"
               className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#25D366] text-white font-semibold rounded-lg hover:opacity-90 transition"
             >
-              <MessageCircle className="w-4 h-4" />
+              <WhatsAppIcon className="w-5 h-5" fillColor="white" />
               Preguntar por WhatsApp
             </a>
           </div>

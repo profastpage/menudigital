@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { MessageCircle, X, Mail, ExternalLink, HelpCircle } from 'lucide-react';
+import { X, Mail, ExternalLink, HelpCircle } from 'lucide-react';
+import { WhatsAppIcon } from '@/components/support/whatsapp-icon';
 
 /**
  * Widget de soporte — INLINE (no floating).
@@ -90,10 +91,10 @@ function SupportContent({ onClose }: { onClose: () => void }) {
   return (
     <>
       {/* Header */}
-      <div className="bg-gradient-to-br from-[#d4af37]/20 to-transparent p-4 border-b border-white/10">
+      <div className="bg-gradient-to-br from-[#25D366]/20 to-transparent p-4 border-b border-white/10">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-[#d4af37]/30 flex items-center justify-center flex-shrink-0">
-            <MessageCircle className="w-5 h-5 text-[#d4af37]" />
+          <div className="w-10 h-10 rounded-full bg-[#25D366]/30 flex items-center justify-center flex-shrink-0">
+            <WhatsAppIcon className="w-5 h-5" fillColor="#25D366" />
           </div>
           <div className="min-w-0">
             <div className="font-bold text-white text-sm">Soporte MenuPro</div>
@@ -112,7 +113,7 @@ function SupportContent({ onClose }: { onClose: () => void }) {
           className="flex items-center gap-3 p-3 rounded-lg bg-[#25D366]/10 hover:bg-[#25D366]/20 border border-[#25D366]/30 transition min-h-[44px]"
         >
           <div className="w-9 h-9 rounded-full bg-[#25D366] flex items-center justify-center flex-shrink-0">
-            <MessageCircle className="w-4 h-4 text-white" />
+            <WhatsAppIcon className="w-5 h-5" fillColor="white" />
           </div>
           <div className="flex-1 min-w-0">
             <div className="font-semibold text-white text-sm">WhatsApp</div>
