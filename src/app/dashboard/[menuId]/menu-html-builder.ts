@@ -270,9 +270,9 @@ function buildCSS(opts: ThemeOpts): string {
   // Nav
   c += '.nav{position:sticky;top:0;background:var(--nav-bg);backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);border-bottom:1px solid var(--border);z-index:100;padding:12px 0;overflow-x:auto;scrollbar-width:none;}';
   c += '.nav::-webkit-scrollbar{display:none;}';
-  c += '.nav-inner{display:flex;gap:8px;padding:0 20px;min-width:max-content;}';
+  c += '.nav-inner{display:flex;gap:8px;padding:0 20px;max-width:100%;}';
   // Tap target ≥44px (Apple HIG / Material spec) — touch-friendly mobile-first
-  c += '.nav-item{white-space:nowrap;padding:11px 18px;background:var(--glass);border:1px solid var(--border);border-radius:24px;color:var(--text-soft);font-size:13.5px;font-weight:500;cursor:pointer;transition:all 0.25s cubic-bezier(0.4,0,0.2,1);display:flex;align-items:center;gap:6px;min-height:44px;}';
+  c += '.nav-item{white-space:nowrap;padding:11px 18px;background:var(--glass);border:1px solid var(--border);border-radius:24px;color:var(--text-soft);font-size:13.5px;font-weight:500;cursor:pointer;transition:all 0.25s cubic-bezier(0.4,0,0.2,1);display:flex;align-items:center;gap:6px;min-height:44px;flex-shrink:0;}';
   // Hover solo en dispositivos con hover real (desktop) — evita sticky hover en mobile
   c += '@media(hover:hover){.nav-item:hover{background:var(--glass-strong);color:var(--text);transform:translateY(-1px);}}';
   c += '.nav-item:active{transform:scale(0.96);}';

@@ -541,12 +541,12 @@ export function MozoPanel({ token, waiterName }: Props) {
 
           {/* Categorías scroll horizontal */}
           {menu && menu.categories.length > 1 && !searchDish && (
-            <div className="flex gap-2 overflow-x-auto pb-1 -mx-3 px-3 scrollbar-none">
+            <div className="flex gap-2 overflow-x-auto pb-1 -mx-3 px-3 scrollbar-none" style={{ WebkitOverflowScrolling: 'touch' }}>
               {menu.categories.map(c => (
                 <button
                   key={c.id}
                   onClick={() => setActiveCategory(c.id)}
-                  className={`px-4 py-2.5 rounded-full text-xs whitespace-nowrap transition-colors min-h-[40px] flex items-center ${
+                  className={`px-4 py-2.5 rounded-full text-xs whitespace-nowrap transition-colors min-h-[40px] flex items-center flex-shrink-0 ${
                     activeCategory === c.id
                       ? 'bg-[#9d4edd] text-white'
                       : 'bg-white/5 text-white/60'

@@ -67,8 +67,6 @@ export function MozoInstallBanner({ planId, waiterName, variant = 'mozo' }: Prop
 
   // No mostrar nada si:
   // - Ya está instalada
-  // - Estado no disponible (unsupported en no-iOS)
-  // - El banner fue cerrado por el usuario recientemente
   // - Just installed (mostrar confirmación abajo)
   if (state === 'installed') {
     if (justInstalled) {
@@ -86,7 +84,11 @@ export function MozoInstallBanner({ planId, waiterName, variant = 'mozo' }: Prop
     return null;
   }
 
-  if (state === 'unsupported' && platform !== 'ios') return null;
+  // IMPORTANTE: No ocultar el banner en "unsupported" para non-iOS.
+  // En Chrome/Edge desktop, beforeinstallprompt puede no dispararse si el usuario
+  // no cumple criterios de engagement, pero igual queremos mostrar instrucciones
+  // manuales (menú ⋮ → Instalar MenuPro).
+  // Solo ocultar si el banner fue cerrado por el usuario recientemente.
   if (bannerDismissed) return null;
 
   const handleInstall = async () => {
@@ -104,10 +106,9 @@ export function MozoInstallBanner({ planId, waiterName, variant = 'mozo' }: Prop
       }
       return;
     }
-    // iOS sin beforeinstallprompt
-    if (platform === 'ios') {
-      setModalOpen(true);
-    }
+    // Si no es instalable (state === 'unsupported' o 'dismissed'), abrir modal con instrucciones
+    // manuales para que el usuario sepa cómo instalar desde el menú del navegador.
+    setModalOpen(true);
   };
 
   const handleDismiss = () => {

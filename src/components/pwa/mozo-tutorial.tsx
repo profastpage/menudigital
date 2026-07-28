@@ -342,24 +342,25 @@ export function MozoTutorial({ open, onClose, waiterName, planId }: Props) {
             </div>
 
             {/* Footer: botones */}
-            <div className="p-4 sm:p-5 border-t border-white/5 flex items-center gap-2 flex-shrink-0">
+            <div className="p-3 sm:p-5 border-t border-white/5 flex items-center gap-2 flex-shrink-0">
               {!isFirst && (
                 <button
                   onClick={handlePrev}
-                  className="px-3 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 hover:text-white text-sm font-medium flex items-center gap-1"
+                  className="px-2.5 sm:px-3 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 hover:text-white text-sm font-medium flex items-center gap-1 flex-shrink-0"
+                  aria-label="Paso anterior"
                 >
                   <ChevronLeft className="w-4 h-4" />
                   <span className="hidden sm:inline">Atrás</span>
                 </button>
               )}
 
-              {/* Dots indicator */}
-              <div className="flex-1 flex items-center justify-center gap-1.5">
+              {/* Dots indicator — se ocultan en mobile muy pequeño para dar espacio al CTA */}
+              <div className="flex-1 flex items-center justify-center gap-1.5 min-w-0 overflow-x-auto scrollbar-none">
                 {steps.map((s, i) => (
                   <button
                     key={s.id}
                     onClick={() => setStep(i)}
-                    className={`h-1.5 rounded-full transition-all ${
+                    className={`h-1.5 rounded-full transition-all flex-shrink-0 ${
                       i === step
                         ? 'w-6 bg-gradient-to-r from-[#9d4edd] to-[#d4af37]'
                         : i < step
@@ -373,7 +374,7 @@ export function MozoTutorial({ open, onClose, waiterName, planId }: Props) {
 
               <button
                 onClick={handleNext}
-                className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#9d4edd] to-[#d4af37] text-white font-semibold text-sm flex items-center gap-1.5 hover:opacity-90 transition shadow-lg"
+                className="px-3 sm:px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#9d4edd] to-[#d4af37] text-white font-semibold text-sm flex items-center gap-1.5 hover:opacity-90 transition shadow-lg flex-shrink-0"
               >
                 {isLast ? (
                   <>
