@@ -278,37 +278,76 @@ export function DashboardClient({ user, plan, menus, isSuperAdmin = false }: Pro
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-          {menus.map((menu) => (
+          {menus.map((menu) => {
+            const cover = (menu as any).theme_cover_url as string | null | undefined;
+            const hasCover = !!cover;
+            return (
             <div
               key={menu.id}
               className="group bg-white/[0.03] border border-white/10 rounded-2xl overflow-hidden hover:border-[#d4af37]/40 hover:shadow-xl hover:shadow-[#d4af37]/5 transition-all"
             >
-              {/* Preview header */}
-              <div
-                className="h-32 relative overflow-hidden"
-                style={{
-                  background: `linear-gradient(135deg, ${menu.color}, ${menu.color}99)`,
-                }}
+              {/* Preview header — clickeable para entrar al editor del menú */}
+              <a
+                href={`/dashboard/${menu.id}`}
+                className="block relative h-32 overflow-hidden cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#d4af37] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0d0d1f]"
+                aria-label={`Abrir menú ${menu.name}`}
+                title={`Abrir menú ${menu.name}`}
               >
-                <div className="absolute inset-0 bg-black/30" />
-                <div className="absolute bottom-3 left-4 right-4 flex items-center justify-between gap-2">
+                {/* Capa base: gradiente de color (fallback y fondo mientras carga la portada) */}
+                <div
+                  className="absolute inset-0"
+                  style={{
+                    background: `linear-gradient(135deg, ${menu.color}, ${menu.color}99)`,
+                  }}
+                />
+                {/* Capa de portada real (si existe) */}
+                {hasCover && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={cover as string}
+                    alt={`Portada de ${menu.name}`}
+                    loading="lazy"
+                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    onError={(e) => {
+                      // Si la portada falla, se oculta y queda el gradiente de fallback
+                      (e.currentTarget as HTMLImageElement).style.display = 'none';
+                    }}
+                  />
+                )}
+                {/* Overlay oscuro para legibilidad del texto */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-black/20" />
+
+                {/* Indicador de "clic para entrar" (aparece en hover) */}
+                <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-[#d4af37] text-[#1a1a2e] text-[11px] font-bold shadow-lg">
+                    <Pencil className="w-3 h-3" />
+                    Abrir
+                  </span>
+                </div>
+
+                {/* Nombre + slogan + badge */}
+                <div className="absolute bottom-3 left-4 right-4 flex items-end justify-between gap-2">
                   <div className="min-w-0">
-                    <div className="font-bold text-lg line-clamp-1">{menu.name}</div>
+                    <div className="font-bold text-lg line-clamp-1 text-white drop-shadow-md group-hover:text-[#d4af37] transition-colors">
+                      {menu.name}
+                    </div>
                     {menu.slogan && (
-                      <div className="text-xs opacity-80 line-clamp-1">{menu.slogan}</div>
+                      <div className="text-xs opacity-90 line-clamp-1 text-white drop-shadow">
+                        {menu.slogan}
+                      </div>
                     )}
                   </div>
                   <span
-                    className={`px-2 py-0.5 rounded-full text-xs font-semibold flex-shrink-0 ${
+                    className={`px-2 py-0.5 rounded-full text-xs font-semibold flex-shrink-0 backdrop-blur-sm ${
                       menu.is_published
-                        ? 'bg-black/30 text-white'
-                        : 'bg-black/40 text-white/60'
+                        ? 'bg-black/40 text-white'
+                        : 'bg-black/50 text-white/70'
                     }`}
                   >
                     {menu.is_published ? 'Publicado' : 'Borrador'}
                   </span>
                 </div>
-              </div>
+              </a>
 
               {/* Body */}
               <div className="p-4">
@@ -420,7 +459,8 @@ export function DashboardClient({ user, plan, menus, isSuperAdmin = false }: Pro
                 </div>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
