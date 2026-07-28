@@ -206,7 +206,7 @@ function buildCSS(opts: ThemeOpts): string {
   // pero con opacidad reducida en light mode para no romper el cálido del cream.
   c += '*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}';
   c += 'html{scroll-behavior:smooth;-webkit-text-size-adjust:100%;}';
-  c += `body{font-family:var(--font-main);background:var(--bg-0);color:var(--text);min-height:100vh;padding-bottom:calc(110px + env(safe-area-inset-bottom, 0px));position:relative;overflow-x:clip;-webkit-overflow-scrolling:touch;}`;
+  c += `body{font-family:var(--font-main);background:var(--bg-0);color:var(--text);min-height:100vh;padding-bottom:calc(110px + env(safe-area-inset-bottom, 0px));position:relative;-webkit-overflow-scrolling:touch;}`;
   // En desktop (>=640px) la bottom-nav está oculta → no necesita padding extra
   c += '@media(min-width:640px){body{padding-bottom:0;}}';
   // Orbes decorativos (orbs) — visibles en ambos temas, pero con menor opacidad en light mode

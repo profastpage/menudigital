@@ -11,7 +11,7 @@
    ==========================================================================
 */
 
-const SW_VERSION = 'v1.0.0';
+const SW_VERSION = 'v1.0.1';
 const STATIC_CACHE = `menupro-static-${SW_VERSION}`;
 const RUNTIME_CACHE = `menupro-runtime-${SW_VERSION}`;
 const IMAGE_CACHE = `menupro-images-${SW_VERSION}`;
