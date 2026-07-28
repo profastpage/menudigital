@@ -1,105 +1,93 @@
 #!/usr/bin/env python3
-"""
-Aplica las 2 migraciones pendientes a Supabase producción:
-1. supabase/audit-rls-fix.sql         — FORCE RLS en 16 tablas + storage + helper
-2. supabase/add-onboarding-fields.sql  — columnas onboarding en profiles
-"""
-
+"""Apply pending SQL migrations to Supabase production."""
 import psycopg2
-import sys
-from pathlib import Path
+import os
 
-DB_HOST = "aws-0-sa-east-1.pooler.supabase.com"
-DB_PORT = 5432
-DB_NAME = "postgres"
-DB_USER = "postgres.bkxtploibraiovgrjtwn"
-DB_PASSWORD = "Wafla0523129500"
+CONN = dict(
+    host='aws-0-sa-east-1.pooler.supabase.com',
+    port=5432,
+    dbname='postgres',
+    user='postgres.bkxtploibraiovgrjtwn',
+    password='Wafla0523129500',
+    sslmode='require',
+    connect_timeout=15,
+)
 
-MIGRATIONS = [
-    "supabase/audit-rls-fix.sql",
-    "supabase/add-onboarding-fields.sql",
+SQL_FILES = [
+    '/home/z/my-project/supabase/add-waiter-password-and-admin-notifications.sql',
+    # Comandas migration — buscar archivo
 ]
 
-def main():
-    base = Path(__file__).resolve().parent.parent
-    print(f"Connecting to {DB_HOST}:{DB_PORT}/{DB_NAME} as {DB_USER}...")
+# Find comandas migration
+import glob
+comandas_files = glob.glob('/home/z/my-project/supabase/*comand*')
+print("Comandas files found:", comandas_files)
+
+# Also check mozos-mesas-migration which likely has comandas
+SQL_FILES.append('/home/z/my-project/supabase/mozos-mesas-migration.sql')
+
+def apply_sql_file(cur, path):
+    name = os.path.basename(path)
+    print(f"\n── Aplicando {name} ──")
+    if not os.path.exists(path):
+        print(f"❌ NO EXISTE: {path}")
+        return False
+    with open(path, 'r') as f:
+        sql = f.read()
+    # Split on semicolons but respect $$ blocks
+    # Use simple execute for whole file (psycopg2 handles it)
     try:
-        conn = psycopg2.connect(
-            host=DB_HOST,
-            port=DB_PORT,
-            dbname=DB_NAME,
-            user=DB_USER,
-            password=DB_PASSWORD,
-            connect_timeout=20,
-            options="-c search_path=public,auth,storage",
-        )
-        conn.autocommit = True
-        cur = conn.cursor()
+        cur.execute(sql)
+        print(f"✅ {name}: aplicado ({len(sql)} bytes)")
+        return True
     except Exception as e:
-        print(f"FAIL: {e}")
-        sys.exit(1)
+        print(f"❌ {name}: ERROR - {e}")
+        return False
 
-    print("OK connected.\n")
+def main():
+    conn = psycopg2.connect(**CONN)
+    conn.autocommit = True  # So each statement commits independently
+    cur = conn.cursor()
+    print("✅ Conexión OK (autocommit ON)")
 
-    for path in MIGRATIONS:
-        full = base / path
-        print(f"=== Applying {path} ===")
-        if not full.exists():
-            print(f"  MISSING FILE: {full}")
-            continue
-        sql = full.read_text(encoding="utf-8")
-        try:
-            cur.execute(sql)
-            print(f"  OK ({len(sql)} bytes applied)\n")
-        except Exception as e:
-            print(f"  ERROR: {e}\n")
-            # Continue with next migration — each is idempotent
+    for f in SQL_FILES:
+        apply_sql_file(cur, f)
 
-    # Verify RLS state
-    print("=== Verifying RLS state ===")
+    # Verificación final
+    print("\n── Verificación final ──")
     cur.execute("""
-        SELECT relname, relrowsecurity
-        FROM pg_class
-        WHERE relname IN (
-          'menus','categories','menu_items','menu_item_options','menu_item_option_items',
-          'branches','tables','waiters','orders','order_items','order_status_history',
-          'inventory_items','inventory_movements','product_recipes','voucher_prints',
-          'profiles','subscriptions','custom_domains'
-        )
-        AND relkind='r'
-        ORDER BY relname;
+        SELECT table_name FROM information_schema.tables
+        WHERE table_schema='public' AND table_type='BASE TABLE'
+        ORDER BY table_name;
     """)
-    rows = cur.fetchall()
-    enabled = 0
-    disabled = 0
-    for name, rls in rows:
-        flag = "OK" if rls else "MISSING"
-        print(f"  {flag:8} {name}: relrowsecurity={rls}")
-        if rls:
-            enabled += 1
+    tables = [r[0] for r in cur.fetchall()]
+    print(f"Total tablas: {len(tables)}")
+    for t in ['admin_notifications', 'comandas', 'comanda_items', 'waiters']:
+        if t in tables:
+            print(f"  ✅ {t}")
         else:
-            disabled += 1
-    print(f"\n  Summary: {enabled} tables with RLS, {disabled} without")
+            print(f"  ❌ {t}")
 
-    # Verify onboarding fields
-    print("\n=== Verifying onboarding columns on profiles ===")
+    # Verificar columna password en waiters
     cur.execute("""
-        SELECT column_name, data_type
-        FROM information_schema.columns
-        WHERE table_schema='public'
-          AND table_name='profiles'
-          AND column_name IN ('onboarding_completed_at','phone','business_name','business_type')
-        ORDER BY column_name;
+        SELECT column_name FROM information_schema.columns
+        WHERE table_name='waiters' AND column_name='password'
     """)
-    rows = cur.fetchall()
-    for col, dtype in rows:
-        print(f"  OK {col} :: {dtype}")
-    if len(rows) < 4:
-        print(f"  WARNING: only {len(rows)}/4 columns present")
+    if cur.fetchone():
+        print("  ✅ waiters.password existe")
+    else:
+        print("  ❌ waiters.password NO existe")
+
+    # Verificar columnas en comandas
+    cur.execute("""
+        SELECT column_name FROM information_schema.columns
+        WHERE table_name='comandas' ORDER BY ordinal_position
+    """)
+    cols = [r[0] for r in cur.fetchall()]
+    print(f"  comandas columnas: {cols}")
 
     cur.close()
     conn.close()
-    print("\nDONE.")
 
 if __name__ == "__main__":
     main()

@@ -102,6 +102,15 @@ export function buildMenuHTML(data: MenuData, opts?: { isPreview?: boolean }): s
     html += '  <svg class="theme-toggle-icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>\n';
     html += '</button>\n';
   }
+  // Mini-header sticky — barra superior con nombre del restaurante + estado
+  // Aparece al hacer scroll > 80px y permanece fijo mientras se navega el menú
+  html += '<div class="mini-header" id="miniHeader" aria-hidden="true">\n';
+  html += '  <div class="mini-header-left">\n';
+  html += '    <img class="mini-header-logo" id="miniHeaderLogo" alt="" />\n';
+  html += '    <span class="mini-header-name" id="miniHeaderName"></span>\n';
+  html += '  </div>\n';
+  html += '  <span class="mini-header-status open" id="miniHeaderStatus">Abierto</span>\n';
+  html += '</div>\n';
   html += '<script>\n';
   // Anti-FOUC: aplicar tema guardado ANTES de que el browser renderice el body
   // Esto evita un flash del tema por defecto si el usuario había elegido otro
@@ -547,6 +556,8 @@ function buildCSS(opts: ThemeOpts): string {
   // Theme toggle button — visible siempre (mobile + desktop), top-right abajo del .nav sticky
   // Diseño glassmorphism que combina con el nav. Muestra sol o luna según tema actual.
   c += '.theme-toggle-btn{position:fixed;top:calc(12px + 50px);right:14px;width:44px;height:44px;border-radius:50%;background:var(--glass-strong);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid var(--border-strong);color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:99;box-shadow:0 4px 14px rgba(0,0,0,0.18);transition:all 0.25s cubic-bezier(0.32,0.72,0,1);-webkit-tap-highlight-color:transparent;opacity:0.9;}';
+  // Cuando el mini-header es visible, empujar el theme-toggle-btn hacia abajo para no chocar
+  c += 'body.mini-header-visible .theme-toggle-btn{top:calc(64px + env(safe-area-inset-top, 0px)) !important;}';
   c += '@media(hover:hover){.theme-toggle-btn:hover{transform:scale(1.08);opacity:1;background:var(--accent);color:#fff;border-color:var(--accent);}}';
   c += '.theme-toggle-btn:active{transform:scale(0.92);}';
   c += '.theme-toggle-btn svg{width:18px;height:18px;}';
@@ -566,6 +577,21 @@ function buildCSS(opts: ThemeOpts): string {
     c += ':root:not([data-theme]) .theme-toggle-icon-moon{display:none;}';
   }
   // En mobile, mover el botón para no chocar con scroll-top-btn (right:14px ya está ok, son verticales)
+
+  // ─── MINI-HEADER STICKY (siempre visible al hacer scroll) ───
+  // Barra superior compacta con nombre del restaurante + estado (Abierto/Cerrado)
+  // Aparece SOLAMENTE cuando el usuario hace scroll > 80px (no compite con el header hero).
+  // Cuando está visible, el .nav (chips) se pega DEBAJO de él.
+  c += '.mini-header{position:fixed;top:0;left:0;right:0;z-index:101;background:var(--nav-bg);backdrop-filter:blur(22px) saturate(180%);-webkit-backdrop-filter:blur(22px) saturate(180%);border-bottom:1px solid var(--border);box-shadow:0 4px 20px rgba(0,0,0,0.18);padding:10px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;transform:translateY(-100%);transition:transform 0.35s cubic-bezier(0.32,0.72,0,1);-webkit-tap-highlight-color:transparent;box-sizing:border-box;padding-top:calc(10px + env(safe-area-inset-top, 0px));}';
+  c += '.mini-header.visible{transform:translateY(0);}';
+  c += '.mini-header-left{display:flex;align-items:center;gap:10px;min-width:0;flex:1;}';
+  c += '.mini-header-logo{width:32px;height:32px;border-radius:50%;object-fit:cover;flex-shrink:0;background:var(--glass);border:1px solid var(--border);}';
+  c += '.mini-header-name{font-size:15px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;letter-spacing:-0.2px;}';
+  c += '.mini-header-status{font-size:11px;font-weight:600;padding:3px 8px;border-radius:10px;flex-shrink:0;}';
+  c += '.mini-header-status.open{background:rgba(34,197,94,0.18);color:#22c55e;border:1px solid rgba(34,197,94,0.35);}';
+  c += '.mini-header-status.closed{background:rgba(239,68,68,0.18);color:#ef4444;border:1px solid rgba(239,68,68,0.35);}';
+  // Cuando el mini-header es visible, el .nav (chips) debe pegarse DEBAJO de él
+  c += '.nav.with-mini-header{top:54px !important;}';
 
   // ─── MODO CARTA (PedidosYa/Rappi horizontal carousel) ───
   // Solo se activa cuando THEME.cartaStyle=true.
@@ -1309,6 +1335,33 @@ function buildJS(opts: JSOpts): string {
   s += '  window.open(url,"_blank");\n';
   s += '}\n';
   s += 'renderApp();\n';
+  // ─── Mini-header sticky: aparece al hacer scroll > 80px ───
+  // Muestra el logo + nombre del restaurante + estado (Abierto/Cerrado).
+  // Cuando está visible, el .nav (chips de categorías) se pega debajo.
+  s += '(function(){\n';
+  s += '  var mh=document.getElementById("miniHeader");\n';
+  s += '  if(!mh){return;}\n';
+  s += '  var mhLogo=document.getElementById("miniHeaderLogo");\n';
+  s += '  var mhName=document.getElementById("miniHeaderName");\n';
+  s += '  var mhStatus=document.getElementById("miniHeaderStatus");\n';
+  s += '  var nav=document.querySelector(".nav");\n';
+  s += '  // Poblar con datos del restaurante\n';
+  s += '  if(mhName&&RESTAURANT.name){mhName.textContent=RESTAURANT.name;}\n';
+  s += '  if(mhLogo&&RESTAURANT.logo_url){mhLogo.src=imgMedium(RESTAURANT.logo_url);mhLogo.onerror=function(){this.style.display="none";};}else if(mhLogo){mhLogo.style.display="none";}\n';
+  s += '  // Estado: calcular si está abierto (horario simple, fallback "Abierto")\n';
+  s += '  var isOpen=true;var now=new Date();var h=now.getHours();\n';
+  s += '  if(h<10||h>=23){isOpen=false;}\n';
+  s += '  if(mhStatus){mhStatus.textContent=isOpen?"Abierto":"Cerrado";mhStatus.className="mini-header-status "+(isOpen?"open":"closed");}\n';
+  s += '  // Mostrar/ocultar al hacer scroll (threshold 80px)\n';
+  s += '  var lastY=0,ticking=false;\n';
+  s += '  function updateMini(){var y=window.scrollY||window.pageYOffset;\n';
+  s += '    if(y>80){mh.classList.add("visible");mh.setAttribute("aria-hidden","false");if(nav){nav.classList.add("with-mini-header");}document.body.classList.add("mini-header-visible");}\n';
+  s += '    else{mh.classList.remove("visible");mh.setAttribute("aria-hidden","true");if(nav){nav.classList.remove("with-mini-header");}document.body.classList.remove("mini-header-visible");}\n';
+  s += '    ticking=false;\n';
+  s += '  }\n';
+  s += '  window.addEventListener("scroll",function(){if(!ticking){window.requestAnimationFrame(updateMini);ticking=true;}},{passive:true});\n';
+  s += '  updateMini();\n';
+  s += '})();\n';
   // Inicializar auto-scroll del carrusel Destacados DESPUÉS de renderApp
   // (necesita que #destacadosTrack exista en el DOM)
   if (cartaStyle && cartaAutoscroll) {

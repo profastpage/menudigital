@@ -98,7 +98,7 @@ export function LandingHeader() {
         <div className="hidden md:flex items-center gap-2 flex-shrink-0">
           <Link
             href="/login"
-            className="text-sm text-white/75 hover:text-white px-4 py-2 rounded-lg hover:bg-white/5 transition-colors font-medium"
+            className="text-sm text-white/85 hover:text-white px-4 py-2 rounded-lg bg-white/5 border border-white/15 hover:bg-white/15 hover:border-white/30 transition-all font-semibold"
           >
             Iniciar sesión
           </Link>
@@ -112,6 +112,12 @@ export function LandingHeader() {
 
         {/* ─── CTA mobile (solo "Empezar gratis", el login va en el menú) ─── */}
         <div className="md:hidden flex items-center gap-2 flex-shrink-0">
+          <Link
+            href="/login"
+            className="text-xs font-bold px-3.5 py-2 rounded-lg bg-white/10 border border-white/25 text-white hover:bg-white/20 transition-colors"
+          >
+            Iniciar sesión
+          </Link>
           <Link
             href="/register"
             className="text-xs font-bold px-3.5 py-2 rounded-lg bg-gradient-to-r from-[#d4af37] to-[#f4d35e] text-[#0a0a14] hover:opacity-90 transition-opacity shadow-md shadow-amber-500/20"
@@ -165,19 +171,19 @@ export function LandingHeader() {
               ))}
             </nav>
 
-            {/* CTAs en el footer del sheet */}
-            <div className="p-4 border-t border-white/5 space-y-2.5">
+            {/* CTAs en el footer del sheet — fondo sólido para contraste */}
+            <div className="p-4 border-t border-white/10 space-y-2.5 bg-black/30">
               <Link
                 href="/login"
                 onClick={() => setMobileOpen(false)}
-                className="block w-full text-center py-3 rounded-xl text-white border-2 border-white/25 hover:border-white/40 hover:bg-white/5 transition-colors text-sm font-semibold"
+                className="block w-full text-center py-3.5 rounded-xl bg-white/10 text-white border border-white/30 hover:bg-white/20 hover:border-white/50 transition-colors text-sm font-bold shadow-md shadow-black/30"
               >
                 Iniciar sesión
               </Link>
               <Link
                 href="/register"
                 onClick={() => setMobileOpen(false)}
-                className="block w-full text-center py-3 rounded-xl bg-gradient-to-r from-[#d4af37] to-[#f4d35e] text-[#0a0a14] hover:opacity-90 transition-opacity text-sm font-bold shadow-lg shadow-amber-500/20"
+                className="block w-full text-center py-3.5 rounded-xl bg-gradient-to-r from-[#d4af37] to-[#f4d35e] text-[#0a0a14] hover:opacity-95 active:scale-[0.98] transition-all text-sm font-extrabold shadow-lg shadow-amber-500/30"
               >
                 Empezar gratis
               </Link>
