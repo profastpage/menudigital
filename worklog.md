@@ -1476,3 +1476,30 @@ Stage Summary:
 - DB producción ahora completamente funcional para todas las features del dashboard
 - Vistas comandas/comanda_items garantizan que el código TS existente funcione sin cambios
 - Working tree clean. Todo pusheado a main.
+
+---
+Task ID: header-fixed-botones-solidos
+Agent: main (Super Z)
+Task: Header landing debe ser FIXED (siempre visible al scroll) + botones del menú hamburguesa con fondo sólido (no transparente)
+
+Work Log:
+- VLM analizó imagen: botón "Iniciar sesión" del menú hamburguesa era transparente (solo borde visible)
+- Fix landing-header.tsx:
+  * Header cambiado sticky → fixed top-0 left-0 right-0
+  * Fondo: bg-[#07070b]/90 (antes /60) — sólido casi opaco, no glassmorphism
+  * border-b border-white/10 SIEMPRE visible (antes era /5 cuando no había scroll)
+  * Header ahora SIEMPRE anclado arriba mientras se hace scroll, óptimo para navegación
+- Fix botones menú hamburguesa:
+  * "Iniciar sesión": bg-white/10 transparente → bg-white SÓLIDO + text-[#0a0a14] negro
+  * Contenedor footer: bg-black/30 → bg-[#050509] SÓLIDO
+  * Ambos botones con shadow-lg para mejor visibilidad
+- Fix Hero section:
+  * pt-12 → pt-24, md:pt-20 → md:pt-28
+  * Compensa el header fixed (ya no ocupa espacio en flujo del documento)
+- TypeScript: 0 errores en src/
+- Commit fc3e14e pushed a GitHub main
+
+Stage Summary:
+- Header landing ahora FIXED: siempre visible al hacer scroll, anclado arriba
+- Botones del menú hamburguesa con fondo SÓLIDO: "Iniciar sesión" blanco sólido, "Empezar gratis" dorado sólido
+- Ya no hay transparencia problemática en el header ni en los botones del menú móvil
