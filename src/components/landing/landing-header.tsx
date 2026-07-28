@@ -58,10 +58,10 @@ export function LandingHeader() {
 
   return (
     <header
-      className={`sticky top-0 z-50 backdrop-blur-xl transition-all duration-300 ${
+      className={`fixed top-0 left-0 right-0 z-50 backdrop-blur-xl transition-all duration-300 ${
         scrolled
-          ? "bg-[#07070b]/85 border-b border-white/10 shadow-lg shadow-black/40"
-          : "bg-[#07070b]/60 border-b border-white/5"
+          ? "bg-[#07070b]/95 border-b border-white/10 shadow-lg shadow-black/40"
+          : "bg-[#07070b]/90 border-b border-white/10"
       }`}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3.5 flex items-center justify-between gap-4">
@@ -171,12 +171,12 @@ export function LandingHeader() {
               ))}
             </nav>
 
-            {/* CTAs en el footer del sheet — fondo sólido para contraste */}
-            <div className="p-4 border-t border-white/10 space-y-2.5 bg-black/30">
+            {/* CTAs en el footer del sheet — fondo SÓLIDO para contraste total */}
+            <div className="p-4 border-t border-white/10 space-y-2.5 bg-[#050509]">
               <Link
                 href="/login"
                 onClick={() => setMobileOpen(false)}
-                className="block w-full text-center py-3.5 rounded-xl bg-white/10 text-white border border-white/30 hover:bg-white/20 hover:border-white/50 transition-colors text-sm font-bold shadow-md shadow-black/30"
+                className="block w-full text-center py-3.5 rounded-xl bg-white text-[#0a0a14] hover:bg-white/90 active:scale-[0.98] transition-all text-sm font-extrabold shadow-lg shadow-black/40"
               >
                 Iniciar sesión
               </Link>

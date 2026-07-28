@@ -7,7 +7,7 @@ import { ArrowRight, Sparkles, Star, Zap, TrendingUp, ShoppingBag, Clock } from 
 export function Hero() {
   const reduce = useReducedMotion();
   return (
-    <section className="relative overflow-hidden pt-12 pb-20 md:pt-20 md:pb-32">
+    <section className="relative overflow-hidden pt-24 pb-20 md:pt-28 md:pb-32">
       {/* Decorative gradient orbs — animados */}
       <motion.div
         animate={reduce ? undefined : { x: [0, 30, 0], y: [0, -20, 0], opacity: [0.15, 0.25, 0.15] }}
