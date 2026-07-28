@@ -362,6 +362,7 @@ function UltraFullAnalytics({ user, plan, isSuperAdmin, menus, profilePlan }: Pr
   const [menuStats, setMenuStats] = useState<MenuStats[]>([]);
   const [reporte, setReporte] = useState<DataReporte | null>(null);
   const [reportePrev, setReportePrev] = useState<DataReporte | null>(null);
+  const [dailySales, setDailySales] = useState<DataReporte['por_dia']>([]);
   const [loading, setLoading] = useState(true);
   const [range, setRange] = useState<RangePreset>('30d');
   const { funnelData, loading: funnelLoading, reload: reloadFunnel } = useFunnelData(range);
@@ -400,10 +401,11 @@ function UltraFullAnalytics({ user, plan, isSuperAdmin, menus, profilePlan }: Pr
       paramsPrev.set('from', startPrev.toISOString().slice(0, 10));
       paramsPrev.set('to', start.toISOString().slice(0, 10));
 
-      const [menusRes, repRes, repPrevRes] = await Promise.all([
+      const [menusRes, repRes, repPrevRes, dailyRes] = await Promise.all([
         fetch(`/api/menus`),
         fetch(`/api/reportes?${params}`),
         fetch(`/api/reportes?${paramsPrev}`),
+        fetch(`/api/analytics/daily-sales?days=30`),
       ]);
 
       const menusData = (await menusRes.json()).menus || [];
@@ -419,6 +421,11 @@ function UltraFullAnalytics({ user, plan, isSuperAdmin, menus, profilePlan }: Pr
 
       if (repRes.ok) setReporte(await repRes.json());
       if (repPrevRes.ok) setReportePrev(await repPrevRes.json());
+      // Chart "Ventas por día" funciona en todos los planes (no requiere Full)
+      if (dailyRes.ok) {
+        const dailyData = await dailyRes.json();
+        setDailySales(dailyData.data || []);
+      }
     } catch (err) {
       toast.error('Error cargando analíticas');
     } finally {
@@ -656,8 +663,8 @@ function UltraFullAnalytics({ user, plan, isSuperAdmin, menus, profilePlan }: Pr
               {plan.limits.hasMultiBranch && <SucursalesView data={reporte.por_sucursal} />}
             </div>
 
-            {/* ───── Ventas por día (gráfico) ───── */}
-            <VentasPorDia data={reporte.por_dia} />
+            {/* ───── Ventas por día (gráfico) — disponible en todos los planes ───── */}
+            <VentasPorDia data={dailySales.length > 0 ? dailySales : (reporte?.por_dia || [])} />
 
             {/* ───── Secciones ULTRA PREMIUM (solo plan Full) ───── */}
             <UltraPremiumSections plan={plan} funnelData={funnelData} reporte={reporte} />
@@ -1092,20 +1099,41 @@ function SucursalesView({ data }: { data: DataReporte['por_sucursal'] }) {
 
 function VentasPorDia({ data }: { data: DataReporte['por_dia'] }) {
   if (data.length === 0) {
-    return null;
+    return (
+      <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-3 sm:p-6">
+        <div className="flex items-center gap-2 mb-3 sm:mb-4">
+          <Calendar className="w-4 h-4 text-[#06d6a0]" />
+          <h3 className="text-sm sm:text-base font-semibold">Ventas por día</h3>
+        </div>
+        <div className="h-24 sm:h-32 flex items-center justify-center text-white/40 text-xs sm:text-sm text-center">
+          <div>
+            <Calendar className="w-8 h-8 mx-auto mb-2 opacity-40" />
+            Aún no hay ventas registradas.<br />
+            Cuando tus mozos envíen comandas, verás el chart aquí.
+          </div>
+        </div>
+      </div>
+    );
   }
   const maxVentas = Math.max(...data.map(d => d.total_ventas), 1);
+  const totalVentas = data.reduce((s, d) => s + d.total_ventas, 0);
+  const diasConVentas = data.filter(d => d.num_comandas > 0).length;
   return (
     <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-3 sm:p-6">
-      <div className="flex items-center gap-2 mb-3 sm:mb-4">
-        <Calendar className="w-4 h-4 text-[#06d6a0]" />
-        <h3 className="text-sm sm:text-base font-semibold">Ventas por día</h3>
+      <div className="flex items-center justify-between mb-3 sm:mb-4 flex-wrap gap-2">
+        <div className="flex items-center gap-2">
+          <Calendar className="w-4 h-4 text-[#06d6a0]" />
+          <h3 className="text-sm sm:text-base font-semibold">Ventas por día</h3>
+        </div>
+        <div className="text-xs text-white/50">
+          <span className="text-white font-semibold">S/ {totalVentas.toFixed(0)}</span> total · {diasConVentas} días con ventas
+        </div>
       </div>
       <div className="flex items-end gap-0.5 sm:gap-1 h-24 sm:h-32 overflow-x-auto scrollbar-none">
         {data.map(d => (
           <div key={d.fecha} className="flex-1 min-w-[3px] sm:min-w-[6px] flex flex-col items-center group relative">
             <div
-              className="w-full rounded-t bg-gradient-to-t from-[#06d6a0] to-[#118ab2] hover:from-[#d4af37] hover:to-[#e63946] transition-all"
+              className={`w-full rounded-t transition-all ${d.num_comandas > 0 ? 'bg-gradient-to-t from-[#06d6a0] to-[#118ab2] hover:from-[#d4af37] hover:to-[#e63946]' : 'bg-white/[0.03]'}`}
               style={{ height: `${Math.max(4, (d.total_ventas / maxVentas) * 100)}px` }}
               title={`${d.fecha} — ${d.num_comandas} comandas, S/ ${d.total_ventas.toFixed(2)}`}
             />
