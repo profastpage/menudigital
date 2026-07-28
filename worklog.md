@@ -1549,3 +1549,37 @@ Stage Summary:
 - No quita 'ser SaaS' — al contrario, segmentación por plan es señal de producto maduro
 - Número real +51 933 667 414 unificado en toda la plataforma
 - Horario inteligente muestra 'En línea' / 'Fuera de horario' según hora Lima
+
+---
+Task ID: whatsapp-logo-oficial
+Agent: main (Super Z)
+Task: Reemplazar MessageCircle (lucide-react) por logo OFICIAL de WhatsApp en todos los componentes de soporte
+
+Work Log:
+- VLM analizó 2 imágenes: confirmó que se veía el icono genérico de burbuja sin teléfono (MessageCircle), NO el logo oficial
+- Creado src/components/support/whatsapp-icon.tsx:
+  * SVG vectorial con path OFICIAL del logo de WhatsApp (burbuja + teléfono)
+  * Basado en WhatsApp brand guidelines (whatsappbrand.com)
+  * Props: className, fillColor (default currentColor), title (accesibilidad)
+  * Reutilizable en cualquier componente
+- Reemplazos realizados (7 instancias en 3 archivos):
+  * support-whatsapp-button.tsx (3 instancias):
+    - Header del popup: WhatsAppIcon blanco en círculo verde
+    - Botón 'Abrir WhatsApp': WhatsAppIcon blanco
+    - Botón flotante principal: WhatsAppIcon blanco grande (w-8 h-8)
+  * support-widget.tsx (2 instancias):
+    - Header del widget: WhatsAppIcon verde #25D366 (antes dorado)
+    - Opción WhatsApp en la lista: WhatsAppIcon blanco en círculo verde
+    - Header gradient actualizado de dorado → verde WhatsApp
+  * ayuda-client.tsx (2 instancias):
+    - Card de contacto WhatsApp: WhatsAppIcon verde grande (w-7 h-7)
+    - Botón 'Preguntar por WhatsApp': WhatsAppIcon blanco
+
+- TypeScript: 0 errores en src/
+- Commit 7dff198 pushed a GitHub main
+
+Stage Summary:
+- Botón flotante ahora muestra el LOGO OFICIAL de WhatsApp (burbuja + teléfono)
+- Ya no usa el icono genérico MessageCircle de lucide-react que era solo una burbuja
+- Componente WhatsAppIcon reutilizable creado para futuros usos
+- Consistencia visual en todos los puntos de contacto WhatsApp de la plataforma
