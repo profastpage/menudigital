@@ -269,14 +269,17 @@ function buildCSS(opts: ThemeOpts): string {
 
   // Nav — chips de categorías (Entradas, Sopas, Arroz, Chaufa, Tallarines, ...)
   // REGLA ANTI-OVERFLOW: el contenedor scrollea horizontalmente, los items
-  // nunca se rompen ni se desbordan. Padding lateral seguro en mobile.
-  c += '.nav{position:sticky;top:0;background:var(--nav-bg);backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);border-bottom:1px solid var(--border);z-index:100;padding:12px 0;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-webkit-overflow-scrolling:touch;scroll-snap-type:x proximity;box-sizing:border-box;max-width:100vw;}';
+  // nunca se rompen ni se desbordan.
+  // IMPORTANTE: NO usar overflow-y:hidden ni max-width:100vw aquí —
+  // en iOS Safari puede bloquear el scroll vertical de toda la página.
+  // Solo overflow-x:auto es suficiente para scroll horizontal de los chips.
+  c += '.nav{position:sticky;top:0;background:var(--nav-bg);backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);border-bottom:1px solid var(--border);z-index:100;padding:12px 0;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;box-sizing:border-box;}';
   c += '.nav::-webkit-scrollbar{display:none;}';
-  c += '.nav-inner{display:flex;gap:8px;padding:0 16px;max-width:100%;box-sizing:border-box;width:max-content;min-width:100%;}';
+  c += '.nav-inner{display:flex;gap:8px;padding:0 16px;max-width:100%;box-sizing:border-box;}';
   // Tap target ≥44px (Apple HIG / Material spec) — touch-friendly mobile-first
   // REGLA ANTI-OVERFLOW: white-space:nowrap + overflow:hidden + text-overflow:ellipsis
   // asegura que el texto NUNCA salga del chip, incluso si un nombre es muy largo.
-  c += '.nav-item{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;padding:11px 18px;background:var(--glass);border:1px solid var(--border);border-radius:24px;color:var(--text-soft);font-size:13.5px;font-weight:500;cursor:pointer;transition:all 0.25s cubic-bezier(0.4,0,0.2,1);display:flex;align-items:center;gap:6px;min-height:44px;flex-shrink:0;box-sizing:border-box;scroll-snap-align:start;}';
+  c += '.nav-item{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;padding:11px 18px;background:var(--glass);border:1px solid var(--border);border-radius:24px;color:var(--text-soft);font-size:13.5px;font-weight:500;cursor:pointer;transition:all 0.25s cubic-bezier(0.4,0,0.2,1);display:flex;align-items:center;gap:6px;min-height:44px;flex-shrink:0;box-sizing:border-box;}';
   // Hover solo en dispositivos con hover real (desktop) — evita sticky hover en mobile
   c += '@media(hover:hover){.nav-item:hover{background:var(--glass-strong);color:var(--text);transform:translateY(-1px);}}';
   c += '.nav-item:active{transform:scale(0.96);}';
