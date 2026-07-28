@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { useOfflineQueue } from '@/hooks/use-offline-queue';
 import { InstallAppButton } from '@/components/pwa/install-app-button';
 import { MozoInstallBanner } from '@/components/pwa/mozo-install-banner';
+import { MozoTutorialButton, MozoTutorial } from '@/components/pwa/mozo-tutorial';
 import { type PlanId } from '@/lib/plans';
 import { deriveVariantUrl } from '@/lib/image-utils';
 
@@ -53,9 +54,25 @@ export function MozoPanel({ token, waiterName }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [isOnline, setIsOnline] = useState(true);
   const [planId, setPlanId] = useState<PlanId | undefined>(undefined);
+  const [tutorialOpen, setTutorialOpen] = useState(false);
 
   // Hook de cola offline (Premium+) — guarda comandas en IndexedDB cuando no hay red
   const { pending, isSyncing, enqueue, syncNow, hasPending } = useOfflineQueue(token);
+
+  // Auto-abrir tutorial la primera vez que el mozo entra al panel
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const SEEN_KEY = `menupro_mozo_tutorial_seen_${token}`;
+    const seen = localStorage.getItem(SEEN_KEY);
+    if (!seen) {
+      // Pequeño delay para que cargue el panel primero
+      const t = setTimeout(() => {
+        setTutorialOpen(true);
+        localStorage.setItem(SEEN_KEY, '1');
+      }, 800);
+      return () => clearTimeout(t);
+    }
+  }, [token]);
 
   // Carrito para crear comanda
   const [selectedMesa, setSelectedMesa] = useState<Mesa | null>(null);
@@ -355,6 +372,11 @@ export function MozoPanel({ token, waiterName }: Props) {
               </div>
             </div>
           </div>
+          <MozoTutorialButton
+            waiterName={waiterName}
+            planId={planId}
+            size="sm"
+          />
           <button
             onClick={load}
             disabled={loading}
@@ -765,6 +787,14 @@ export function MozoPanel({ token, waiterName }: Props) {
           </details>
         </div>
       )}
+
+      {/* Modal de tutorial (auto-abierto la primera vez, reabrible desde botón "Guía") */}
+      <MozoTutorial
+        open={tutorialOpen}
+        onClose={() => setTutorialOpen(false)}
+        waiterName={waiterName}
+        planId={planId}
+      />
     </div>
   );
 }
