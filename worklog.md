@@ -1355,3 +1355,79 @@ Stage Summary:
   beneficios reales del plan (dominio, traducciones, lealtad, push, API, voucher).
 - Insight AI comparativo contra benchmarks de la industria.
 - Mobile-first 100%: todos los grids son responsive, nada se sale del viewport.
+
+---
+Task ID: ultra-review-real-wa-tracking
+Agent: main (Super Z)
+Task: Revisión ultra completa + tests agénticos Android/Windows por plan + auditar rate limiting + implementar tracking real de clics WhatsApp desde menús públicos.
+
+Work Log:
+- Audit rate limiting: solo 2 rutas tenían protección (auth + upload + bg-removal en middleware, webhook MP en route). Agregado:
+  * General API: 100/min por IP para TODAS las /api/* (excepto track y auth)
+  * Tracking: 60/min por IP para /api/track/*
+  * Webhook MP: 60/min explícito en middleware (antes solo en route)
+  * Public menu: 60/min por IP para /r/* y /qr/* (anti-scraping)
+- Implementado tracking REAL de clics WhatsApp:
+  * Nueva tabla whatsapp_clicks (id, menu_id, ip, user_agent, source, created_at) con RLS:
+    - INSERT anónimo permitido (cualquiera puede trackear desde menú público)
+    - SELECT solo para owner del menú o super-admin
+  * Nuevo endpoint POST /api/track/whatsapp-click:
+    - Recibe {menu_id, source} vía sendBeacon
+    - Valida UUID (anti-inyección)
+    - Rate limited 30/min por IP
+    - Devuelve 204 No Content (beacon no necesita respuesta)
+  * Pixel inyectado en menu-html-builder.ts:
+    - En sendWhatsApp(): navigator.sendBeacon antes de window.open(wa.me)
+    - En ícono social WhatsApp: data-wa-track="1" attr + listener que firea beacon
+  * /api/analytics/funnel refactorizado:
+    - Reemplaza estimación 25% por count REAL de whatsapp_clicks
+    - Agrega clicsWhatsappPorSource {cart, social, direct} en response
+    - Agrega deltaWhatsappClicks vs período anterior
+  * FunnelChart.tsx mejorado:
+    - Badge verde "TRACKING REAL" con pulse animation
+    - Sección "Clics WhatsApp reales por origen" (3 columnas: cart/social/direct)
+    - Indicador de delta WA vs período anterior
+- 3 BUGS CRÍTICOS ENCONTRADOS Y FIXEADOS durante testing agéntico:
+  * Bug 1: menus RLS solo permitía SELECT own/admin → /r/[slug] devolvía "Menú no encontrado"
+    Fix: menus_select_published policy (SELECT WHERE is_published = true)
+  * Bug 2: categories RLS mismo problema → categorías no cargaban
+    Fix: categories_select_published policy (SELECT WHERE menu_id IN published menus)
+  * Bug 3: dishes RLS mismo problema → platos no cargaban
+    Fix: dishes_select_published policy (SELECT WHERE category_id IN published categories)
+  Causa raíz: audit-rls-fix.sql aplicado previamente forzó RLS pero NO agregó
+  policies públicas para lectura anónima de menús publicados.
+
+Tests agénticos ejecutados (agent-browser):
+- Android (Pixel 5 UA):
+  * Landing page: ✅ todas las secciones visibles (hero, features, planes, FAQ)
+  * Login: ✅ formulario funcional
+  * Dashboard FULL: ✅ sidebar completo + bottom nav mobile
+  * Comandas: ✅ página carga con chips y botones
+  * Reportes: ✅ KPIs + ventas por día + ranking mozos
+  * Menus: ✅ lista de menús con acciones
+  * Cocina/Mesas/Mozos/Inventario: ✅ todos cargan sin errores
+- Windows desktop (1920x1080):
+  * Public menu /r/polleria-rikos: ✅ render completo (hero, header, dishes, cart)
+  * Public menu /r/chifa-dragon-de-oro: ✅ 28 platos cargan
+  * Login + Dashboard FULL: ✅ todas las secciones
+  * Analytics: ✅ FunnelChart con badge "TRACKING REAL" + source breakdown
+- Flujo E2E tracking real verificado:
+  1. Click "Agregar" en plato → cart counter 1, total $25
+  2. Click cart bar → modal abre con "Enviar Pedido por WhatsApp"
+  3. Click WhatsApp button → sendBeacon firea a /api/track/whatsapp-click
+  4. Click guardado en DB: menu_id, source=cart, ip, user_agent, timestamp
+  5. /api/analytics/funnel devuelve clicsWhatsapp: 1 (REAL, no 25% estimación)
+  6. clicsWhatsappPorSource: {cart: 1, social: 0, direct: 0}
+  7. FunnelChart UI muestra el breakdown correctamente
+
+Stage Summary:
+- 3 bugs críticos RLS fixeados (production estaba ROTA para menús públicos)
+- Tracking REAL de WhatsApp 100% funcional (reemplaza estimación 25%)
+- Rate limiting audit completo: 6 tiers cubren todos los endpoints
+- Tests agénticos Android + Windows: 15+ páginas verificadas
+- Commits: ecfa099 (tracking+rate-limit), 20c94a3 (RLS fix)
+- Capturas en /home/z/my-project/download/ (7 PNGs)
+- Limitación conocida: rate limiter in-memory no comparte estado entre
+  instancias serverless de Vercel. Para distributed rate limiting real,
+  recomendar Upstash Ratelimit (Redis serverless) si se detecta abuso
+  a nivel de red.
