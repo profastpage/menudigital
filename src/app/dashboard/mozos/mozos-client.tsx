@@ -596,7 +596,7 @@ export function MozosClient({ user, plan, isSuperAdmin }: Props) {
                   <Input
                     value={newMozo.phone}
                     onChange={(e) => setNewMozo({ ...newMozo, phone: e.target.value })}
-                    placeholder="987 654 321"
+                    placeholder="933 667 414"
                     className="bg-white/5 border-white/10"
                   />
                 </div>

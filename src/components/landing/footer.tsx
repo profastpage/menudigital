@@ -46,7 +46,7 @@ export function Footer() {
                 </a>
               </li>
               <li>
-                <a href="https://wa.me/51987654321" target="_blank" rel="noreferrer" className="block py-2 hover:text-white">
+                <a href="https://wa.me/51933667414" target="_blank" rel="noreferrer" className="block py-2 hover:text-white">
                   WhatsApp
                 </a>
               </li>

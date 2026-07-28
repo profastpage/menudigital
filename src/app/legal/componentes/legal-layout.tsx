@@ -73,12 +73,12 @@ export function LegalLayout({ title, lastUpdated, description, children }: Legal
             </a>{" "}
             o por WhatsApp al{" "}
             <a
-              href="https://wa.me/51987654321"
+              href="https://wa.me/51933667414"
               target="_blank"
               rel="noreferrer"
               className="text-[#d4af37] font-medium hover:underline"
             >
-              +51 987 654 321
+              +51 933 667 414
             </a>
             .
           </p>

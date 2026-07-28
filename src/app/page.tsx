@@ -9,6 +9,7 @@ import { FAQ } from "@/components/landing/faq";
 import { Footer } from "@/components/landing/footer";
 import { ScrollProgress } from "@/components/landing/scroll-progress";
 import { LandingHeader } from "@/components/landing/landing-header";
+import { SupportWhatsAppButton } from "@/components/support/support-whatsapp-button";
 
 export default function Home() {
   return (
@@ -25,6 +26,9 @@ export default function Home() {
       <Testimonials />
       <FAQ />
       <Footer />
+
+      {/* Botón flotante de WhatsApp — soporte ventas para visitantes */}
+      <SupportWhatsAppButton variant="landing" />
     </main>
   );
 }

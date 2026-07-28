@@ -92,7 +92,7 @@ const SECTIONS: Section[] = [
     steps: [
       {
         title: 'Completa los campos básicos',
-        detail: 'En la parte superior del editor verás: Nombre, Slogan (frase corta), Descripción (1-2 párrafos), WhatsApp (con código de país, ej. 51987654321) y Moneda.',
+        detail: 'En la parte superior del editor verás: Nombre, Slogan (frase corta), Descripción (1-2 párrafos), WhatsApp (con código de país, ej. 51933667414) y Moneda.',
         tip: 'El WhatsApp se usará para que los clientes te envíen sus pedidos con 1 clic desde el menú publicado.',
       },
       {
@@ -564,7 +564,7 @@ export function GuiaClient({ user, plan, isSuperAdmin = false }: Props) {
       <div className="mt-6 text-center text-xs text-white/40 px-4">
         ¿Necesitas ayuda adicional? Escríbenos a{' '}
         <a
-          href="https://wa.me/51987654321"
+          href="https://wa.me/51933667414"
           target="_blank"
           rel="noreferrer"
           className="text-[#d4af37] hover:underline"

@@ -105,7 +105,7 @@ function SupportContent({ onClose }: { onClose: () => void }) {
       {/* Opciones */}
       <div className="p-3 space-y-2">
         <a
-          href="https://wa.me/51987654321?text=Hola%20MenuPro,%20necesito%20ayuda%20con"
+          href="https://wa.me/51933667414?text=Hola%20MenuPro,%20necesito%20ayuda%20con"
           target="_blank"
           rel="noreferrer"
           onClick={onClose}
@@ -116,7 +116,7 @@ function SupportContent({ onClose }: { onClose: () => void }) {
           </div>
           <div className="flex-1 min-w-0">
             <div className="font-semibold text-white text-sm">WhatsApp</div>
-            <div className="text-xs text-white/60">+51 987 654 321</div>
+            <div className="text-xs text-white/60">+51 933 667 414</div>
           </div>
           <ExternalLink className="w-3 h-3 text-white/40 flex-shrink-0" />
         </a>

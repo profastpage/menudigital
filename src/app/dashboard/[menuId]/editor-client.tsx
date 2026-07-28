@@ -909,7 +909,7 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount }: Props)
                 <Input
                   value={menu.whatsapp}
                   onChange={(e) => setMenu({ ...menu, whatsapp: e.target.value.replace(/\D/g, '') })}
-                  placeholder="51987654321"
+                  placeholder="51933667414"
                   className="bg-white/5 border-white/10 text-white"
                 />
                 <p className="text-xs text-white/40">

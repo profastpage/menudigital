@@ -173,7 +173,7 @@ export function AyudaClient() {
         {/* Quick contact cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-10">
           <a
-            href="https://wa.me/51987654321?text=Hola%20MenuPro,%20necesito%20ayuda%20con"
+            href="https://wa.me/51933667414?text=Hola%20MenuPro,%20necesito%20ayuda%20con"
             target="_blank"
             rel="noreferrer"
             className="flex items-center gap-4 p-5 bg-gradient-to-br from-[#25D366]/10 to-[#128C7E]/5 border border-[#25D366]/30 rounded-xl hover:bg-[#25D366]/10 transition group"
@@ -208,7 +208,7 @@ export function AyudaClient() {
               No encontramos resultados para “{search}”.
             </p>
             <a
-              href="https://wa.me/51987654321"
+              href="https://wa.me/51933667414"
               target="_blank"
               rel="noreferrer"
               className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#25D366] text-white font-semibold rounded-lg hover:opacity-90 transition"

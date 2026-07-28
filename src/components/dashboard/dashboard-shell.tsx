@@ -28,6 +28,7 @@ import type { Plan } from '@/lib/plans';
 import { isPlanAtLeast, type PlanId } from '@/lib/plans';
 import { InstallAppButton } from '@/components/pwa/install-app-button';
 import { SupportWidget } from '@/components/support/support-widget';
+import { SupportWhatsAppButton } from '@/components/support/support-whatsapp-button';
 
 interface NavItem {
   href: string;
@@ -417,6 +418,16 @@ export function DashboardShell({ user, plan, isSuperAdmin = false, children }: P
             })()}
           </div>
         </nav>
+
+        {/* ───────── Botón flotante WhatsApp (soporte por plan) ───────── */}
+        {/* PREMIUM/FULL → WhatsApp directo con mensaje contextual según ruta */}
+        {/* FREE/PRO → modal upsell para upgrade a Premium */}
+        {/* Posición: bottom-6 right-6, NO choca con bottom-nav (que está en bottom-0) */}
+        <SupportWhatsAppButton
+          variant="dashboard"
+          planId={plan.id as 'free' | 'pro' | 'premium' | 'full'}
+          userEmail={user.email}
+        />
       </div>
 
     </div>
