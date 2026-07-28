@@ -1431,3 +1431,48 @@ Stage Summary:
   instancias serverless de Vercel. Para distributed rate limiting real,
   recomendar Upstash Ratelimit (Redis serverless) si se detecta abuso
   a nivel de red.
+
+---
+Task ID: final-review-sticky-header-comandas-views
+Agent: main (Super Z)
+Task: Revisión final completa + fix botones landing + mini-header sticky en menú público + aplicar migraciones SQL pendientes a producción
+
+Work Log:
+- Analizadas 2 imágenes del usuario con VLM (z-ai vision):
+  * Imagen 1: menú móvil landing con botones "Iniciar sesión" (outline) y "Empezar gratis" (dorado) — el outline se veía sin fondo, roto
+  * Imagen 2: menú público de restaurante "La Parrilla" — al hacer scroll, NO había header fijo arriba (el .nav con chips de categorías se ocultaba)
+
+- Fix landing header (src/components/landing/landing-header.tsx):
+  * Botón "Iniciar sesión" en desktop: agregado bg-white/5 + border-white/15
+  * Botón "Iniciar sesión" en mobile (header inline): agregado bg-white/10 + border-white/25 (ANTES no existía, solo estaba en el menú hamburguesa)
+  * Botones del menú hamburguesa: fondo sólido bg-white/10 con border + bg-black/30 en el contenedor del footer del sheet
+  * Padding py-3 → py-3.5 para mejor tap target
+
+- Fix mini-header sticky en menú público (src/app/dashboard/[menuId]/menu-html-builder.ts):
+  * Nuevo elemento .mini-header position:fixed top:0 con transform:translateY(-100%) → visible al scroll>80px
+  * Contenido: logo 32px + nombre restaurante + estado Abierto/Cerrado (calculado por hora)
+  * .nav (chips categorías) recibe clase .with-mini-header que cambia top:0 → top:54px cuando mini-header visible
+  * theme-toggle-btn se empuja top:62px → top:64px+safe-area cuando mini-header visible (vía body.mini-header-visible)
+  * safe-area-inset-top respetado en padding-top del mini-header (notch iPhone)
+  * JS usa requestAnimationFrame para performance + passive scroll listener
+  * Anti-FOUC: mini-header empieza oculto (aria-hidden=true), solo aparece con scroll
+
+- Verificación DB producción (psycopg2 → aws-0-sa-east-1.pooler.supabase.com):
+  * FALTABAN: admin_notifications, comandas, comanda_items, waiters.password
+  * Aplicado add-waiter-password-and-admin-notifications.sql → admin_notifications creada + waiters.password agregada
+  * Creadas vistas comandas y comanda_items (comandas-views.sql guardado en repo)
+  * Vistas exponen orders/order_items con alias esperados por código TS (mesa_numero, items_count, name, qty, price)
+  * security_invoker=true en vistas para que RLS de orders/order_items aplique
+  * Verificación: 27 comandas, 75 comanda_items accesibles correctamente
+
+- TypeScript: 0 errores en src/ (solo pre-existing en scripts/examples/skills)
+- Commit 243eb3d pushed a GitHub main
+
+Stage Summary:
+- 3 fixes críticos aplicados:
+  1. Botones landing visibles (mobile + desktop + menú hamburguesa)
+  2. Mini-header sticky en menú público (nombre + logo + estado siempre visible al scroll)
+  3. Migraciones SQL aplicadas a producción (admin_notifications, waiters.password, comandas views)
+- DB producción ahora completamente funcional para todas las features del dashboard
+- Vistas comandas/comanda_items garantizan que el código TS existente funcione sin cambios
+- Working tree clean. Todo pusheado a main.
