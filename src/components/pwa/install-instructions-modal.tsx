@@ -1,28 +1,46 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Share, Plus, Monitor, Smartphone, Download, Check, Apple } from "lucide-react";
+import { X, Share, Plus, Monitor, Smartphone, Download, Check, Apple, Loader2, RefreshCw } from "lucide-react";
 import type { Platform } from "@/hooks/use-pwa-install";
 
 interface Props {
   open: boolean;
   onClose: () => void;
   platform: Platform;
-  onInstallNative?: () => void;
+  onInstallNative?: () => Promise<"accepted" | "dismissed" | "manual" | "failed" | "no-event"> | undefined;
   variant?: "dashboard" | "mozo" | "landing";
+  /** Si true, omitir la sección "Instalar automáticamente" y mostrar solo pasos manuales (iOS o fallback cuando no hay evento) */
+  manualOnly?: boolean;
 }
 
-export function InstallInstructionsModal({ open, onClose, platform, onInstallNative, variant = "dashboard" }: Props) {
-  // Para desktop/android, disparamos la instalación nativa automáticamente al abrir el modal
-  useEffect(() => {
-    if (!open) return;
-    if ((platform === "android" || platform === "desktop") && onInstallNative) {
-      // Pequeño delay para que el modal se muestre primero y luego se dispare el prompt nativo
-      const t = setTimeout(() => onInstallNative(), 400);
-      return () => clearTimeout(t);
+export function InstallInstructionsModal({ open, onClose, platform, onInstallNative, variant = "dashboard", manualOnly: manualOnlyProp }: Props) {
+  const [installing, setInstalling] = useState(false);
+  const [installResult, setInstallResult] = useState<"accepted" | "dismissed" | "failed" | "no-event" | "manual" | null>(null);
+
+  // En iOS nunca hay evento nativo → siempre manualOnly
+  // Si onInstallNative no se pasa → también manualOnly
+  const manualOnly = manualOnlyProp || platform === "ios" || !onInstallNative;
+
+  // Resetear cuando se cierra/abre
+  const handleClose = () => {
+    setInstallResult(null);
+    setInstalling(false);
+    onClose();
+  };
+
+  const handleInstallNative = async () => {
+    if (!onInstallNative) return;
+    setInstalling(true);
+    const r = (await onInstallNative()) as "accepted" | "dismissed" | "failed" | "no-event" | "manual" | undefined;
+    setInstalling(false);
+    setInstallResult(r ?? "failed");
+    // Si fue aceptado, cerrar el modal (la UI principal mostrará "App instalada")
+    if (r === "accepted") {
+      setTimeout(() => handleClose(), 600);
     }
-  }, [open, platform, onInstallNative]);
+  };
 
   const titleColor =
     variant === "mozo"
@@ -39,7 +57,7 @@ export function InstallInstructionsModal({ open, onClose, platform, onInstallNat
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-4"
-          onClick={onClose}
+          onClick={handleClose}
         >
           <motion.div
             initial={{ y: 50, opacity: 0, scale: 0.95 }}
@@ -47,16 +65,16 @@ export function InstallInstructionsModal({ open, onClose, platform, onInstallNat
             exit={{ y: 50, opacity: 0, scale: 0.95 }}
             transition={{ type: "spring", duration: 0.4 }}
             onClick={(e) => e.stopPropagation()}
-            className="bg-[#0a0a14] border border-white/10 rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl"
+            className="bg-[#0a0a14] border border-white/10 rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl max-h-[92vh] overflow-y-auto"
           >
             {/* Header */}
             <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3">
-                <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${titleColor} flex items-center justify-center text-xl font-bold text-[#0a0a14]`}>
+              <div className="flex items-center gap-3 min-w-0">
+                <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${titleColor} flex items-center justify-center text-xl font-bold text-[#0a0a14] flex-shrink-0`}>
                   {variant === "mozo" ? "👨‍🍳" : "M"}
                 </div>
-                <div>
-                  <h3 className="text-xl font-bold text-white">
+                <div className="min-w-0">
+                  <h3 className="text-xl font-bold text-white truncate">
                     Instalar MenuPro{variant === "mozo" ? " · Panel del mozo" : ""}
                   </h3>
                   <p className="text-xs text-white/50">
@@ -68,15 +86,114 @@ export function InstallInstructionsModal({ open, onClose, platform, onInstallNat
                 </div>
               </div>
               <button
-                onClick={onClose}
-                className="w-9 h-9 rounded-xl bg-white/5 hover:bg-white/10 flex items-center justify-center text-white/60 hover:text-white"
+                onClick={handleClose}
+                className="w-9 h-9 rounded-xl bg-white/5 hover:bg-white/10 flex items-center justify-center text-white/60 hover:text-white flex-shrink-0"
                 aria-label="Cerrar"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            {/* Contenido según plataforma */}
+            {/* ========================================
+                Sección "Instalar automáticamente"
+                SOLO en Android/desktop con evento disponible
+                ======================================== */}
+            {!manualOnly && (
+              <div className="mb-5">
+                {/* Resultado de la instalación */}
+                {installResult === "accepted" ? (
+                  <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-4 flex items-center gap-3">
+                    <Check className="w-5 h-5 text-emerald-400 flex-shrink-0" />
+                    <p className="text-sm text-emerald-100">
+                      ¡App instalada! Búscala en tu pantalla de inicio.
+                    </p>
+                  </div>
+                ) : installResult === "dismissed" ? (
+                  <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4">
+                    <p className="text-sm text-amber-100 mb-2">
+                      Cancelaste la instalación. Puedes intentarlo de nuevo cuando quieras.
+                    </p>
+                    <button
+                      onClick={handleInstallNative}
+                      disabled={installing}
+                      className={`mt-1 w-full py-3 rounded-xl bg-gradient-to-r ${titleColor} text-[#0a0a14] font-semibold hover:opacity-90 transition disabled:opacity-60 flex items-center justify-center gap-2`}
+                    >
+                      {installing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                      {installing ? "Abriendo diálogo..." : "Intentar de nuevo"}
+                    </button>
+                  </div>
+                ) : installResult === "no-event" ? (
+                  // El navegador no disparó beforeinstallprompt — mostrar instrucciones manuales
+                  <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4">
+                    <p className="text-sm text-amber-100 mb-1 font-semibold">
+                      Tu navegador no mostró el diálogo automático.
+                    </p>
+                    <p className="text-xs text-amber-100/70 mb-3">
+                      Esto pasa a veces (Chrome decide no mostrarlo si acabas de llegar). Sigue los pasos manuales abajo — funciona igual.
+                    </p>
+                  </div>
+                ) : installResult === "failed" ? (
+                  <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4">
+                    <p className="text-sm text-red-100 mb-2">
+                      Hubo un error al abrir el diálogo. Intenta los pasos manuales abajo.
+                    </p>
+                  </div>
+                ) : (
+                  // Estado inicial: botón grande "Instalar automáticamente"
+                  <>
+                    {platform === "android" && (
+                      <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3 flex items-start gap-2.5 mb-3">
+                        <Smartphone className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" />
+                        <p className="text-xs text-emerald-100/90 leading-relaxed">
+                          Tu navegador soporta instalación directa. Toca el botón y aparecerá el diálogo de Chrome.
+                        </p>
+                      </div>
+                    )}
+                    {platform === "desktop" && (
+                      <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-3 flex items-start gap-2.5 mb-3">
+                        <Monitor className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
+                        <p className="text-xs text-blue-100/90 leading-relaxed">
+                          Tu navegador soporta instalación directa. Toca el botón y aparecerá el diálogo de Chrome/Edge.
+                        </p>
+                      </div>
+                    )}
+                    <button
+                      onClick={handleInstallNative}
+                      disabled={installing}
+                      className={`w-full py-3.5 rounded-xl bg-gradient-to-r ${titleColor} text-[#0a0a14] font-semibold hover:opacity-90 transition disabled:opacity-60 flex items-center justify-center gap-2 shadow-lg`}
+                    >
+                      {installing ? (
+                        <>
+                          <Loader2 className="w-5 h-5 animate-spin" />
+                          Abriendo diálogo...
+                        </>
+                      ) : (
+                        <>
+                          <Download className="w-5 h-5" />
+                          Instalar automáticamente
+                        </>
+                      )}
+                    </button>
+                    <p className="text-center text-[11px] text-white/40 mt-2">
+                      Aparecerá el diálogo nativo del navegador
+                    </p>
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* Separador "o" */}
+            {!manualOnly && installResult !== "accepted" && (
+              <div className="flex items-center gap-3 my-4">
+                <div className="h-px bg-white/10 flex-1" />
+                <span className="text-xs text-white/40 font-medium">o instala manualmente</span>
+                <div className="h-px bg-white/10 flex-1" />
+              </div>
+            )}
+
+            {/* ========================================
+                Instrucciones manuales según plataforma
+                ======================================== */}
             {platform === "ios" && (
               <div className="space-y-4">
                 <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 flex items-start gap-2.5">
@@ -115,13 +232,6 @@ export function InstallInstructionsModal({ open, onClose, platform, onInstallNat
 
             {platform === "android" && (
               <div className="space-y-4">
-                <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3 flex items-start gap-2.5">
-                  <Smartphone className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" />
-                  <p className="text-xs text-emerald-100/90 leading-relaxed">
-                    Si no apareció el diálogo de instalación automática, sigue estos pasos manuales:
-                  </p>
-                </div>
-
                 <ol className="space-y-3">
                   <Step
                     num={1}
@@ -147,13 +257,6 @@ export function InstallInstructionsModal({ open, onClose, platform, onInstallNat
 
             {platform === "desktop" && (
               <div className="space-y-4">
-                <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-3 flex items-start gap-2.5">
-                  <Monitor className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
-                  <p className="text-xs text-blue-100/90 leading-relaxed">
-                    Si no apareció el diálogo de instalación automática, usa el ícono de instalación en la barra de direcciones:
-                  </p>
-                </div>
-
                 <ol className="space-y-3">
                   <Step
                     num={1}
@@ -190,12 +293,12 @@ export function InstallInstructionsModal({ open, onClose, platform, onInstallNat
               </div>
             )}
 
-            {/* CTA */}
+            {/* CTA cerrar */}
             <button
-              onClick={onClose}
+              onClick={handleClose}
               className={`mt-6 w-full py-3.5 rounded-xl bg-gradient-to-r ${titleColor} text-[#0a0a14] font-semibold hover:opacity-90 transition`}
             >
-              Entendido
+              {installResult === "accepted" ? "¡Listo!" : "Cerrar"}
             </button>
           </motion.div>
         </motion.div>

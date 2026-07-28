@@ -113,26 +113,27 @@ export function InstallAppButton({
 
   const handleClick = async () => {
     if (needsManualInstructions) {
-      // iOS: abrir modal con instrucciones
+      // iOS: siempre abrir modal con instrucciones manuales (sin botón "Instalar automáticamente")
       setModalOpen(true);
       return;
     }
-    if (canInstall) {
-      const result = await promptInstall();
-      if (result === "manual") {
-        // iOS llegó aquí por algún motivo — abrir modal
-        setModalOpen(true);
-      } else if (result === "accepted") {
-        setJustInstalled(true);
-        setTimeout(() => setJustInstalled(false), 4000);
-      }
-      // Si dismissed o failed, simplemente no hacer nada (el hook ya marcó el estado)
-      return;
-    }
-    // Si no es instalable pero es iOS, abrir modal con instrucciones manuales
-    if (platform === "ios") {
+    // Android/desktop: intentar prompt nativo PRIMERO.
+    // Si hay un beforeinstallprompt event disponible, promptInstall() lo dispara
+    // y aparece el diálogo nativo del navegador (lo que el usuario quiere ver).
+    // Si no hay evento, devolverá "no-event" → abrir modal con instrucciones manuales como fallback.
+    const result = await promptInstall();
+    if (result === "manual") {
+      // iOS llegó aquí por algún motivo — abrir modal
+      setModalOpen(true);
+    } else if (result === "accepted") {
+      setJustInstalled(true);
+      setTimeout(() => setJustInstalled(false), 4000);
+    } else if (result === "no-event" || result === "failed") {
+      // El navegador no disparó beforeinstallprompt — abrir modal con instrucciones manuales
+      // El modal ofrecerá "Intentar de nuevo" + pasos manuales
       setModalOpen(true);
     }
+    // Si dismissed, no hacer nada (el hook ya marcó el estado)
   };
 
   // Estilos según `style`
@@ -192,16 +193,14 @@ export function InstallAppButton({
         platform={platform}
         variant={variant}
         onInstallNative={
-          canInstall && !needsManualInstructions
+          !needsManualInstructions
             ? async () => {
                 const r = await promptInstall();
                 if (r === "accepted") {
-                  setModalOpen(false);
                   setJustInstalled(true);
                   setTimeout(() => setJustInstalled(false), 4000);
-                } else if (r === "dismissed") {
-                  setModalOpen(false);
                 }
+                return r;
               }
             : undefined
         }

@@ -1,10 +1,12 @@
 {
+  "id": "/",
   "name": "MenuPro — Menús digitales para restaurantes",
   "short_name": "MenuPro",
   "description": "Crea tu carta digital con carrito integrado de WhatsApp en minutos. Sin comisiones por venta. Hecho en Perú para restaurantes peruanos.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
   "orientation": "portrait",
   "background_color": "#07070b",
   "theme_color": "#ff6b35",

@@ -93,22 +93,23 @@ export function MozoInstallBanner({ planId, waiterName, variant = 'mozo' }: Prop
 
   const handleInstall = async () => {
     if (needsManualInstructions) {
+      // iOS: siempre abrir modal con instrucciones manuales
       setModalOpen(true);
       return;
     }
-    if (canInstall) {
-      const result = await promptInstall();
-      if (result === 'manual') {
-        setModalOpen(true);
-      } else if (result === 'accepted') {
-        setJustInstalled(true);
-        setTimeout(() => setJustInstalled(false), 5000);
-      }
-      return;
+    // Android/desktop: intentar prompt nativo PRIMERO
+    const result = await promptInstall();
+    if (result === "manual") {
+      setModalOpen(true);
+    } else if (result === "accepted") {
+      setJustInstalled(true);
+      setTimeout(() => setJustInstalled(false), 5000);
+    } else if (result === "no-event" || result === "failed") {
+      // El navegador no disparó beforeinstallprompt — abrir modal con instrucciones manuales
+      // El modal ofrecerá botón "Instalar automáticamente" (intentar de nuevo) + pasos manuales
+      setModalOpen(true);
     }
-    // Si no es instalable (state === 'unsupported' o 'dismissed'), abrir modal con instrucciones
-    // manuales para que el usuario sepa cómo instalar desde el menú del navegador.
-    setModalOpen(true);
+    // Si dismissed, no hacer nada
   };
 
   const handleDismiss = () => {
@@ -212,16 +213,14 @@ export function MozoInstallBanner({ planId, waiterName, variant = 'mozo' }: Prop
         platform={platform}
         variant={variant}
         onInstallNative={
-          canInstall && !needsManualInstructions
+          !needsManualInstructions
             ? async () => {
                 const r = await promptInstall();
                 if (r === 'accepted') {
-                  setModalOpen(false);
                   setJustInstalled(true);
                   setTimeout(() => setJustInstalled(false), 5000);
-                } else if (r === 'dismissed') {
-                  setModalOpen(false);
                 }
+                return r;
               }
             : undefined
         }
