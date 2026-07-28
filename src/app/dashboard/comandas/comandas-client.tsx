@@ -268,12 +268,12 @@ export function ComandasClient({ user, plan, isSuperAdmin, menus }: Props) {
         </div>
       </div>
 
-      {/* Filtros de estado */}
-      <div className="flex gap-2 mb-6 overflow-x-auto pb-2 scrollbar-none">
+      {/* Filtros de estado — flex-wrap para que NUNCA se corten en móvil */}
+      <div className="flex flex-wrap gap-2 mb-6">
         <button
           onClick={() => setFilterStatus('all')}
-          className={`px-4 py-2.5 rounded-full text-xs font-semibold whitespace-nowrap min-h-[40px] flex items-center ${
-            filterStatus === 'all' ? 'bg-white/15 text-white' : 'bg-white/5 text-white/60'
+          className={`px-3.5 py-2 rounded-full text-xs font-semibold min-h-[40px] flex items-center transition-colors ${
+            filterStatus === 'all' ? 'bg-white/15 text-white' : 'bg-white/5 text-white/60 hover:bg-white/10'
           }`}
         >
           Todas ({orders.length})
@@ -285,8 +285,8 @@ export function ComandasClient({ user, plan, isSuperAdmin, menus }: Props) {
             <button
               key={s.id}
               onClick={() => setFilterStatus(s.id)}
-              className={`px-4 py-2.5 rounded-full text-xs font-semibold whitespace-nowrap min-h-[40px] flex items-center ${
-                filterStatus === s.id ? 'text-white' : 'bg-white/5 text-white/60'
+              className={`px-3.5 py-2 rounded-full text-xs font-semibold min-h-[40px] flex items-center transition-colors ${
+                filterStatus === s.id ? 'text-white' : 'bg-white/5 text-white/60 hover:bg-white/10'
               }`}
               style={filterStatus === s.id ? { background: s.color } : undefined}
             >

@@ -54,7 +54,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: '/dashboard/inventario', label: 'Inventario', icon: Package, premium: true },
   { href: '/dashboard/reportes', label: 'Reportes', icon: TrendingUp, full: true },
   { href: '/dashboard/billing', label: 'Planes', icon: CreditCard },
-  { href: '/dashboard/ayuda', label: 'Ayuda', icon: HelpCircle },
+  // Ayuda está ahora integrada en el botón de Soporte (sidebar + header móvil)
 ];
 
 interface Props {
@@ -215,7 +215,7 @@ export function DashboardShell({ user, plan, isSuperAdmin = false, children }: P
         </nav>
 
         {/* Botón instalar app — PWA plan-aware */}
-        <div className="border-t border-white/10 pt-3 px-2">
+        <div className="border-t border-white/10 pt-3 px-2 space-y-1">
           <InstallAppButton
             variant="dashboard"
             size="sm"
@@ -226,11 +226,13 @@ export function DashboardShell({ user, plan, isSuperAdmin = false, children }: P
           {plan.id === 'free' && (
             <Link
               href="/dashboard/billing"
-              className="mt-2 block text-center text-[10px] text-[#d4af37]/80 hover:text-[#d4af37] transition"
+              className="block text-center text-[10px] text-[#d4af37]/80 hover:text-[#d4af37] transition py-1"
             >
               ⚡ Sube a Pro para PWA optimizada →
             </Link>
           )}
+          {/* Soporte inline en sidebar */}
+          <SupportWidget variant="sidebar" />
         </div>
 
         {renderUserBlock()}
@@ -332,6 +334,8 @@ export function DashboardShell({ user, plan, isSuperAdmin = false, children }: P
                 showLabel={false}
                 planId={plan.id}
               />
+              {/* Soporte inline — mismo tamaño h-11 w-11 que los demás botones del header */}
+              <SupportWidget variant="icon" />
               <Button
                 variant="ghost"
                 size="icon"
@@ -410,8 +414,6 @@ export function DashboardShell({ user, plan, isSuperAdmin = false, children }: P
         </nav>
       </div>
 
-      {/* Widget flotante de soporte */}
-      <SupportWidget />
     </div>
   );
 }

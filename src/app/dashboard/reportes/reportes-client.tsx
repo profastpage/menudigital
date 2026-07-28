@@ -103,22 +103,23 @@ export function ReportesClient({ user, plan, isSuperAdmin, branches }: Props) {
   return (
     <DashboardShell user={user} plan={plan} isSuperAdmin={isSuperAdmin}>
       <div className="space-y-6">
-        {/* Header */}
-        <div className="flex flex-wrap items-center justify-between gap-3">
+        {/* Header — mobile-first: stack vertical, todo dentro del viewport */}
+        <div className="space-y-3">
           <div>
-            <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-              <BarChart3 className="w-6 h-6 text-[#e63946]" />
-              Reportes avanzados
+            <h1 className="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
+              <BarChart3 className="w-5 h-5 sm:w-6 sm:h-6 text-[#e63946] flex-shrink-0" />
+              <span className="truncate">Reportes avanzados</span>
             </h1>
-            <p className="text-sm text-white/50 mt-1">
+            <p className="text-xs sm:text-sm text-white/50 mt-1">
               Análisis de ventas por mozo, plato, sucursal y hora
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
+          {/* Filtros: en móvil 1 columna full-width; en sm+ fila */}
+          <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2">
             <select
               value={range}
               onChange={e => setRange(e.target.value as RangePreset)}
-              className="bg-white/5 border border-white/10 text-white text-sm rounded-lg px-3 py-2"
+              className="bg-white/5 border border-white/10 text-white text-sm rounded-lg px-3 py-2.5 min-h-[44px] w-full sm:w-auto truncate"
             >
               <option value="7d">Últimos 7 días</option>
               <option value="30d">Últimos 30 días</option>
@@ -129,7 +130,7 @@ export function ReportesClient({ user, plan, isSuperAdmin, branches }: Props) {
               <select
                 value={branchId}
                 onChange={e => setBranchId(e.target.value)}
-                className="bg-white/5 border border-white/10 text-white text-sm rounded-lg px-3 py-2"
+                className="bg-white/5 border border-white/10 text-white text-sm rounded-lg px-3 py-2.5 min-h-[44px] w-full sm:w-auto sm:max-w-[200px] truncate"
               >
                 <option value="">Todas las sucursales</option>
                 {branches.map(b => (
@@ -142,7 +143,7 @@ export function ReportesClient({ user, plan, isSuperAdmin, branches }: Props) {
               size="sm"
               onClick={load}
               disabled={loading}
-              className="border-white/10 text-white hover:bg-white/5"
+              className="border-white/10 text-white hover:bg-white/5 min-h-[44px] col-span-2 sm:col-span-1 sm:ml-auto"
             >
               <RefreshCw className={`w-4 h-4 mr-1.5 ${loading ? 'animate-spin' : ''}`} />
               Actualizar
@@ -158,8 +159,8 @@ export function ReportesClient({ user, plan, isSuperAdmin, branches }: Props) {
           <div className="text-center py-20 text-white/40">Sin datos</div>
         ) : (
           <>
-            {/* ───── KPIs ───── */}
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+            {/* ───── KPIs — 2 cols en móvil, 5 en desktop, todo dentro del viewport ───── */}
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-2 sm:gap-3">
               <KpiCard
                 label="Ventas totales"
                 value={`S/ ${data.kpis.total_ventas.toFixed(2)}`}
@@ -192,8 +193,8 @@ export function ReportesClient({ user, plan, isSuperAdmin, branches }: Props) {
               />
             </div>
 
-            {/* ───── Tabs ───── */}
-            <div className="flex gap-1 p-1 bg-white/5 rounded-xl overflow-x-auto scrollbar-none max-w-full">
+            {/* ───── Tabs — scroll horizontal con snap, todo dentro del viewport ───── */}
+            <div className="flex gap-1 p-1 bg-white/5 rounded-xl overflow-x-auto scrollbar-none -mx-4 px-4 sm:mx-0 sm:px-1">
               <TabBtn active={view === 'mozos'} onClick={() => setView('mozos')} icon={<Users className="w-4 h-4" />}>
                 Por mozo
               </TabBtn>
@@ -231,12 +232,12 @@ export function ReportesClient({ user, plan, isSuperAdmin, branches }: Props) {
 
 function KpiCard({ label, value, icon, color }: { label: string; value: string; icon: React.ReactNode; color: string }) {
   return (
-    <div className="bg-white/5 border border-white/10 rounded-xl p-4">
-      <div className="flex items-center gap-2 text-white/50 text-xs mb-2">
-        <span style={{ color }}>{icon}</span>
-        <span className="truncate">{label}</span>
+    <div className="bg-white/5 border border-white/10 rounded-xl p-3 sm:p-4 min-w-0">
+      <div className="flex items-center gap-1.5 sm:gap-2 text-white/50 text-[10px] sm:text-xs mb-1.5 sm:mb-2">
+        <span style={{ color }} className="flex-shrink-0">{icon}</span>
+        <span className="truncate leading-tight">{label}</span>
       </div>
-      <div className="text-xl font-bold text-white truncate">{value}</div>
+      <div className="text-base sm:text-xl font-bold text-white truncate">{value}</div>
     </div>
   );
 }
@@ -245,7 +246,7 @@ function TabBtn({ active, onClick, icon, children }: { active: boolean; onClick:
   return (
     <button
       onClick={onClick}
-      className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-colors ${
+      className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs sm:text-sm whitespace-nowrap min-h-[40px] transition-colors flex-shrink-0 ${
         active ? 'bg-white/10 text-white' : 'text-white/50 hover:text-white'
       }`}
     >
