@@ -1503,3 +1503,49 @@ Stage Summary:
 - Header landing ahora FIXED: siempre visible al hacer scroll, anclado arriba
 - Botones del menú hamburguesa con fondo SÓLIDO: "Iniciar sesión" blanco sólido, "Empezar gratis" dorado sólido
 - Ya no hay transparencia problemática en el header ni en los botones del menú móvil
+
+---
+Task ID: whatsapp-sticky-segmentado
+Agent: main (Super Z)
+Task: Implementar botón flotante WhatsApp sticky con segmentación por plan (landing always / dashboard PREMIUM+FULL directo / FREE+PRO upsell)
+
+Work Log:
+- Creado src/components/support/support-whatsapp-button.tsx (331 líneas):
+  * 3 variantes: landing (siempre visible, ventas), dashboard (verifica plan), always-on (custom)
+  * Número real: +51 933 667 414 (exportado como SUPPORT_WHATSAPP_NUMBER)
+  * Mensajes pre-rellenados contextuales según ruta del dashboard:
+    - /billing → consulta sobre facturación
+    - /[menuId] → consulta sobre mi menú
+    - /mozos → consulta sobre mozos
+    - /mesas, /inventario, /comandas, /cocina, /reportes, /analytics, /domains, /onboarding → mensajes específicos
+  * Mensaje incluye email del usuario para identificación
+  * Indicador 'En línea' animado 9am-9pm hora Lima (America/Lima vía Intl.DateTimeFormat)
+  * Pulse animation ring cuando online
+  * Popup con info de horario y tiempo de respuesta
+  * Modal upsell para FREE/PRO con 4 beneficios de Premium + CTA a /dashboard/billing
+  * NO se renderiza en /r/*, /qr/*, /mozo/* (clientes del restaurante no contactan a MenuPro)
+  * Posición fixed bottom-right, sube a 72px en mobile (no choca con bottom-nav h-64px)
+  * safe-area-inset-bottom respetado para iPhones con notch
+
+- Actualizado número WhatsApp placeholder → real en 16 referencias:
+  * 51987654321 → 51933667414
+  * +51 987 654 321 → +51 933 667 414
+  * Archivos: support-widget, ayuda, guia, onboarding, footer, legal-layout, reembolsos, mozos-client, editor-client
+
+- Integración:
+  * Landing (src/app/page.tsx): <SupportWhatsAppButton variant="landing" /> al final del main
+  * Dashboard (src/components/dashboard/dashboard-shell.tsx): agregado antes del cierre, con planId y userEmail
+  * PREMIUM/FULL → WhatsApp directo con mensaje contextual
+  * FREE/PRO → modal upsell 'Upgrade a Premium para soporte WhatsApp directo'
+
+- TypeScript: 0 errores en src/
+- Commit 7d59ec9 pushed a GitHub main
+
+Stage Summary:
+- Botón flotante WhatsApp sticky implementado con segmentación profesional por plan
+- Landing: captura leads de ventas (visitantes sin cuenta)
+- Dashboard FREE/PRO: botón visible pero genera upsell a Premium (conversión)
+- Dashboard PREMIUM/FULL: WhatsApp directo prioritario (retention)
+- No quita 'ser SaaS' — al contrario, segmentación por plan es señal de producto maduro
+- Número real +51 933 667 414 unificado en toda la plataforma
+- Horario inteligente muestra 'En línea' / 'Fuera de horario' según hora Lima
