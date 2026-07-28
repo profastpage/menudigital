@@ -24,6 +24,7 @@ import type { Plan } from '@/lib/plans';
 import { isPlanAtLeast, type PlanId } from '@/lib/plans';
 import { DashboardShell } from '@/components/dashboard/dashboard-shell';
 import { InstallAppButton } from '@/components/pwa/install-app-button';
+import { MozoInstallBanner } from '@/components/pwa/mozo-install-banner';
 
 interface MenuStat {
   id: string;
@@ -407,18 +408,22 @@ export function DashboardHomeClient({ user, plan, isSuperAdmin = false, stats }:
         </div>
       )}
 
-      {/* ───────── PWA banner para Free ───────── */}
-      {plan.id === 'free' && (
-        <div className="mt-8 pt-6 border-t border-white/5">
-          <InstallAppButton
-            variant="dashboard"
-            size="sm"
-            style="compact"
-            planId={plan.id}
-            className="w-full justify-center sm:w-auto"
-          />
-        </div>
-      )}
+      {/* ───────── PWA banner para TODOS los planes ───────── */}
+      <div className="mt-8 pt-6 border-t border-white/5">
+        {/* Banner prominent solo si no está instalada (se oculta automáticamente al instalar) */}
+        <MozoInstallBanner
+          planId={plan.id}
+          variant="dashboard"
+        />
+        {/* Botón compact como acceso rápido siempre visible (también se auto-oculta si instalada) */}
+        <InstallAppButton
+          variant="dashboard"
+          size="sm"
+          style="compact"
+          planId={plan.id}
+          className="w-full justify-center sm:w-auto"
+        />
+      </div>
     </DashboardShell>
   );
 }

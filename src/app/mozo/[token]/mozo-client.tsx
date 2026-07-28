@@ -8,6 +8,7 @@ import {  ClipboardList, Send, Check, X, Plus, Minus, Search,
 import { toast } from 'sonner';
 import { useOfflineQueue } from '@/hooks/use-offline-queue';
 import { InstallAppButton } from '@/components/pwa/install-app-button';
+import { MozoInstallBanner } from '@/components/pwa/mozo-install-banner';
 import { type PlanId } from '@/lib/plans';
 import { deriveVariantUrl } from '@/lib/image-utils';
 
@@ -371,6 +372,13 @@ export function MozoPanel({ token, waiterName }: Props) {
           />
         </div>
       </header>
+
+      {/* Banner prominent de instalación de la app — solo si no está instalada */}
+      <MozoInstallBanner
+        planId={planId}
+        waiterName={waiterName}
+        variant="mozo"
+      />
 
       {/* Banner de cola offline pendiente */}
       {hasPending && (
