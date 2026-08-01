@@ -248,6 +248,23 @@ body {
   }
 }
 
+/* ───────── Native select option contrast fix ─────────
+   Ensures that when a <select> has a white background (e.g. dashboard dropdowns),
+   the <option> popup also renders with white background + black text.
+   Browsers default to system colors which can show white-on-white or dark-on-dark.
+*/
+select.bg-white option,
+select[className*="bg-white"] option,
+select option {
+  background-color: #ffffff;
+  color: #000000;
+}
+select.bg-white,
+select[class*="bg-white"] {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+}
+
 /* ───────── xs breakpoint (400px+) para headers densos en mobile ───────── */
 @media (min-width: 400px) {
   .xs\:block { display: block; }

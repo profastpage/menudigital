@@ -162,8 +162,11 @@ export function DomainsClient({ user, plan, isSuperAdmin = false, planId, menus 
     }
   }
 
-  // No Pro: upsell (still wrapped in shell)
-  if (planId !== 'pro') {
+  // Acceso: Free ve upsell. Pro/Premium/Full acceden normalmente.
+  const PLAN_ORDER = ['free', 'pro', 'premium', 'full'];
+  const hasAccess = PLAN_ORDER.indexOf(planId as any) >= PLAN_ORDER.indexOf('pro') || isSuperAdmin;
+
+  if (!hasAccess) {
     return (
       <DashboardShell user={user} plan={plan} isSuperAdmin={isSuperAdmin}>
         <div className="text-center py-8 sm:py-12">
@@ -234,12 +237,12 @@ export function DomainsClient({ user, plan, isSuperAdmin = false, planId, menus 
           <div className="space-y-2">
             <Label className="text-xs">Menú a vincular</Label>
             <Select value={selectedMenu} onValueChange={setSelectedMenu}>
-              <SelectTrigger className="bg-white/5 border-white/10 text-white h-10">
+              <SelectTrigger className="bg-white border-gray-200 text-black h-10 font-medium shadow-sm">
                 <SelectValue placeholder="Ninguno" />
               </SelectTrigger>
-              <SelectContent className="bg-[#15152a] border-white/10">
+              <SelectContent className="bg-white border-gray-200 text-black">
                 {menus.map((m) => (
-                  <SelectItem key={m.id} value={m.id} className="text-white">
+                  <SelectItem key={m.id} value={m.id} className="text-black hover:bg-gray-100 focus:bg-gray-100 focus:text-black">
                     {m.name} {m.is_published ? '✓' : '(borrador)'}
                   </SelectItem>
                 ))}
@@ -311,12 +314,12 @@ export function DomainsClient({ user, plan, isSuperAdmin = false, planId, menus 
                       value={d.menu_id || ''}
                       onValueChange={(v) => handleLinkMenu(d.id, v)}
                     >
-                      <SelectTrigger className="w-full sm:w-48 bg-white/5 border-white/10 text-white h-8 text-sm">
+                      <SelectTrigger className="w-full sm:w-48 bg-white border-gray-200 text-black h-8 text-sm font-medium shadow-sm">
                         <SelectValue placeholder="Seleccionar..." />
                       </SelectTrigger>
-                      <SelectContent className="bg-[#15152a] border-white/10">
+                      <SelectContent className="bg-white border-gray-200 text-black">
                         {menus.map((m) => (
-                          <SelectItem key={m.id} value={m.id} className="text-white">
+                          <SelectItem key={m.id} value={m.id} className="text-black hover:bg-gray-100 focus:bg-gray-100 focus:text-black">
                             {m.name}
                           </SelectItem>
                         ))}

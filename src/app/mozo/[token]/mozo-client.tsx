@@ -401,7 +401,7 @@ export function MozoPanel({ token, waiterName }: Props) {
           {/* Formulario */}
           <form
             onSubmit={submitPwd}
-            className="bg-white/[0.04] border border-white/10 rounded-2xl p-5 space-y-3 backdrop-blur-sm"
+            className="bg-white/[0.04] border border-white/10 rounded-2xl p-5 space-y-3"
           >
             <div>
               <label className="text-xs text-white/50 font-medium mb-1.5 block">
@@ -584,7 +584,7 @@ export function MozoPanel({ token, waiterName }: Props) {
       )}
 
       {/* Tabs superiores */}
-      <div className="sticky top-[60px] z-20 bg-[#0a0a14]/95 backdrop-blur border-b border-white/5">
+      <div className="sticky top-[60px] z-20 bg-[#0a0a14] border-b border-white/5">
         <div className="grid grid-cols-3 px-2 py-2 gap-1.5">
           <TabBtn active={view === 'mesas'} onClick={() => setView('mesas')} icon={<Utensils className="w-4 h-4" />}>
             Mesas
@@ -626,10 +626,10 @@ export function MozoPanel({ token, waiterName }: Props) {
                   }}
                   className={`relative p-3 rounded-xl border text-center transition-all ${
                     isSelected
-                      ? 'border-[#9d4edd] bg-[#9d4edd]/20'
+                      ? 'border-[#9d4edd] bg-[#9d4edd]/30'
                       : isFree
-                      ? 'border-white/10 bg-white/5 hover:border-[#06d6a0]/50'
-                      : 'border-white/10 bg-white/5 hover:border-[#d4af37]/50'
+                      ? 'border-white/10 bg-[#15151f] hover:border-[#06d6a0]/50'
+                      : 'border-white/10 bg-[#15151f] hover:border-[#d4af37]/50'
                   }`}
                 >
                   <div className={`absolute top-1 right-1 w-2 h-2 rounded-full ${
@@ -676,7 +676,7 @@ export function MozoPanel({ token, waiterName }: Props) {
           {!selectedMesa && (
             <button
               onClick={() => setView('mesas')}
-              className="w-full p-3 rounded-xl border border-dashed border-white/20 text-white/60 text-sm"
+              className="w-full p-3 rounded-xl border border-dashed border-[#9d4edd]/40 bg-[#9d4edd]/10 text-white/80 text-sm font-medium"
             >
               + Seleccionar mesa primero
             </button>
@@ -690,7 +690,7 @@ export function MozoPanel({ token, waiterName }: Props) {
               value={searchDish}
               onChange={e => setSearchDish(e.target.value)}
               placeholder="Buscar plato..."
-              className="w-full bg-white/5 border border-white/10 rounded-xl pl-9 pr-3 py-3 text-sm text-white placeholder:text-white/30 min-h-[44px]"
+              className="w-full bg-[#15151f] border border-white/10 rounded-xl pl-9 pr-3 py-3 text-sm text-white placeholder:text-white/30 min-h-[44px]"
             />
           </div>
 
@@ -725,10 +725,12 @@ export function MozoPanel({ token, waiterName }: Props) {
                 <button
                   key={dish.id}
                   onClick={() => addToCart(dish)}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl p-3 flex items-center gap-3 text-left active:bg-white/10 transition-colors"
+                  className="w-full bg-[#15151f] border border-white/10 rounded-xl p-3 flex items-center gap-3 text-left active:bg-[#1c1c2a] transition-colors"
                 >
                   {dish.image_url ? (
-                    <img src={deriveVariantUrl(dish.image_url, 'thumb')} alt={dish.name} className="w-12 h-12 rounded-lg object-cover flex-shrink-0" loading="lazy" decoding="async" />
+                    <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-[#15151f]">
+                      <img src={deriveVariantUrl(dish.image_url, 'thumb')} alt={dish.name} className="w-12 h-12 rounded-lg object-cover" loading="lazy" decoding="async" />
+                    </div>
                   ) : (
                     <div className="w-12 h-12 rounded-lg bg-white/5 flex items-center justify-center flex-shrink-0">
                       <Utensils className="w-5 h-5 text-white/30" />
@@ -812,7 +814,7 @@ export function MozoPanel({ token, waiterName }: Props) {
             comandas.map(c => {
               const status = STATUS_INFO[c.status];
               return (
-                <div key={c.id} className="bg-white/5 border border-white/10 rounded-xl p-3">
+                <div key={c.id} className="bg-[#15151f] border border-white/10 rounded-xl p-3">
                   <div className="flex items-start justify-between mb-2">
                     <div>
                       <div className="text-sm font-bold text-white">{c.order_number}</div>
@@ -873,7 +875,7 @@ export function MozoPanel({ token, waiterName }: Props) {
 
       {/* ───── Carrito flotante ───── */}
       {cart.length > 0 && view === 'menu' && (
-        <div className="fixed bottom-0 left-0 right-0 z-40 bg-[#0a0a14] border-t border-white/10 p-3 safe-bottom">
+        <div className="fixed bottom-0 left-0 right-0 z-40 bg-[#0a0a14] border-t border-white/10 p-3 safe-bottom shadow-2xl">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs text-white/50">{cart.length} plato(s) · Total</span>
             <span className="text-lg font-bold text-[#d4af37]">S/ {cartTotal.toFixed(2)}</span>
@@ -903,7 +905,7 @@ export function MozoPanel({ token, waiterName }: Props) {
       {/* ───── Modal detalle carrito ───── */}
       {cart.length > 0 && view === 'menu' && (
         <div className="fixed bottom-[150px] left-0 right-0 z-30 px-3">
-          <details className="bg-white/5 border border-white/10 rounded-xl">
+          <details className="bg-[#0a0a14] border border-white/15 rounded-xl shadow-2xl">
             <summary className="px-3 py-3 text-xs text-white/70 cursor-pointer min-h-[44px] flex items-center">
               Ver carrito ({cart.length})
             </summary>

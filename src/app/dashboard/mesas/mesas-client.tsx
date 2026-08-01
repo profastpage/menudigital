@@ -309,7 +309,7 @@ export function MesasClient({ user, plan, isSuperAdmin }: Props) {
                 <select
                   value={mesa.status}
                   onChange={(e) => handleStatusChange(mesa.id, e.target.value as Mesa['status'])}
-                  className="w-full mt-3 bg-white/10 border border-white/20 rounded-lg px-3 py-2.5 text-sm text-white min-h-[40px]"
+                  className="w-full mt-3 bg-white border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-black font-medium shadow-sm min-h-[40px]"
                 >
                   <option value="libre">Libre</option>
                   <option value="ocupada">Ocupada</option>

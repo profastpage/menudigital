@@ -36,16 +36,18 @@ export async function POST(
       return NextResponse.json({ error: 'Sin permisos' }, { status: 403 });
     }
 
-    // 2. Verificar que el usuario sea Pro
+    // 2. Verificar que el usuario tenga plan Pro o superior (Premium/Full)
     const { data: profile } = await supabase
       .from('profiles')
       .select('plan, is_super_admin')
       .eq('id', user.id)
       .single();
 
-    if (profile?.plan !== 'pro' && !profile?.is_super_admin) {
+    const PLAN_ORDER = ['free', 'pro', 'premium', 'full'];
+    const hasAccess = PLAN_ORDER.indexOf(profile?.plan || 'free') >= PLAN_ORDER.indexOf('pro');
+    if (!hasAccess && !profile?.is_super_admin) {
       return NextResponse.json(
-        { error: 'Requiere plan Pro para aplicar temas pre-diseñados' },
+        { error: 'Requiere plan Pro (o superior) para aplicar temas pre-diseñados' },
         { status: 403 }
       );
     }

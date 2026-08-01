@@ -119,7 +119,7 @@ export function ReportesClient({ user, plan, isSuperAdmin, branches }: Props) {
             <select
               value={range}
               onChange={e => setRange(e.target.value as RangePreset)}
-              className="bg-white/5 border border-white/10 text-white text-sm rounded-lg px-3 py-2.5 min-h-[44px] w-full sm:w-auto truncate"
+              className="bg-white border border-gray-200 text-black text-sm rounded-lg px-3 py-2.5 min-h-[44px] w-full sm:w-auto font-medium shadow-sm truncate"
             >
               <option value="7d">Últimos 7 días</option>
               <option value="30d">Últimos 30 días</option>
@@ -130,7 +130,7 @@ export function ReportesClient({ user, plan, isSuperAdmin, branches }: Props) {
               <select
                 value={branchId}
                 onChange={e => setBranchId(e.target.value)}
-                className="bg-white/5 border border-white/10 text-white text-sm rounded-lg px-3 py-2.5 min-h-[44px] w-full sm:w-auto sm:max-w-[200px] truncate"
+                className="bg-white border border-gray-200 text-black text-sm rounded-lg px-3 py-2.5 min-h-[44px] w-full sm:w-auto sm:max-w-[200px] font-medium shadow-sm truncate"
               >
                 <option value="">Todas las sucursales</option>
                 {branches.map(b => (

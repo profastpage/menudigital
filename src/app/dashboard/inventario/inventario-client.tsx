@@ -405,7 +405,7 @@ export function InventarioClient({ user, plan, isSuperAdmin, menus }: Props) {
               </div>
               <div>
                 <Label>Unidad</Label>
-                <select value={newItem.unit} onChange={(e) => setNewItem({ ...newItem, unit: e.target.value })} className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm">
+                <select value={newItem.unit} onChange={(e) => setNewItem({ ...newItem, unit: e.target.value })} className="w-full bg-white border border-gray-200 text-black rounded-lg px-3 py-2 text-sm font-medium shadow-sm">
                   <option value="unidad">Unidad</option>
                   <option value="kg">Kilogramo (kg)</option>
                   <option value="g">Gramo (g)</option>
@@ -687,7 +687,7 @@ function RecipesModal({
               <select
                 value={form.menu_item_id}
                 onChange={(e) => setForm({ ...form, menu_item_id: e.target.value })}
-                className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm"
+                className="w-full bg-white border border-gray-200 text-black rounded-lg px-3 py-2 text-sm font-medium shadow-sm"
               >
                 <option value="">Selecciona un plato…</option>
                 {dishes.map(d => (
@@ -700,7 +700,7 @@ function RecipesModal({
               <select
                 value={form.inventory_item_id}
                 onChange={(e) => setForm({ ...form, inventory_item_id: e.target.value })}
-                className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm"
+                className="w-full bg-white border border-gray-200 text-black rounded-lg px-3 py-2 text-sm font-medium shadow-sm"
               >
                 <option value="">Selecciona un insumo…</option>
                 {inventoryItems.map(i => (

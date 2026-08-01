@@ -1091,12 +1091,12 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount }: Props)
                     value={menu.currency}
                     onValueChange={(v) => setMenu({ ...menu, currency: v })}
                   >
-                    <SelectTrigger className="bg-white/5 border-white/10 text-white">
+                    <SelectTrigger className="bg-white border-gray-200 text-black font-medium shadow-sm">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className="bg-[#15152a] border-white/10">
+                    <SelectContent className="bg-white border-gray-200 text-black">
                       {CURRENCIES.map((c) => (
-                        <SelectItem key={c.value} value={c.value} className="text-white">
+                        <SelectItem key={c.value} value={c.value} className="text-black hover:bg-gray-100 focus:bg-gray-100 focus:text-black">
                           {c.label}
                         </SelectItem>
                       ))}
@@ -1750,7 +1750,7 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount }: Props)
                                     <select
                                       value={grp.type}
                                       onChange={(e) => updateOptionGroup(cat.id, dish.id, grp.id, 'type', e.target.value)}
-                                      className="bg-white/5 border border-white/10 text-white h-8 text-xs rounded-md px-1.5"
+                                      className="bg-white border border-gray-200 text-black h-8 text-xs rounded-md px-1.5 font-medium shadow-sm"
                                     >
                                       <option value="single">Elige 1</option>
                                       <option value="multiple">Múltiple</option>

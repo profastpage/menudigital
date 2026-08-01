@@ -33,6 +33,7 @@ import {
 import type { Plan } from '@/lib/plans';
 import { isPlanAtLeast, type PlanId } from '@/lib/plans';
 import { DashboardShell } from '@/components/dashboard/dashboard-shell';
+import { exportWorkbook, FMT } from '@/lib/excel-export';
 import { FunnelChart } from '@/components/analytics/funnel-chart';
 
 interface MenuStats {
@@ -257,7 +258,7 @@ function ProAnalytics({ user, plan, isSuperAdmin, menus, profilePlan }: Props) {
             <select
               value={range}
               onChange={e => setRange(e.target.value as RangePreset)}
-              className="bg-white/5 border border-white/10 text-white text-sm rounded-lg px-3 py-2.5 min-h-[44px] w-full sm:w-auto"
+              className="bg-white border border-gray-200 text-black text-sm rounded-lg px-3 py-2.5 min-h-[44px] w-full sm:w-auto font-medium shadow-sm"
             >
               <option value="7d">Últimos 7 días</option>
               <option value="30d">Últimos 30 días</option>
@@ -449,51 +450,154 @@ function UltraFullAnalytics({ user, plan, isSuperAdmin, menus, profilePlan }: Pr
 
   const totalViews = menuStats.reduce((s, m) => s + m.total_views, 0);
 
-  // Export CSV (incluye datos del embudo cuando estén disponibles)
-  function exportCSV() {
+  // Export XLSX profesional (múltiples hojas, formato moneda/porcentaje, headers estilizados)
+  async function exportXLSX() {
     if (!reporte) return;
-    const rows: string[][] = [];
-    rows.push(['Métrica', 'Valor']);
-    rows.push(['Ventas totales', `S/ ${reporte.kpis.total_ventas.toFixed(2)}`]);
-    rows.push(['Comandas', String(reporte.kpis.num_comandas)]);
-    rows.push(['Ticket promedio', `S/ ${reporte.kpis.ticket_promedio.toFixed(2)}`]);
-    rows.push(['Platos vendidos', String(reporte.kpis.num_platos_vendidos)]);
-    rows.push(['Mesas usadas', String(reporte.kpis.num_mesas_usadas)]);
-    // Datos del embudo
-    if (funnelData) {
-      rows.push([]);
-      rows.push(['Embudo de conversión']);
-      rows.push(['Etapa', 'Valor', '% vs etapa anterior']);
-      funnelData.funnel.forEach(s => {
-        rows.push([s.label, String(s.value), `${s.pct ?? 0}%`]);
-      });
-      rows.push(['Conversión global', `${funnelData.kpis.conversionGlobal}%`]);
-      rows.push(['Visitas únicas (IP)', String(funnelData.kpis.visitasUnicas)]);
-      rows.push(['Clics WhatsApp', String(funnelData.kpis.clicsWhatsapp)]);
-      rows.push(['Pedidos WhatsApp', String(funnelData.kpis.pedidosWhatsapp)]);
-    }
-    rows.push([]);
-    rows.push(['Top platos']);
-    rows.push(['Plato', 'Cantidad', 'Ventas']);
-    reporte.por_plato.slice(0, 30).forEach(p => {
-      rows.push([p.menu_item_name, String(p.cantidad), `S/ ${p.total_ventas.toFixed(2)}`]);
-    });
-    rows.push([]);
-    rows.push(['Ranking mozos']);
-    rows.push(['Mozo', 'Comandas', 'Ventas', 'Ticket']);
-    reporte.por_mozo.forEach(m => {
-      rows.push([m.waiter_name, String(m.num_comandas), `S/ ${m.total_ventas.toFixed(2)}`, `S/ ${m.ticket_promedio.toFixed(2)}`]);
-    });
+    toast.loading('Generando Excel profesional...', { id: 'xlsx-export' });
 
-    const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
-    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `reporte-menupro-${new Date().toISOString().slice(0,10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast.success('CSV exportado');
+    try {
+      const periodLabel = range === '7d' ? 'Últimos 7 días'
+        : range === '30d' ? 'Últimos 30 días'
+        : range === '90d' ? 'Últimos 90 días'
+        : range === 'month' ? 'Este mes'
+        : 'Personalizado';
+
+      // ── Hoja 1: Resumen KPIs ────────────────────────────────────────────
+      const kpiRows: Array<Record<string, any>> = [{
+        metrica: 'Ventas totales',
+        valor: reporte.kpis.total_ventas,
+        unidad: 'PEN',
+        detalle: comparativa ? `${comparativa.ventas >= 0 ? '+' : ''}${comparativa.ventas.toFixed(1)}% vs periodo anterior` : '—',
+      }, {
+        metrica: 'Comandas',
+        valor: reporte.kpis.num_comandas,
+        unidad: 'count',
+        detalle: comparativa ? `${comparativa.comandas >= 0 ? '+' : ''}${comparativa.comandas.toFixed(1)}% vs periodo anterior` : '—',
+      }, {
+        metrica: 'Ticket promedio',
+        valor: reporte.kpis.ticket_promedio,
+        unidad: 'PEN',
+        detalle: comparativa ? `${comparativa.ticket >= 0 ? '+' : ''}${comparativa.ticket.toFixed(1)}% vs periodo anterior` : '—',
+      }, {
+        metrica: 'Platos vendidos',
+        valor: reporte.kpis.num_platos_vendidos,
+        unidad: 'count',
+        detalle: comparativa ? `${comparativa.platos >= 0 ? '+' : ''}${comparativa.platos.toFixed(1)}% vs periodo anterior` : '—',
+      }, {
+        metrica: 'Mesas usadas',
+        valor: reporte.kpis.num_mesas_usadas,
+        unidad: 'count',
+        detalle: '—',
+      }];
+
+      // ── Hoja 2: Embudo de conversión ────────────────────────────────────
+      const funnelRows: Array<Record<string, any>> = funnelData
+        ? funnelData.funnel.map(s => ({
+            etapa: s.label,
+            valor: s.value,
+            pct_vs_anterior: (s.pct ?? 0) / 100,
+          }))
+        : [];
+
+      // ── Hoja 3: Top platos ──────────────────────────────────────────────
+      const platosRows: Array<Record<string, any>> = reporte.por_plato.slice(0, 50).map((p, i) => ({
+        rank: i + 1,
+        plato: p.menu_item_name,
+        cantidad: p.cantidad,
+        ventas_pen: p.total_ventas,
+        ticket_promedio_pen: p.cantidad > 0 ? p.total_ventas / p.cantidad : 0,
+      }));
+
+      // ── Hoja 4: Ranking mozos ───────────────────────────────────────────
+      const mozosRows: Array<Record<string, any>> = reporte.por_mozo.map((m, i) => ({
+        rank: i + 1,
+        mozo: m.waiter_name,
+        comandas: m.num_comandas,
+        ventas_pen: m.total_ventas,
+        ticket_promedio_pen: m.ticket_promedio,
+      }));
+
+      // ── Hoja 5: Por menú ────────────────────────────────────────────────
+      const menuRows: Array<Record<string, any>> = menuStats.map((m) => ({
+        menu: m.menu_name,
+        vistas: m.total_views,
+        hoy: m.today_views || 0,
+        semana: m.week_views || 0,
+      }));
+
+      await exportWorkbook({
+        filename: 'reporte-menupro',
+        period: periodLabel,
+        sheets: [
+          {
+            name: 'Resumen',
+            title: 'MenuPro — Resumen de métricas',
+            subtitle: `Período: ${periodLabel} · Generado: ${new Date().toLocaleString('es-PE')}`,
+            columns: [
+              { header: 'Métrica', key: 'metrica', width: 28, bold: true },
+              { header: 'Valor', key: 'valor', width: 18 },
+              { header: 'Unidad', key: 'unidad', width: 12 },
+              { header: 'Comparativa', key: 'detalle', width: 32 },
+            ],
+            rows: kpiRows,
+          },
+          ...(funnelRows.length > 0 ? [{
+            name: 'Embudo',
+            title: 'Embudo de conversión',
+            subtitle: `Período: ${periodLabel}`,
+            columns: [
+              { header: 'Etapa', key: 'etapa', width: 32, bold: true },
+              { header: 'Valor', key: 'valor', width: 14 },
+              { header: '% vs etapa anterior', key: 'pct_vs_anterior', width: 22, fmt: FMT.PCT },
+            ],
+            rows: funnelRows,
+          }] : []),
+          {
+            name: 'Top Platos',
+            title: 'Top platos vendidos',
+            subtitle: `Período: ${periodLabel} · Top 50`,
+            columns: [
+              { header: '#', key: 'rank', width: 6, bold: true },
+              { header: 'Plato', key: 'plato', width: 36, bold: true },
+              { header: 'Cantidad', key: 'cantidad', width: 12, fmt: FMT.INT },
+              { header: 'Ventas (S/)', key: 'ventas_pen', width: 16, fmt: FMT.PEN, bold: true },
+              { header: 'Ticket promedio (S/)', key: 'ticket_promedio_pen', width: 22, fmt: FMT.PEN },
+            ],
+            rows: platosRows,
+          },
+          ...(mozosRows.length > 0 ? [{
+            name: 'Mozos',
+            title: 'Ranking de mozos',
+            subtitle: `Período: ${periodLabel}`,
+            columns: [
+              { header: '#', key: 'rank', width: 6, bold: true },
+              { header: 'Mozo', key: 'mozo', width: 28, bold: true },
+              { header: 'Comandas', key: 'comandas', width: 12, fmt: FMT.INT },
+              { header: 'Ventas (S/)', key: 'ventas_pen', width: 16, fmt: FMT.PEN, bold: true },
+              { header: 'Ticket promedio (S/)', key: 'ticket_promedio_pen', width: 22, fmt: FMT.PEN },
+            ],
+            rows: mozosRows,
+          }] : []),
+          ...(menuRows.length > 0 ? [{
+            name: 'Menús',
+            title: 'Estadísticas por menú',
+            subtitle: `Período: ${periodLabel}`,
+            columns: [
+              { header: 'Menú', key: 'menu', width: 32, bold: true },
+              { header: 'Vistas totales', key: 'vistas', width: 14, fmt: FMT.INT },
+              { header: 'Vistas hoy', key: 'hoy', width: 14, fmt: FMT.INT },
+              { header: 'Vistas esta semana', key: 'semana', width: 18, fmt: FMT.INT },
+            ],
+            rows: menuRows,
+          }] : []),
+        ],
+      });
+
+      toast.success('Excel profesional exportado', { id: 'xlsx-export' });
+    } catch (err) {
+      console.error('[exportXLSX]', err);
+      toast.error('Error exportando Excel', { id: 'xlsx-export' });
+    }
   }
 
   return (
@@ -516,7 +620,7 @@ function UltraFullAnalytics({ user, plan, isSuperAdmin, menus, profilePlan }: Pr
             <select
               value={range}
               onChange={e => setRange(e.target.value as RangePreset)}
-              className="bg-white/5 border border-white/10 text-white text-sm rounded-lg px-3 py-2.5 min-h-[44px] w-full sm:w-auto"
+              className="bg-white border border-gray-200 text-black text-sm rounded-lg px-3 py-2.5 min-h-[44px] w-full sm:w-auto font-medium shadow-sm"
             >
               <option value="7d">Últimos 7 días</option>
               <option value="30d">Últimos 30 días</option>
@@ -536,12 +640,12 @@ function UltraFullAnalytics({ user, plan, isSuperAdmin, menus, profilePlan }: Pr
             <Button
               variant="outline"
               size="sm"
-              onClick={exportCSV}
+              onClick={exportXLSX}
               disabled={!reporte}
               className="border-[#d4af37]/30 text-[#d4af37] hover:bg-[#d4af37]/10 min-h-[44px] col-span-2 sm:col-span-1 sm:ml-auto"
             >
               <Download className="w-4 h-4 mr-1.5" />
-              Exportar CSV
+              Exportar Excel
             </Button>
           </div>
         </div>

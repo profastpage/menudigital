@@ -485,7 +485,7 @@ export function ComandasClient({ user, plan, isSuperAdmin, menus }: Props) {
                     <select
                       value={form.table_id}
                       onChange={(e) => setForm({ ...form, table_id: e.target.value })}
-                      className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm"
+                      className="w-full bg-white border border-gray-200 text-black rounded-lg px-3 py-2 text-sm font-medium shadow-sm"
                     >
                       <option value="">Para llevar (sin mesa)</option>
                       {mesas.filter(m => m.status === 'libre' || m.status === 'reservada').map(m => (
@@ -501,7 +501,7 @@ export function ComandasClient({ user, plan, isSuperAdmin, menus }: Props) {
                       <select
                         value={form.waiter_id}
                         onChange={(e) => setForm({ ...form, waiter_id: e.target.value })}
-                        className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm"
+                        className="w-full bg-white border border-gray-200 text-black rounded-lg px-3 py-2 text-sm font-medium shadow-sm"
                       >
                         <option value="">Sin asignar</option>
                         {waiters.map(w => (

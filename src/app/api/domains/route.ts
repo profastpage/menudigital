@@ -20,9 +20,12 @@ export async function GET() {
     .eq('id', user.id)
     .single();
 
-  if (profile?.plan !== 'pro') {
+  // Acceso: Pro, Premium y Full (no solo Pro)
+  const PLAN_ORDER = ['free', 'pro', 'premium', 'full'];
+  const hasAccess = PLAN_ORDER.indexOf(profile?.plan || 'free') >= PLAN_ORDER.indexOf('pro');
+  if (!hasAccess) {
     return NextResponse.json(
-      { error: 'Dominios personalizados solo disponibles en Pro' },
+      { error: 'Dominios personalizados disponibles a partir del plan Pro. Upgrade para activar.' },
       { status: 403 }
     );
   }
@@ -57,9 +60,12 @@ export async function POST(req: NextRequest) {
     .eq('id', user.id)
     .single();
 
-  if (profile?.plan !== 'pro') {
+  // Acceso: Pro, Premium y Full
+  const PLAN_ORDER_POST = ['free', 'pro', 'premium', 'full'];
+  const hasAccessPost = PLAN_ORDER_POST.indexOf(profile?.plan || 'free') >= PLAN_ORDER_POST.indexOf('pro');
+  if (!hasAccessPost) {
     return NextResponse.json(
-      { error: 'Dominios personalizados solo disponibles en Pro. Upgrade para activar.' },
+      { error: 'Dominios personalizados disponibles a partir del plan Pro. Upgrade para activar.' },
       { status: 403 }
     );
   }
