@@ -1583,3 +1583,36 @@ Stage Summary:
 - Ya no usa el icono genérico MessageCircle de lucide-react que era solo una burbuja
 - Componente WhatsAppIcon reutilizable creado para futuros usos
 - Consistencia visual en todos los puntos de contacto WhatsApp de la plataforma
+
+---
+Task ID: demo-accounts-pro-premium-full
+Agent: main (Super Z)
+Task: Crear 3 cuentas demo ultra-pobladas (demopro/demopremium/demofull) para publicidad con métricas realistas, comandas, mozos, mesas, inventario, etc.
+
+Work Log:
+- Inspeccionada DB producción: 21 tablas, enum user_plan con free/pro/premium/full
+- Creado script scripts/seed-demo-accounts.py (4 cuentas demo con datos completos)
+  * demopro@menudigital.pro (plan PRO): 3 menús, 82 platos, ~8K views, ~1.3K WA clicks
+  * demopremium@menudigital.pro (plan PREMIUM): 5 menús, 137 platos, ~6K views, ~1K WA clicks, 1 sucursal, 8 mozos, 15 mesas, 25 insumos, 50 comandas
+  * demofull@menudigital.pro (plan FULL): 7 menús, 175 platos, ~5.5K views, ~1K WA clicks, 3 sucursales, 15 mozos, 30 mesas, 50 insumos, 120 comandas, 80 movimientos, 95 recetas, 24 vouchers, dominio custom
+- Script principal dividido en 4 partes por problemas de memoria (shell se colgaba):
+  * seed-demofull-account.py: auth/profile/branches/menus/dishes/analytics iniciales
+  * seed-demofull-resume.py: continuar analytics + mozos + mesas
+  * seed-demofull-resume2.py: continuar insumos + comandas (con commits cada 10)
+  * seed-demofull-final.py: 20 comandas restantes + movimientos + recetas + dominio
+- Cada script idempotente (ON CONFLICT DO UPDATE/NOTHING), re-ejecutable sin romper
+- Credenciales únicas: Password DemoMenuPro2025! para las 4 cuentas
+
+Estado final verificado (todas login OK):
+  Email                          Plan      Menus  Views   WA  Mozos Mesas Inv Orders
+  demo@menudigital.pro           full          5     30    1    22    59  64     27
+  demofull@menudigital.pro       full          7   5562  965    15    30  50    120
+  demopremium@menudigital.pro    premium       5   5970 1034     8    15  25     50
+  demopro@menudigital.pro        pro           3   7884 1350     0     0   0      0
+
+Stage Summary:
+- 3 cuentas demo completamente funcionales y pobladas con métricas realistas
+- Scripts Python persistentes en /scripts/seed-demofull-*.py (idempotentes)
+- 4 cuentas demo operativas en producción Supabase (login verificado)
+- Listas para publicidad: cada una muestra features distintas del plan correspondiente
+- URLs públicas: /r/polleria-pro, /r/polleria-prem, /r/polleria-full, etc.
