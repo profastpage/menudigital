@@ -109,7 +109,7 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount }: Props)
   const [theme, setTheme] = useState({
     color_secondary: (initialMenu as any).theme_color_secondary || '#1a1a2e',
     font: (initialMenu as any).theme_font || 'Inter',
-    layout: (initialMenu as any).theme_layout || 'single',
+    layout: (initialMenu as any).theme_layout === 'grid' ? 'double' : ((initialMenu as any).theme_layout || 'single'),
     image_size: (initialMenu as any).theme_image_size || 'medium',
     card_style: (initialMenu as any).theme_card_style || 'expanded',
     cover_url: (initialMenu as any).theme_cover_url || '',
@@ -124,6 +124,17 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount }: Props)
     carta_list_style: (initialMenu as any).theme_carta_list_style === true,
     carta_autoscroll: (initialMenu as any).theme_carta_autoscroll === true,
     carta_scroll_speed: (initialMenu as any).theme_carta_scroll_speed || 30,
+    // Estilo Híbrido (per-category style: carousel / list / classic)
+    hybrid_style: (initialMenu as any).theme_hybrid_style === true,
+    hybrid_config: (() => {
+      try {
+        const raw = (initialMenu as any).theme_hybrid_config;
+        if (!raw) return {} as Record<string, string>;
+        const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+        return parsed || {};
+      } catch { return {} as Record<string, string>; }
+    })(),
+    sticky_top_bar: (initialMenu as any).theme_sticky_top_bar !== false,
   });
   // Estado de redes sociales
   const [socials, setSocials] = useState({
@@ -214,6 +225,9 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount }: Props)
           theme_carta_list_style: theme.carta_list_style,
           theme_carta_autoscroll: theme.carta_autoscroll,
           theme_carta_scroll_speed: theme.carta_scroll_speed,
+          theme_hybrid_style: theme.hybrid_style,
+          theme_hybrid_config: JSON.stringify(theme.hybrid_config || {}),
+          theme_sticky_top_bar: theme.sticky_top_bar,
           // Redes sociales
           social_facebook: socials.facebook,
           social_instagram: socials.instagram,
@@ -300,6 +314,9 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount }: Props)
         theme_carta_list_style: theme.carta_list_style,
         theme_carta_autoscroll: theme.carta_autoscroll,
         theme_carta_scroll_speed: theme.carta_scroll_speed,
+        theme_hybrid_style: theme.hybrid_style,
+        theme_hybrid_config: JSON.stringify(theme.hybrid_config || {}),
+        theme_sticky_top_bar: theme.sticky_top_bar,
         // Redes sociales
         social_facebook: socials.facebook || null,
         social_instagram: socials.instagram || null,
@@ -399,6 +416,9 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount }: Props)
           theme_carta_list_style: theme.carta_list_style,
           theme_carta_autoscroll: theme.carta_autoscroll,
           theme_carta_scroll_speed: theme.carta_scroll_speed,
+          theme_hybrid_style: theme.hybrid_style,
+          theme_hybrid_config: JSON.stringify(theme.hybrid_config || {}),
+          theme_sticky_top_bar: theme.sticky_top_bar,
           // Redes sociales
           social_facebook: socials.facebook,
           social_instagram: socials.instagram,
@@ -1263,11 +1283,10 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount }: Props)
                 {/* Layout */}
                 <div className="space-y-2">
                   <Label>Layout de platos</Label>
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-2 gap-2">
                     {[
                       { v: 'single', label: '1 columna', icon: '▮' },
                       { v: 'double', label: '2 columnas', icon: '▮▮' },
-                      { v: 'grid', label: 'Grid 3 col', icon: '▮▮▮' },
                     ].map((opt) => (
                       <button
                         key={opt.v}
@@ -1275,7 +1294,7 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount }: Props)
                         disabled={plan.id === 'free' && opt.v !== 'single'}
                         onClick={() => setTheme({ ...theme, layout: opt.v as any })}
                         className={`p-3 rounded-lg border text-sm transition ${
-                          theme.layout === opt.v
+                          (theme.layout === opt.v || (theme.layout === 'grid' && opt.v === 'double'))
                             ? 'border-[#d4af37] bg-[#d4af37]/10 text-[#d4af37]'
                             : 'border-white/10 bg-white/5 text-white/70 hover:bg-white/10'
                         } disabled:opacity-40 disabled:cursor-not-allowed`}
@@ -1286,7 +1305,7 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount }: Props)
                     ))}
                   </div>
                   {plan.id === 'free' && (
-                    <p className="text-xs text-white/40">2 columnas y grid requieren plan Pro.</p>
+                    <p className="text-xs text-white/40">2 columnas requiere plan Pro.</p>
                   )}
                 </div>
 
@@ -1509,6 +1528,82 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount }: Props)
                       )}
                     </div>
                   )}
+
+                  {/* ─── Estilo Híbrido (per-category style) ─── */}
+                  <div className="mt-4 pt-4 border-t border-white/10 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-[#9d4edd]" />
+                      <h3 className="text-sm font-semibold text-white/90">Estilo Híbrido (mixto por categoría)</h3>
+                    </div>
+                    <p className="text-xs text-white/50 leading-relaxed">
+                      Combina <span className="text-white/70">carrusel</span>, <span className="text-white/70">lista Rappi</span> y
+                      <span className="text-white/70"> clásico</span> en el mismo menú. Elige qué estilo
+                      usar para cada categoría individualmente.
+                    </p>
+                    <ToggleRow
+                      label="Activar modo híbrido"
+                      desc="Permitir estilo distinto por categoría"
+                      value={theme.hybrid_style}
+                      disabled={plan.id === 'free'}
+                      onChange={(v) => {
+                        // Si activamos hybrid, desactivamos carta_style y carta_list_style globales
+                        setTheme({
+                          ...theme,
+                          hybrid_style: v,
+                          carta_style: v ? false : theme.carta_style,
+                          carta_list_style: v ? false : theme.carta_list_style,
+                        });
+                      }}
+                    />
+                    {theme.hybrid_style && (
+                      <div className="bg-white/[0.03] border border-white/10 rounded-xl p-4 space-y-3">
+                        <div className="text-xs uppercase tracking-wider text-white/40">
+                          Estilo por categoría
+                        </div>
+                        {categories.length === 0 && (
+                          <p className="text-xs text-white/40">Agrega categorías para configurar su estilo.</p>
+                        )}
+                        {categories.map((cat, idx) => (
+                          <div key={cat.id || idx} className="flex items-center justify-between gap-3">
+                            <span className="text-sm text-white/80 truncate flex-1 min-w-0">
+                              <span className="text-white/40 mr-2">#{idx + 1}</span>
+                              {cat.name || 'Sin nombre'}
+                            </span>
+                            <select
+                              value={theme.hybrid_config?.[String(idx)] || 'classic'}
+                              onChange={(e) => {
+                                const newConfig = { ...(theme.hybrid_config || {}) };
+                                newConfig[String(idx)] = e.target.value;
+                                setTheme({ ...theme, hybrid_config: newConfig });
+                              }}
+                              className="bg-white text-black border border-gray-200 rounded-lg px-3 py-1.5 text-xs font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-[#d4af37] min-w-[140px]"
+                            >
+                              <option value="classic">📋 Clásico</option>
+                              <option value="carousel">🎯 Carrusel</option>
+                              <option value="list">📜 Lista Rappi</option>
+                            </select>
+                          </div>
+                        ))}
+                        <p className="text-[10px] text-white/40 leading-relaxed pt-2">
+                          <span className="text-white/60">Clásico</span>: cards verticales con imagen grande.
+                          <br />
+                          <span className="text-white/60">Carrusel</span>: scroll horizontal estilo PedidosYa.
+                          <br />
+                          <span className="text-white/60">Lista Rappi</span>: texto izquierda + imagen pequeña derecha.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* ─── Sticky bottom bar (toggle) ─── */}
+                  <div className="mt-4 pt-4 border-t border-white/10">
+                    <ToggleRow
+                      label="Barra inferior (subir al inicio)"
+                      desc="Barra delgada siempre visible con botón 'Subir'"
+                      value={theme.sticky_top_bar}
+                      onChange={(v) => setTheme({ ...theme, sticky_top_bar: v })}
+                    />
+                  </div>
                 </div>
 
                 <div className="flex justify-end gap-2 pt-2">

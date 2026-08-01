@@ -104,6 +104,10 @@ export async function PUT(
     theme_carta_list_style,
     theme_carta_autoscroll,
     theme_carta_scroll_speed,
+    // Estilo Híbrido (per-category style: carousel/list/classic)
+    theme_hybrid_style,
+    theme_hybrid_config,
+    theme_sticky_top_bar,
     // Redes sociales
     social_facebook,
     social_instagram,
@@ -144,6 +148,9 @@ export async function PUT(
   if (theme_carta_list_style !== undefined) updateData.theme_carta_list_style = theme_carta_list_style;
   if (theme_carta_autoscroll !== undefined) updateData.theme_carta_autoscroll = theme_carta_autoscroll;
   if (theme_carta_scroll_speed !== undefined) updateData.theme_carta_scroll_speed = theme_carta_scroll_speed;
+  if (theme_hybrid_style !== undefined) updateData.theme_hybrid_style = theme_hybrid_style;
+  if (theme_hybrid_config !== undefined) updateData.theme_hybrid_config = theme_hybrid_config || null;
+  if (theme_sticky_top_bar !== undefined) updateData.theme_sticky_top_bar = theme_sticky_top_bar;
 
   // Redes sociales (todas opcionales, se guardan como null si vienen vacías)
   if (social_facebook !== undefined) updateData.social_facebook = social_facebook?.trim() || null;

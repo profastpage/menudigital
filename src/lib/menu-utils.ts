@@ -18,6 +18,9 @@ export interface MenuData {
   // Tema personalizables (plan Pro desbloquea todo)
   theme_color_secondary?: string;
   theme_font?: string;
+  // layout: solo 'single' (1 columna) o 'double' (2 columnas).
+  // 'grid' se mantiene en el tipo por compatibilidad con menús antiguos,
+  // pero ya no se ofrece en el editor (se mapea a 'double' al renderizar).
   theme_layout?: 'single' | 'double' | 'grid';
   theme_image_size?: 'none' | 'small' | 'medium' | 'large' | 'hero';
   theme_card_style?: 'compact' | 'expanded' | 'minimal';
@@ -33,6 +36,10 @@ export interface MenuData {
   theme_carta_list_style?: boolean;   // default false — modo lista Rappi (texto izq, imagen der)
   theme_carta_autoscroll?: boolean;   // default false — auto-scroll del carrusel Destacados
   theme_carta_scroll_speed?: number;  // default 30 — px/seg del auto-scroll
+  // Estilo Híbrido (mezcla carrusel + lista rappi + clásico por categoría)
+  theme_hybrid_style?: boolean;       // default false — activa modo híbrido (per-category style)
+  theme_hybrid_config?: string | null; // default null — JSON: {"0":"carousel","1":"list","2":"classic"}
+  theme_sticky_top_bar?: boolean;     // default true — barra inferior sticky con botón "subir"
   // Redes sociales
   social_facebook?: string | null;
   social_instagram?: string | null;

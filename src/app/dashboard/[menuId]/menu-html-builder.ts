@@ -36,9 +36,20 @@ export function buildMenuHTML(data: MenuData, opts?: { isPreview?: boolean }): s
   const cartaListStyle = data.theme_carta_list_style === true;
   const cartaAutoscroll = data.theme_carta_autoscroll === true;
   const cartaScrollSpeed = data.theme_carta_scroll_speed || 30;
+  // Estilo Híbrido (per-category style: carousel / list / classic)
+  const hybridStyle = data.theme_hybrid_style === true;
+  let hybridConfig: Record<string, string> = {};
+  try {
+    const raw = (data as any).theme_hybrid_config;
+    if (raw) {
+      hybridConfig = typeof raw === 'string' ? JSON.parse(raw) : raw;
+    }
+  } catch { hybridConfig = {}; }
+  // Sticky bottom bar (desktop) — visible by default
+  const stickyTopBar = (data as any).theme_sticky_top_bar !== false;
 
-  const css = buildCSS({ layout, imageSize, cardStyle, font, darkMode, showSearch, showCatIcons, rounded, coverUrl, secondary, showGallery, cartaStyle, cartaListStyle });
-  const js = buildJS({ layout, imageSize, cardStyle, showSearch, showGallery, isPreview, darkMode, cartaStyle, cartaListStyle, cartaAutoscroll, cartaScrollSpeed });
+  const css = buildCSS({ layout, imageSize, cardStyle, font, darkMode, showSearch, showCatIcons, rounded, coverUrl, secondary, showGallery, cartaStyle, cartaListStyle, hybridStyle, stickyTopBar });
+  const js = buildJS({ layout, imageSize, cardStyle, showSearch, showGallery, isPreview, darkMode, cartaStyle, cartaListStyle, cartaAutoscroll, cartaScrollSpeed, hybridStyle, hybridConfig, stickyTopBar });
   const colorRgb = hexToRgbStr(data.color);
   const secondaryRgb = hexToRgbStr(secondary);
 
@@ -111,6 +122,34 @@ export function buildMenuHTML(data: MenuData, opts?: { isPreview?: boolean }): s
   html += '  </div>\n';
   html += '  <span class="mini-header-status open" id="miniHeaderStatus">Abierto</span>\n';
   html += '</div>\n';
+  // Sticky bottom bar — barra inferior delgada (desktop) con botón "Subir al inicio"
+  // Solo se renderiza si stickyTopBar está activo. En mobile se oculta vía CSS.
+  if (stickyTopBar) {
+    html += '<div class="sticky-top-bar" id="stickyTopBar">\n';
+    html += '  <span class="sticky-top-bar-label">Inicio</span>\n';
+    html += '  <button class="sticky-top-bar-btn" id="stickyTopBtn" aria-label="Subir al inicio">\n';
+    html += '    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>\n';
+    html += '    Subir al inicio\n';
+    html += '  </button>\n';
+    html += '</div>\n';
+  }
+  // Search overlay — modal con todos los platos indexados + filtro en vivo
+  // Se renderiza vacío y se rellena al abrir (lazy render)
+  if (showSearch) {
+    html += '<div class="search-overlay" id="searchOverlay" aria-hidden="true">\n';
+    html += '  <div class="search-overlay-inner">\n';
+    html += '    <div class="search-overlay-header">\n';
+    html += '      <div class="search-overlay-input-wrap">\n';
+    html += '        <svg class="search-overlay-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>\n';
+    html += '        <input type="text" class="search-overlay-input" id="searchOverlayInput" placeholder="Buscar plato..." />\n';
+    html += '      </div>\n';
+    html += '      <button class="search-overlay-close" id="searchOverlayClose" aria-label="Cerrar">&times;</button>\n';
+    html += '    </div>\n';
+    html += '    <div class="search-overlay-summary" id="searchOverlaySummary"></div>\n';
+    html += '    <div class="search-overlay-results" id="searchOverlayResults"></div>\n';
+    html += '  </div>\n';
+    html += '</div>\n';
+  }
   html += '<script>\n';
   // Anti-FOUC: aplicar tema guardado ANTES de que el browser renderice el body
   // Esto evita un flash del tema por defecto si el usuario había elegido otro
@@ -118,7 +157,7 @@ export function buildMenuHTML(data: MenuData, opts?: { isPreview?: boolean }): s
   html += 'var RESTAURANT = ' + JSON.stringify(data) + ';\n';
   html += 'var SHOW_BRANDING = ' + (!!data.branding_text) + ';\n';
   html += 'var BRANDING_TEXT = ' + JSON.stringify(data.branding_text || '') + ';\n';
-  html += 'var THEME = ' + JSON.stringify({ layout, imageSize, cardStyle, showSearch, showGallery, cartaStyle, cartaListStyle, cartaAutoscroll, cartaScrollSpeed }) + ';\n';
+  html += 'var THEME = ' + JSON.stringify({ layout, imageSize, cardStyle, showSearch, showGallery, cartaStyle, cartaListStyle, cartaAutoscroll, cartaScrollSpeed, hybridStyle, hybridConfig, stickyTopBar }) + ';\n';
   html += 'var IS_PREVIEW = ' + JSON.stringify(isPreview) + ';\n';
   html += 'document.documentElement.style.setProperty("--accent", "' + data.color + '");\n';
   html += 'document.documentElement.style.setProperty("--accent-rgb", "' + colorRgb + '");\n';
@@ -149,10 +188,12 @@ interface ThemeOpts {
   showGallery: boolean;
   cartaStyle: boolean;
   cartaListStyle: boolean;
+  hybridStyle: boolean;
+  stickyTopBar: boolean;
 }
 
 function buildCSS(opts: ThemeOpts): string {
-  const { layout, imageSize, cardStyle, font, darkMode, showSearch, showCatIcons, rounded, coverUrl, showGallery, cartaStyle, cartaListStyle } = opts;
+  const { layout, imageSize, cardStyle, font, darkMode, showSearch, showCatIcons, rounded, coverUrl, showGallery, cartaStyle, cartaListStyle, hybridStyle, stickyTopBar } = opts;
   const radius = rounded ? '16px' : '4px';
   const radiusSm = rounded ? '12px' : '2px';
   const radiusLg = rounded ? '24px' : '8px';
@@ -665,6 +706,68 @@ function buildCSS(opts: ThemeOpts): string {
     c += '.rappi-item-add svg{width:14px;height:14px;}';
   }
 
+  // ─── STICKY BOTTOM BAR (desktop, thin) ───
+  // Barra inferior delgada siempre visible (desktop ≥640px) con botón "Subir al inicio".
+  // En mobile el mobile-bottom-nav cumple la misma función (botón Inicio).
+  if (stickyTopBar) {
+    c += '.sticky-top-bar{position:fixed;bottom:0;left:0;right:0;height:44px;background:var(--bottom-nav-bg);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:1px solid var(--border);display:flex;align-items:center;justify-content:center;gap:14px;padding:0 16px;z-index:93;box-shadow:0 -2px 12px rgba(0,0,0,0.12);transform:translateY(0);transition:transform 0.3s cubic-bezier(0.32,0.72,0,1);}';
+    c += '.sticky-top-bar.hidden{transform:translateY(110%);}';
+    // Hidden on mobile (mobile-bottom-nav covers this need)
+    c += '@media(max-width:639px){.sticky-top-bar{display:none !important;}}';
+    // Padding for desktop body to avoid overlap
+    c += '@media(min-width:640px){body{padding-bottom:44px;}}';
+    c += '.sticky-top-bar-btn{display:flex;align-items:center;gap:7px;background:linear-gradient(135deg,var(--accent),rgba(var(--accent-rgb),0.85));color:#fff;border:none;padding:7px 18px;border-radius:22px;font-size:12.5px;font-weight:700;cursor:pointer;box-shadow:0 3px 10px rgba(var(--accent-rgb),0.35);transition:all 0.2s;font-family:var(--font-main);-webkit-tap-highlight-color:transparent;}';
+    c += '.sticky-top-bar-btn:hover{transform:translateY(-1px);box-shadow:0 5px 14px rgba(var(--accent-rgb),0.5);}';
+    c += '.sticky-top-bar-btn:active{transform:translateY(0);}';
+    c += '.sticky-top-bar-btn svg{width:14px;height:14px;}';
+    c += '.sticky-top-bar-label{font-size:11px;color:var(--text-muted);font-weight:500;letter-spacing:0.3px;}';
+    // Hide sticky bar when modal/lightbox open on desktop
+    c += 'body:has(.dish-lightbox.visible) .sticky-top-bar,body:has(.modal-overlay.visible) .sticky-top-bar{transform:translateY(110%);opacity:0;pointer-events:none;}';
+  }
+
+  // ─── SEARCH OVERLAY (preview of all dishes) ───
+  // Modal overlay que aparece al hacer clic en el botón de búsqueda.
+  // Muestra TODOS los platos indexados del menú en una grilla, con filtro en vivo.
+  if (showSearch) {
+    c += '.search-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);z-index:250;display:none;align-items:stretch;justify-content:center;animation:soFade 0.22s ease;}';
+    c += '.search-overlay.visible{display:flex;}';
+    c += '@keyframes soFade{from{opacity:0;}to{opacity:1;}}';
+    c += '.search-overlay-inner{background:var(--lightbox-bg);width:100%;max-width:680px;min-height:100dvh;max-height:100dvh;display:flex;flex-direction:column;animation:soSlide 0.28s cubic-bezier(0.32,0.72,0,1);box-shadow:0 0 60px rgba(0,0,0,0.5);overflow:hidden;}';
+    c += '@media(min-width:640px){.search-overlay-inner{border-radius:24px;min-height:auto;max-height:88vh;margin:24px;}}';
+    c += '@keyframes soSlide{from{transform:translateY(40px);opacity:0;}to{transform:translateY(0);opacity:1;}}';
+    c += '.search-overlay-header{padding:14px 16px calc(14px + env(safe-area-inset-top, 0px));border-bottom:1px solid var(--border);background:var(--bottom-nav-bg);display:flex;align-items:center;gap:10px;flex-shrink:0;}';
+    c += '.search-overlay-input-wrap{flex:1;position:relative;}';
+    c += '.search-overlay-input{width:100%;padding:11px 14px 11px 40px;border-radius:12px;background:var(--glass);border:1px solid var(--border);color:var(--text);font-size:14.5px;font-family:var(--font-main);outline:none;transition:border 0.2s;}';
+    c += '.search-overlay-input:focus{border-color:rgba(var(--accent-rgb),0.5);background:var(--glass-strong);}';
+    c += '.search-overlay-input::placeholder{color:var(--text-muted);}';
+    c += '.search-overlay-icon{position:absolute;left:13px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:var(--text-muted);pointer-events:none;}';
+    c += '.search-overlay-close{width:38px;height:38px;border-radius:50%;background:var(--glass);border:1px solid var(--border);color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:20px;line-height:1;transition:all 0.2s;}';
+    c += '.search-overlay-close:hover{background:var(--glass-strong);}';
+    c += '.search-overlay-close:active{transform:scale(0.92);}';
+    // Index summary
+    c += '.search-overlay-summary{padding:10px 16px;background:var(--glass);border-bottom:1px solid var(--border);font-size:12px;color:var(--text-muted);flex-shrink:0;display:flex;align-items:center;gap:8px;}';
+    c += '.search-overlay-summary .count-pill{background:rgba(var(--accent-rgb),0.15);color:var(--accent);font-weight:700;padding:2px 9px;border-radius:10px;font-size:11px;}';
+    // Results grid
+    c += '.search-overlay-results{flex:1;overflow-y:auto;padding:12px;-webkit-overflow-scrolling:touch;}';
+    c += '.search-results-grid{display:grid;grid-template-columns:1fr;gap:10px;}';
+    c += '@media(min-width:480px){.search-results-grid{grid-template-columns:1fr 1fr;}}';
+    c += '@media(min-width:720px){.search-results-grid{grid-template-columns:1fr 1fr 1fr;}}';
+    // Search result card (compact)
+    c += '.search-result-card{display:flex;gap:10px;background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px;cursor:pointer;transition:all 0.18s;}';
+    c += '.search-result-card:hover{border-color:rgba(var(--accent-rgb),0.4);transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,0.12);}';
+    c += '.search-result-card:active{transform:scale(0.99);}';
+    c += '.search-result-img{flex:0 0 64px;width:64px;height:64px;border-radius:8px;overflow:hidden;background:linear-gradient(135deg,var(--glass),var(--glass-strong));flex-shrink:0;}';
+    c += '.search-result-img img{width:100%;height:100%;object-fit:cover;display:block;}';
+    c += '.search-result-img-placeholder{width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--accent),rgba(var(--accent-rgb),0.55));color:#fff;font-size:22px;font-weight:900;}';
+    c += '.search-result-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;}';
+    c += '.search-result-name{font-size:13.5px;font-weight:700;color:var(--text);line-height:1.25;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;}';
+    c += '.search-result-cat{font-size:10.5px;color:var(--accent);font-weight:600;text-transform:uppercase;letter-spacing:0.3px;}';
+    c += '.search-result-desc{font-size:11.5px;color:var(--text-muted);line-height:1.35;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden;}';
+    c += '.search-result-price{font-size:13px;font-weight:800;color:var(--accent-text);margin-top:auto;}';
+    c += '.search-no-results{padding:48px 20px;text-align:center;color:var(--text-muted);font-size:14px;}';
+    c += '.search-no-results svg{width:36px;height:36px;margin:0 auto 10px;display:block;opacity:0.5;}';
+  }
+
   return c;
 }
 
@@ -680,6 +783,9 @@ interface JSOpts {
   cartaListStyle?: boolean;
   cartaAutoscroll?: boolean;
   cartaScrollSpeed?: number;
+  hybridStyle?: boolean;
+  hybridConfig?: Record<string, string>;
+  stickyTopBar?: boolean;
 }
 
 function buildJS(opts: JSOpts): string {
@@ -690,6 +796,9 @@ function buildJS(opts: JSOpts): string {
   const cartaListStyle = opts.cartaListStyle === true;
   const cartaAutoscroll = opts.cartaAutoscroll === true;
   const cartaScrollSpeed = opts.cartaScrollSpeed || 30;
+  const hybridStyle = opts.hybridStyle === true;
+  const hybridConfig = opts.hybridConfig || {};
+  const stickyTopBar = opts.stickyTopBar !== false;
   let s = '';
   s += 'var cart = [];\n';
   s += 'var searchQuery = "";\n';
@@ -763,8 +872,113 @@ function buildJS(opts: JSOpts): string {
   // ─── MODO CARTA (PedidosYa/Rappi horizontal carousel) ───
   // Si THEME.cartaStyle=true: secciones con scroll horizontal (Destacados + cada categoría)
   // Si THEME.cartaListStyle=true: lista estilo Rappi (texto izq, imagen pequeña der)
-  // Si ambos false: layout original (grid de cards verticales)
-  if (cartaStyle || cartaListStyle) {
+  // Si THEME.hybridStyle=true: cada categoría con su propio estilo (carousel/list/classic)
+  // Si todos false: layout original (grid de cards verticales)
+  if (hybridStyle) {
+    // MODO HÍBRIDO: cada categoría se renderiza con su estilo configurado
+    // hybridConfig = {"0":"carousel","1":"list","2":"classic", ...}
+    // Estilo por defecto: "classic"
+    s += '  html+="<div class=\\"carta-wrapper\\">";\n';
+    // Destacados: mostrar si al menos una categoría es carrusel
+    s += '  var hasCarousel=false;\n';
+    s += '  RESTAURANT.categories.forEach(function(cat,i){if((THEME.hybridConfig||{})[String(i)]==="carousel"){hasCarousel=true;}});\n';
+    s += '  if(hasCarousel){\n';
+    s += '    var destacados=[];\n';
+    s += '    RESTAURANT.categories.forEach(function(cat,ci){(cat.dishes||[]).forEach(function(dish,di){if(destacados.length<10){destacados.push({catIdx:ci,dishIdx:di,dishObj:dish,catName:cat.name});}});});\n';
+    s += '    if(destacados.length>0){\n';
+    s += '      html+="<section class=\\"carta-destacados\\" id=\\"cat-destacados\\">";\n';
+    s += '      html+="<h2 class=\\"carta-section-title\\">⭐ Destacados <span class=\\"cat-count\\">"+destacados.length+" platos</span></h2>";\n';
+    s += '      html+="<div class=\\"carta-track\\" id=\\"destacadosTrack\\">";\n';
+    s += '      destacados.forEach(function(it,idx){\n';
+    s += '        var d=it.dishObj;var letter=(d.name||"P").charAt(0).toUpperCase();\n';
+    s += '        html+="<div class=\\"carta-card\\" data-cat=\\""+it.catIdx+"\\" data-dish=\\""+it.dishIdx+"\\" data-name=\\""+escapeHtml((d.name||"").toLowerCase())+"\\" data-desc=\\""+escapeHtml((d.description||"").toLowerCase())+"\\" style=\\"transition-delay:"+(idx*40)+"ms\\">";\n';
+    s += '        html+="<div class=\\"carta-card-img-wrap\\">";\n';
+    s += '        if(idx<3){html+="<span class=\\"carta-card-featured\\">Top</span>";}\n';
+    s += '        html+="<span class=\\"carta-card-price-overlay\\">"+formatPrice(d.price)+"</span>";\n';
+    s += '        if(d.image_url){var _src=imgMedium(d.image_url),_ss=imgSrcset(d.image_url);html+="<img src=\\""+escapeHtml(_src)+"\\" "+(_ss?"srcset=\\""+escapeHtml(_ss)+"\\" sizes=\\"(max-width: 600px) 90vw, (max-width: 1024px) 45vw, 300px\\" ":"")+"class=\\"carta-card-img\\" alt=\\""+escapeHtml(d.name||"Plato")+"\\" data-letter=\\""+escapeHtml(letter)+"\\" loading=\\"lazy\\" decoding=\\"async\\"/>";}\n';
+    s += '        else{html+="<div class=\\"carta-card-placeholder\\">"+escapeHtml(letter)+"</div>";}\n';
+    s += '        html+="<button class=\\"carta-card-add\\" data-cat=\\""+it.catIdx+"\\" data-dish=\\""+it.dishIdx+"\\" title=\\"Agregar\\"><svg viewBox=\\"0 0 24 24\\" fill=\\"none\\" stroke=\\"currentColor\\" stroke-width=\\"3\\" stroke-linecap=\\"round\\" stroke-linejoin=\\"round\\"><path d=\\"M12 5v14M5 12h14\\"/></svg></button>";\n';
+    s += '        html+="</div>";\n';
+    s += '        html+="<div class=\\"carta-card-info\\"><div class=\\"carta-card-name\\">"+escapeHtml(d.name||"Plato")+"</div>";\n';
+    s += '        if(d.description){html+="<div class=\\"carta-card-desc\\">"+escapeHtml(d.description)+"</div>";}\n';
+    s += '        html+="</div></div>";\n';
+    s += '      });\n';
+    s += '      html+="</section>";\n';
+    s += '    }\n';
+    s += '  }\n';
+    // Cada categoría con su estilo específico
+    s += '  RESTAURANT.categories.forEach(function(cat,i){\n';
+    s += '    var catDishes=cat.dishes||[];\n';
+    s += '    if(catDishes.length===0)return;\n';
+    s += '    var catStyle=(THEME.hybridConfig||{})[String(i)]||"classic";\n';
+    // Render section header según estilo
+    s += '    if(catStyle==="carousel"||catStyle==="list"){\n';
+    s += '      html+="<section class=\\"carta-category\\" id=\\"cat-"+i+"\\">";\n';
+    s += '      html+="<h2 class=\\"carta-section-title\\">"+escapeHtml(cat.name)+" <span class=\\"cat-count\\">"+catDishes.length+" platos</span></h2>";\n';
+    s += '    }else{\n';
+    s += '      html+="<section class=\\"section ' + (opts.layout === 'single' ? 'single-layout' : 'two-layout') + '\\" id=\\"cat-"+i+"\\">";\n';
+    s += '      html+="<h2 class=\\"section-title\\">"+escapeHtml(cat.name)+"</h2>";\n';
+    s += '      html+="<div class=\\"dishes-grid\\">";\n';
+    s += '    }\n';
+    // Render platos según estilo
+    s += '    if(catStyle==="carousel"){\n';
+    s += '      html+="<div class=\\"carta-track\\" id=\\"track-"+i+"\\">";\n';
+    s += '      catDishes.forEach(function(dish,j){\n';
+    s += '        var letter=(dish.name||"P").charAt(0).toUpperCase();\n';
+    s += '        html+="<div class=\\"carta-card\\" data-cat=\\""+i+"\\" data-dish=\\""+j+"\\" data-name=\\""+escapeHtml((dish.name||"").toLowerCase())+"\\" data-desc=\\""+escapeHtml((dish.description||"").toLowerCase())+"\\" style=\\"transition-delay:"+(j*40)+"ms\\">";\n';
+    s += '        html+="<div class=\\"carta-card-img-wrap\\">";\n';
+    s += '        html+="<span class=\\"carta-card-price-overlay\\">"+formatPrice(dish.price)+"</span>";\n';
+    s += '        if(dish.image_url){var _src=imgMedium(dish.image_url),_ss=imgSrcset(dish.image_url);html+="<img src=\\""+escapeHtml(_src)+"\\" "+(_ss?"srcset=\\""+escapeHtml(_ss)+"\\" sizes=\\"(max-width: 600px) 90vw, (max-width: 1024px) 45vw, 300px\\" ":"")+"class=\\"carta-card-img\\" alt=\\""+escapeHtml(dish.name||"Plato")+"\\" data-letter=\\""+escapeHtml(letter)+"\\" loading=\\"lazy\\" decoding=\\"async\\"/>";}\n';
+    s += '        else{html+="<div class=\\"carta-card-placeholder\\">"+escapeHtml(letter)+"</div>";}\n';
+    s += '        html+="<button class=\\"carta-card-add\\" data-cat=\\""+i+"\\" data-dish=\\""+j+"\\" title=\\"Agregar\\"><svg viewBox=\\"0 0 24 24\\" fill=\\"none\\" stroke=\\"currentColor\\" stroke-width=\\"3\\" stroke-linecap=\\"round\\" stroke-linejoin=\\"round\\"><path d=\\"M12 5v14M5 12h14\\"/></svg></button>";\n';
+    s += '        html+="</div>";\n';
+    s += '        html+="<div class=\\"carta-card-info\\"><div class=\\"carta-card-name\\">"+escapeHtml(dish.name||"Plato")+"</div>";\n';
+    s += '        if(dish.description){html+="<div class=\\"carta-card-desc\\">"+escapeHtml(dish.description)+"</div>";}\n';
+    s += '        html+="</div></div>";\n';
+    s += '      });\n';
+    s += '      html+="</div>";\n';
+    s += '    }else if(catStyle==="list"){\n';
+    s += '      html+="<div class=\\"rappi-list\\">";\n';
+    s += '      catDishes.forEach(function(dish,j){\n';
+    s += '        var letter=(dish.name||"P").charAt(0).toUpperCase();\n';
+    s += '        html+="<div class=\\"rappi-item\\" data-cat=\\""+i+"\\" data-dish=\\""+j+"\\" data-name=\\""+escapeHtml((dish.name||"").toLowerCase())+"\\" data-desc=\\""+escapeHtml((dish.description||"").toLowerCase())+"\\" style=\\"transition-delay:"+(j*40)+"ms\\">";\n';
+    s += '        html+="<div class=\\"rappi-item-info\\"><div class=\\"rappi-item-name\\">"+escapeHtml(dish.name||"Plato")+"</div>";\n';
+    s += '        if(dish.description){html+="<div class=\\"rappi-item-desc\\">"+escapeHtml(dish.description)+"</div>";}\n';
+    s += '        else{html+="<div class=\\"rappi-item-desc\\">Delicioso plato preparado con ingredientes frescos.</div>";}\n';
+    s += '        html+="<div class=\\"rappi-item-price\\">"+formatPrice(dish.price)+"</div></div>";\n';
+    s += '        html+="<div class=\\"rappi-item-img-wrap\\">";\n';
+    s += '        if(dish.image_url){var _src=imgMedium(dish.image_url),_ss=imgSrcset(dish.image_url);html+="<img src=\\""+escapeHtml(_src)+"\\" "+(_ss?"srcset=\\""+escapeHtml(_ss)+"\\" sizes=\\"(max-width: 600px) 90vw, (max-width: 1024px) 45vw, 300px\\" ":"")+"class=\\"rappi-item-img\\" alt=\\""+escapeHtml(dish.name||"Plato")+"\\" data-letter=\\""+escapeHtml(letter)+"\\" loading=\\"lazy\\" decoding=\\"async\\"/>";}\n';
+    s += '        else{html+="<div class=\\"rappi-item-placeholder\\">"+escapeHtml(letter)+"</div>";}\n';
+    s += '        html+="<button class=\\"rappi-item-add\\" data-cat=\\""+i+"\\" data-dish=\\""+j+"\\" title=\\"Agregar\\"><svg viewBox=\\"0 0 24 24\\" fill=\\"none\\" stroke=\\"currentColor\\" stroke-width=\\"3\\" stroke-linecap=\\"round\\" stroke-linejoin=\\"round\\"><path d=\\"M12 5v14M5 12h14\\"/></svg></button>";\n';
+    s += '        html+="</div></div>";\n';
+    s += '      });\n';
+    s += '      html+="</div>";\n';
+    s += '    }else{\n';
+    // classic: vertical cards (cerrar dishes-grid)
+    s += '      catDishes.forEach(function(dish,j){\n';
+    s += '        html+="<div class=\\"dish\\" data-cat=\\""+i+"\\" data-dish=\\""+j+"\\" data-name=\\""+escapeHtml((dish.name||"").toLowerCase())+"\\" data-desc=\\""+escapeHtml((dish.description||"").toLowerCase())+"\\" style=\\"transition-delay:"+(j*40)+"ms\\">";\n';
+    s += '        if(THEME.imageSize!=="none"){\n';
+    s += '          html+="<div class=\\"dish-img-wrap\\">";\n';
+    s += '          html+="<span class=\\"dish-cat-badge\\">"+escapeHtml(cat.name||"Plato")+"</span>";\n';
+    s += '          if(dish.image_url){var _src=imgMedium(dish.image_url),_ss=imgSrcset(dish.image_url);html+="<img src=\\""+escapeHtml(_src)+"\\" "+(_ss?"srcset=\\""+escapeHtml(_ss)+"\\" sizes=\\"(max-width: 600px) 90vw, (max-width: 1024px) 45vw, 400px\\" ":"")+"class=\\"dish-img\\" alt=\\""+escapeHtml(dish.name||"Plato")+"\\" data-letter=\\""+escapeHtml((dish.name||"P").charAt(0).toUpperCase())+"\\" loading=\\"lazy\\" decoding=\\"async\\"/>";}\n';
+    s += '          else{html+="<div class=\\"dish-img-placeholder\\">"+escapeHtml((dish.name||"P").charAt(0).toUpperCase())+"</div>";}\n';
+    s += '          html+="</div>";\n';
+    s += '        }\n';
+    s += '        html+="<div class=\\"dish-info\\">";\n';
+    s += '        html+="<div class=\\"dish-name\\">"+escapeHtml(dish.name||"Plato")+"</div>";\n';
+    s += '        if(dish.description){html+="<div class=\\"dish-desc\\">"+escapeHtml(dish.description)+"</div>";}\n';
+    s += '        else{html+="<div class=\\"dish-desc\\">Delicioso plato preparado con ingredientes frescos.</div>";}\n';
+    s += '        html+="<div class=\\"dish-bottom\\">";\n';
+    s += '        html+="<div class=\\"dish-price\\">"+formatPrice(dish.price)+"</div>";\n';
+    s += '        html+="<button class=\\"add-btn\\" data-cat=\\""+i+"\\" data-dish=\\""+j+"\\" title=\\"Agregar\\"><svg width=\\"14\\" height=\\"14\\" viewBox=\\"0 0 24 24\\" fill=\\"none\\" stroke=\\"currentColor\\" stroke-width=\\"3\\" stroke-linecap=\\"round\\" stroke-linejoin=\\"round\\"><path d=\\"M12 5v14M5 12h14\\"/></svg>Agregar</button>";\n';
+    s += '        html+="</div></div></div>";\n';
+    s += '      });\n';
+    s += '      html+="</div>";\n'; // close dishes-grid
+    s += '    }\n';
+    s += '    html+="</section>";\n';
+    s += '  });\n';
+    s += '  html+="</div>";\n'; // close carta-wrapper
+  } else if (cartaStyle || cartaListStyle) {
     // Iniciar wrapper del modo Carta
     s += '  html+="<div class=\\"carta-wrapper\\">";\n';
     // Construir "Destacados": tomar hasta 10 platos (con o sin imagen) de todas las categorías
@@ -899,11 +1113,57 @@ function buildJS(opts: JSOpts): string {
   s += 'function getCategoryIcon(name){var n=(name||"").toLowerCase();if(n.indexOf("entr")>=0||n.indexOf("aperit")>=0)return "🥗";if(n.indexOf("sopa")>=0||n.indexOf("caldo")>=0)return "🍜";if(n.indexOf("pasta")>=0)return "🍝";if(n.indexOf("parrilla")>=0||n.indexOf("grill")>=0||n.indexOf("carne")>=0)return "🥩";if(n.indexOf("pollo")>=0)return "🍗";if(n.indexOf("pesca")>=0||n.indexOf("maris")>=0)return "🐟";if(n.indexOf("postre")>=0)return "🍰";if(n.indexOf("bebida")>=0||n.indexOf("drink")>=0)return "🥤";if(n.indexOf("trago")>=0||n.indexOf("cocktail")>=0||n.indexOf("bar")>=0)return "🍸";if(n.indexOf("desay")>=0)return "🍳";if(n.indexOf("pizza")>=0)return "🍕";if(n.indexOf("burger")>=0||n.indexOf("hambur")>=0)return "🍔";if(n.indexOf("ensal")>=0)return "🥗";if(n.indexOf("sushi")>=0)return "🍣";if(n.indexOf("taco")>=0||n.indexOf("mexic")>=0)return "🌮";if(n.indexOf(" asia")>=0||n.indexOf("chino")>=0||n.indexOf("wok")>=0)return "🥡";if(n.indexOf("vegan")>=0||n.indexOf("veggie")>=0)return "🌱";if(n.indexOf("cafe")>=0||n.indexOf("coffee")>=0)return "☕";return "🍴";}\n';
 
   // searchInput event listener (si showSearch)
+  // Click en el input → abre overlay con TODOS los platos indexados + filtro en vivo
   if (showSearch) {
-    s += 'var searchInput=document.getElementById("searchInput");\n';
-    s += 'if(searchInput){searchInput.addEventListener("input",function(e){searchQuery=e.target.value.toLowerCase();filterDishes();});}\n';
+    // Function definitions (hoisted, safe to define at top level)
     s += 'function filterDishes(){var dishes=document.querySelectorAll(".dish, .carta-card, .rappi-item");var anyVisible=false;dishes.forEach(function(d){var n=d.getAttribute("data-name")||"";var desc=d.getAttribute("data-desc")||"";var visible=n.indexOf(searchQuery)>=0||desc.indexOf(searchQuery)>=0;d.style.display=visible?"":"none";if(visible)anyVisible=true;});document.querySelectorAll(".no-results").forEach(function(n){n.remove();});if(!anyVisible&&searchQuery){var sections=document.querySelectorAll(".section, .carta-category");if(sections.length){var last=sections[sections.length-1];last.insertAdjacentHTML("afterend","<div class=\\"no-results\\">No se encontraron platos</div>");}}}\n';
+    // ─── SEARCH OVERLAY: index all dishes + live filter ───
+    s += 'var __searchOverlayIndex=[];\n'; // global index of all dishes
+    s += 'function buildSearchOverlayIndex(){__searchOverlayIndex=[];RESTAURANT.categories.forEach(function(cat,ci){(cat.dishes||[]).forEach(function(dish,di){__searchOverlayIndex.push({catIdx:ci,dishIdx:di,catName:cat.name||"",name:dish.name||"",description:dish.description||"",price:dish.price||0,image_url:dish.image_url||""});});});}\n';
+    s += 'function openSearchOverlay(){\n';
+    s += '  var ov=document.getElementById("searchOverlay");\n';
+    s += '  if(!ov)return;\n';
+    s += '  if(__searchOverlayIndex.length===0){buildSearchOverlayIndex();}\n';
+    s += '  var summary=document.getElementById("searchOverlaySummary");\n';
+    s += '  if(summary){summary.innerHTML="<span>📋 Total de platos indexados:</span> <span class=\\"count-pill\\">"+__searchOverlayIndex.length+"</span>";}\n';
+    s += '  var input=document.getElementById("searchOverlayInput");\n';
+    s += '  if(input){input.value="";}\n';
+    s += '  renderSearchOverlayResults("");\n';
+    s += '  ov.classList.add("visible");\n';
+    s += '  ov.setAttribute("aria-hidden","false");\n';
+    s += '  document.body.style.overflow="hidden";\n';
+    s += '  if(input){setTimeout(function(){input.focus();},100);}\n';
+    s += '}\n';
+    s += 'function closeSearchOverlay(){var ov=document.getElementById("searchOverlay");if(!ov)return;ov.classList.remove("visible");ov.setAttribute("aria-hidden","true");document.body.style.overflow="";}\n';
+    s += 'function renderSearchOverlayResults(query){\n';
+    s += '  var container=document.getElementById("searchOverlayResults");\n';
+    s += '  if(!container)return;\n';
+    s += '  var q=(query||"").toLowerCase();\n';
+    s += '  var filtered=q?__searchOverlayIndex.filter(function(it){return it.name.toLowerCase().indexOf(q)>=0||it.description.toLowerCase().indexOf(q)>=0||it.catName.toLowerCase().indexOf(q)>=0;}):__searchOverlayIndex;\n';
+    s += '  if(filtered.length===0){container.innerHTML="<div class=\\"search-no-results\\"><svg viewBox=\\"0 0 24 24\\" fill=\\"none\\" stroke=\\"currentColor\\" stroke-width=\\"1.5\\" stroke-linecap=\\"round\\" stroke-linejoin=\\"round\\"><circle cx=\\"11\\" cy=\\"11\\" r=\\"8\\"/><path d=\\"m21 21-4.3-4.3\\"/></svg>No se encontraron platos para \\""+escapeHtml(query)+"\\"</div>";return;}\n';
+    s += '  var html="<div class=\\"search-results-grid\\">";\n';
+    s += '  filtered.forEach(function(it){\n';
+    s += '    var letter=(it.name||"P").charAt(0).toUpperCase();\n';
+    s += '    html+="<div class=\\"search-result-card\\" data-cat=\\""+it.catIdx+"\\" data-dish=\\""+it.dishIdx+"\\">";\n';
+    s += '    html+="<div class=\\"search-result-img\\">";\n';
+    s += '    if(it.image_url){var _src=imgMedium(it.image_url),_ss=imgSrcset(it.image_url);html+="<img src=\\""+escapeHtml(_src)+"\\" "+(_ss?"srcset=\\""+escapeHtml(_ss)+"\\" sizes=\\"64px\\" ":"")+"alt=\\""+escapeHtml(it.name)+"\\" loading=\\"lazy\\" decoding=\\"async\\"/>";}\n';
+    s += '    else{html+="<div class=\\"search-result-img-placeholder\\">"+escapeHtml(letter)+"</div>";}\n';
+    s += '    html+="</div>";\n';
+    s += '    html+="<div class=\\"search-result-info\\">";\n';
+    s += '    html+="<div class=\\"search-result-cat\\">"+escapeHtml(it.catName)+"</div>";\n';
+    s += '    html+="<div class=\\"search-result-name\\">"+escapeHtml(it.name)+"</div>";\n';
+    s += '    if(it.description){html+="<div class=\\"search-result-desc\\">"+escapeHtml(it.description)+"</div>";}\n';
+    s += '    html+="<div class=\\"search-result-price\\">"+formatPrice(it.price)+"</div>";\n';
+    s += '    html+="</div></div>";\n';
+    s += '  });\n';
+    s += '  html+="</div>";\n';
+    s += '  container.innerHTML=html;\n';
+    s += '  // Wire up clicks on result cards → open dish lightbox (or add to cart)\n';
+    s += '  container.querySelectorAll(".search-result-card").forEach(function(card){card.addEventListener("click",function(){var ci=parseInt(this.dataset.cat);var di=parseInt(this.dataset.dish);closeSearchOverlay();if(typeof openDishLightbox==="function"&&' + (showGallery ? 'true' : 'false') + '){openDishLightbox(ci,di);}else{addToCart(ci,di);}});});\n';
+    s += '}\n';
   }
+  // ─── STICKY TOP BAR (desktop): wire up "Subir al inicio" button ───
+  // (wired inside attachEvents, since the element is in static HTML and exists already)
 
   s += '  updateCart();\n';
   s += '}\n';
@@ -1024,6 +1284,23 @@ function buildJS(opts: JSOpts): string {
   // Tracking clics en ícono WhatsApp del header social (no abre carrito, va directo a wa.me)
   s += '  document.querySelectorAll("a[data-wa-track]").forEach(function(a){a.addEventListener("click",function(){try{if(navigator&&navigator.sendBeacon){navigator.sendBeacon("/api/track/whatsapp-click",new Blob([JSON.stringify({menu_id:RESTAURANT.id,source:"social"})],{type:"application/json"}));}}catch(e){}});});\n';
   s += '  window.addEventListener("scroll",updateActiveNav,{passive:true});\n';
+  // ─── Search input → opens overlay (wired here because #searchInput is created by renderApp) ───
+  if (showSearch) {
+    s += '  var si=document.getElementById("searchInput");\n';
+    s += '  if(si){si.addEventListener("focus",function(){openSearchOverlay();si.blur();});si.addEventListener("click",function(){openSearchOverlay();});}\n';
+    // Overlay input + close button + backdrop click
+    s += '  var soInput=document.getElementById("searchOverlayInput");\n';
+    s += '  if(soInput){soInput.addEventListener("input",function(e){renderSearchOverlayResults(e.target.value);});}\n';
+    s += '  var soClose=document.getElementById("searchOverlayClose");\n';
+    s += '  if(soClose){soClose.addEventListener("click",closeSearchOverlay);}\n';
+    s += '  var soOv=document.getElementById("searchOverlay");\n';
+    s += '  if(soOv){soOv.addEventListener("click",function(e){if(e.target===soOv)closeSearchOverlay();});}\n';
+  }
+  // ─── Sticky top bar (desktop): "Subir al inicio" button ───
+  if (stickyTopBar) {
+    s += '  var stbBtn=document.getElementById("stickyTopBtn");\n';
+    s += '  if(stbBtn){stbBtn.addEventListener("click",function(){window.scrollTo({top:0,behavior:"smooth"});});}\n';
+  }
   // Scroll-to-top button: show after 600px scroll, hide when modal is open (via CSS :has)
   s += '  var scrollTopBtn=document.getElementById("scrollTopBtn");\n';
   s += '  if(scrollTopBtn){\n';
@@ -1257,7 +1534,7 @@ function buildJS(opts: JSOpts): string {
   s += '      var action=this.dataset.action;\n';
   s += '      document.querySelectorAll(".mbn-item").forEach(function(b){b.classList.remove("active");});this.classList.add("active");\n';
   s += '      if(action==="home"){window.scrollTo({top:0,behavior:"smooth"});}\n';
-  s += '      else if(action==="search"){var si=document.getElementById("searchInput");if(si){si.focus();si.scrollIntoView({behavior:"smooth",block:"center"});}}\n';
+  s += '      else if(action==="search"){if(typeof openSearchOverlay==="function"){openSearchOverlay();}else{var si=document.getElementById("searchInput");if(si){si.focus();si.scrollIntoView({behavior:"smooth",block:"center"});}}}\n';
   s += '      else if(action==="cart"){openModal();}\n';
   s += '      else if(action==="favorites"){toggleFavoritesModal();}\n';
   s += '    });\n';
