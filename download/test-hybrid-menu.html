@@ -248,6 +248,8 @@ function renderApp(){
   showMobileNavOnMobile();
   if(typeof restoreDishFromURL==="function"){restoreDishFromURL();}
 function getCategoryIcon(name){var n=(name||"").toLowerCase();if(n.indexOf("entr")>=0||n.indexOf("aperit")>=0)return "🥗";if(n.indexOf("sopa")>=0||n.indexOf("caldo")>=0)return "🍜";if(n.indexOf("pasta")>=0)return "🍝";if(n.indexOf("parrilla")>=0||n.indexOf("grill")>=0||n.indexOf("carne")>=0)return "🥩";if(n.indexOf("pollo")>=0)return "🍗";if(n.indexOf("pesca")>=0||n.indexOf("maris")>=0)return "🐟";if(n.indexOf("postre")>=0)return "🍰";if(n.indexOf("bebida")>=0||n.indexOf("drink")>=0)return "🥤";if(n.indexOf("trago")>=0||n.indexOf("cocktail")>=0||n.indexOf("bar")>=0)return "🍸";if(n.indexOf("desay")>=0)return "🍳";if(n.indexOf("pizza")>=0)return "🍕";if(n.indexOf("burger")>=0||n.indexOf("hambur")>=0)return "🍔";if(n.indexOf("ensal")>=0)return "🥗";if(n.indexOf("sushi")>=0)return "🍣";if(n.indexOf("taco")>=0||n.indexOf("mexic")>=0)return "🌮";if(n.indexOf(" asia")>=0||n.indexOf("chino")>=0||n.indexOf("wok")>=0)return "🥡";if(n.indexOf("vegan")>=0||n.indexOf("veggie")>=0)return "🌱";if(n.indexOf("cafe")>=0||n.indexOf("coffee")>=0)return "☕";return "🍴";}
+  updateCart();
+}
 function filterDishes(){var dishes=document.querySelectorAll(".dish, .carta-card, .rappi-item");var anyVisible=false;dishes.forEach(function(d){var n=d.getAttribute("data-name")||"";var desc=d.getAttribute("data-desc")||"";var visible=n.indexOf(searchQuery)>=0||desc.indexOf(searchQuery)>=0;d.style.display=visible?"":"none";if(visible)anyVisible=true;});document.querySelectorAll(".no-results").forEach(function(n){n.remove();});if(!anyVisible&&searchQuery){var sections=document.querySelectorAll(".section, .carta-category");if(sections.length){var last=sections[sections.length-1];last.insertAdjacentHTML("afterend","<div class=\"no-results\">No se encontraron platos</div>");}}}
 var __searchOverlayIndex=[];
 function buildSearchOverlayIndex(){__searchOverlayIndex=[];RESTAURANT.categories.forEach(function(cat,ci){(cat.dishes||[]).forEach(function(dish,di){__searchOverlayIndex.push({catIdx:ci,dishIdx:di,catName:cat.name||"",name:dish.name||"",description:dish.description||"",price:dish.price||0,image_url:dish.image_url||""});});});}
@@ -289,10 +291,7 @@ function renderSearchOverlayResults(query){
   });
   html+="</div>";
   container.innerHTML=html;
-  // Wire up clicks on result cards → open dish lightbox (or add to cart)
   container.querySelectorAll(".search-result-card").forEach(function(card){card.addEventListener("click",function(){var ci=parseInt(this.dataset.cat);var di=parseInt(this.dataset.dish);closeSearchOverlay();if(typeof openDishLightbox==="function"&&true){openDishLightbox(ci,di);}else{addToCart(ci,di);}});});
-}
-  updateCart();
 }
 function setupReveal(){
   var dishes=document.querySelectorAll(".dish, .carta-card, .rappi-item");

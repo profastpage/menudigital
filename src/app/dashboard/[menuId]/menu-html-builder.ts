@@ -1114,11 +1114,16 @@ function buildJS(opts: JSOpts): string {
 
   // searchInput event listener (si showSearch)
   // Click en el input → abre overlay con TODOS los platos indexados + filtro en vivo
+  // NOTE: search function definitions are emitted AFTER renderApp closes (below)
+  // so they're at the top level and accessible from attachEvents.
+
+  s += '  updateCart();\n';
+  s += '}\n'; // closes renderApp
+
+  // ─── Search functions (TOP LEVEL — accessible from attachEvents) ───
   if (showSearch) {
-    // Function definitions (hoisted, safe to define at top level)
     s += 'function filterDishes(){var dishes=document.querySelectorAll(".dish, .carta-card, .rappi-item");var anyVisible=false;dishes.forEach(function(d){var n=d.getAttribute("data-name")||"";var desc=d.getAttribute("data-desc")||"";var visible=n.indexOf(searchQuery)>=0||desc.indexOf(searchQuery)>=0;d.style.display=visible?"":"none";if(visible)anyVisible=true;});document.querySelectorAll(".no-results").forEach(function(n){n.remove();});if(!anyVisible&&searchQuery){var sections=document.querySelectorAll(".section, .carta-category");if(sections.length){var last=sections[sections.length-1];last.insertAdjacentHTML("afterend","<div class=\\"no-results\\">No se encontraron platos</div>");}}}\n';
-    // ─── SEARCH OVERLAY: index all dishes + live filter ───
-    s += 'var __searchOverlayIndex=[];\n'; // global index of all dishes
+    s += 'var __searchOverlayIndex=[];\n';
     s += 'function buildSearchOverlayIndex(){__searchOverlayIndex=[];RESTAURANT.categories.forEach(function(cat,ci){(cat.dishes||[]).forEach(function(dish,di){__searchOverlayIndex.push({catIdx:ci,dishIdx:di,catName:cat.name||"",name:dish.name||"",description:dish.description||"",price:dish.price||0,image_url:dish.image_url||""});});});}\n';
     s += 'function openSearchOverlay(){\n';
     s += '  var ov=document.getElementById("searchOverlay");\n';
@@ -1158,15 +1163,9 @@ function buildJS(opts: JSOpts): string {
     s += '  });\n';
     s += '  html+="</div>";\n';
     s += '  container.innerHTML=html;\n';
-    s += '  // Wire up clicks on result cards → open dish lightbox (or add to cart)\n';
     s += '  container.querySelectorAll(".search-result-card").forEach(function(card){card.addEventListener("click",function(){var ci=parseInt(this.dataset.cat);var di=parseInt(this.dataset.dish);closeSearchOverlay();if(typeof openDishLightbox==="function"&&' + (showGallery ? 'true' : 'false') + '){openDishLightbox(ci,di);}else{addToCart(ci,di);}});});\n';
     s += '}\n';
   }
-  // ─── STICKY TOP BAR (desktop): wire up "Subir al inicio" button ───
-  // (wired inside attachEvents, since the element is in static HTML and exists already)
-
-  s += '  updateCart();\n';
-  s += '}\n';
   // ─── Auto-scroll del carrusel Destacados (solo si cartaStyle + cartaAutoscroll) ───
   // Implementación: requestAnimationFrame loop que hace scrollLeft += speed/60 cada frame.
   // Al llegar al final, rebota (cambia dirección).
