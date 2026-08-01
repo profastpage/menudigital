@@ -645,7 +645,7 @@ function buildCSS(opts: ThemeOpts): string {
   //     .carta-section-title
   //     .carta-track (horizontal scroll, snap-x mandatory)
   //       .carta-card
-  if (cartaStyle || cartaListStyle) {
+  if (cartaStyle || cartaListStyle || hybridStyle) {
     // Layout contenedor del modo Carta: padding inferior para no chocar con bottom nav
     c += '.carta-wrapper{padding:8px 0 24px;}';
     // Título de sección (estilo PedidosYa: bold + accent left-bar)
@@ -685,7 +685,7 @@ function buildCSS(opts: ThemeOpts): string {
   }
 
   // ─── MODO LISTA Rappi (texto izquierda, imagen pequeña derecha) ───
-  if (cartaListStyle) {
+  if (cartaListStyle || hybridStyle) {
     c += '.rappi-list{display:flex;flex-direction:column;gap:12px;padding:8px 16px;}';
     c += '.rappi-item{display:flex;gap:12px;background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius);padding:12px;cursor:pointer;position:relative;transition:transform 0.2s,border-color 0.2s;opacity:0;transform:translateY(10px);}';
     c += '.rappi-item.revealed{opacity:1;transform:translateY(0);}';
