@@ -1705,3 +1705,98 @@ Stage Summary:
 - Mozos: todos los elementos translúcidos (tabs, carrito, mesas, search, comandas) ahora sólidos
 - 11 selects en 7 archivos ahora bg-white text-black + regla CSS global para option popup nativo
 - MercadoPago: código 100% completo, solo faltan env vars en Vercel si no están configuradas
+
+---
+Task ID: hybrid-style-sticky-bar-search-overlay-layout-fix
+Agent: main (Super Z)
+Task: 4 mejoras solicitadas por usuario: (1) Fix layout personalización (solo 1+2 cols, no grid 3), (2) barra inferior sticky con botón "subir al inicio", (3) botón buscador abre preview de platos indexando toda la carta, (4) estilo híbrido (carrusel+lista+clásico por categoría). Aplicar a TODOS los clientes antiguos y nuevos. Verificar con VLM + simuladores Android/iOS.
+
+Work Log:
+- VLM analizó 4 imágenes del usuario:
+  * Img 1: panel personalización con 3 opciones layout (1 col, 2 cols, grid 3 cols) — solo 1 col funcionaba
+  * Img 3: menú estilo rappi con carrusel horizontal por categoría
+  * Img 4: menú clásico público con cards verticales
+  * Img thumbnail: panel config estilo carta (carrusel/lista toggles)
+
+- Fix layout (editor-client.tsx):
+  * Removida opción 'grid' (3 cols) del selector — ahora solo 1 col y 2 cols (grid-cols-2)
+  * Auto-mapeo: menús existentes con theme_layout='grid' → 'double' en el editor
+  * Mensaje actualizado: "2 columnas requiere plan Pro"
+
+- Nuevos campos en menu-utils.ts (ThemeOpts):
+  * theme_hybrid_style (boolean, default false)
+  * theme_hybrid_config (string JSON, default null) — {"0":"carousel","1":"list","2":"classic"}
+  * theme_sticky_top_bar (boolean, default true)
+
+- SQL migration (supabase/add-hybrid-style.sql):
+  * 3 nuevas columnas en menus table (idempotente)
+  * Aplicada a producción: 22 menus actualizados, todos con defaults compatibles
+
+- API route (api/menus/[id]/route.ts):
+  * PUT handler destructura + persiste los 3 nuevos campos
+
+- Editor UI (editor-client.tsx):
+  * Nueva sección "Estilo Híbrido (mixto por categoría)" con:
+    - Toggle para activar/desactivar modo híbrido
+    - Dropdown por categoría: Clásico / Carrusel / Lista Rappi
+    - Descripción visual de cada estilo
+  * Toggle "Barra inferior (subir al inicio)" para sticky top bar
+  * 3 save blocks (save(), preview, publish) actualizados con nuevos campos
+  * Scripts Python (patch-editor-save.py, cleanup-editor-dups.py) para edición masiva
+
+- Menu HTML builder (menu-html-builder.ts):
+  * HTML: sticky-top-bar div con botón "Subir al inicio" (desktop only via CSS)
+  * HTML: search-overlay div con input + close + summary + results
+  * CSS: .sticky-top-bar (44px height, fixed bottom, hidden mobile), .search-overlay (modal full-screen mobile, centered desktop), .search-results-grid (1-3 cols responsivo), .search-result-card (compact card)
+  * CSS: hybrid mode usa misma CSS que carta+ rappi-list (if cartaStyle || cartaListStyle || hybridStyle)
+  * JS: hybrid rendering branch — per-category style (carousel/list/classic) basado en THEME.hybridConfig
+  * JS: search overlay functions (openSearchOverlay, closeSearchOverlay, renderSearchOverlayResults, buildSearchOverlayIndex) — indexa TODOS los platos de TODAS las categorías
+  * JS: searchInput event listener (en attachEvents, no top-level) → abre overlay en click/focus
+  * JS: sticky-top-btn click → scroll to top smooth
+  * JS: mobile-bottom-nav "Buscar" → openSearchOverlay() en lugar de focus searchInput
+
+- BUG FIX crítico: search functions estaban scoped dentro de renderApp()
+  * Síntoma: typeof openSearchOverlay === 'undefined', attachEvents throweaba 'closeSearchOverlay is not defined'
+  * Causa: function declarations emitidas ANTES del closing '}' de renderApp → scoped a renderApp
+  * Fix: mover el closing '}' de renderApp ANTES de las search function definitions
+  * Commit dedicado: aaa9ce6
+
+- BUG FIX CSS: carta-track y rappi-list CSS no se emitían cuando hybridStyle=true
+  * Síntoma: .carta-track tenía display:block en lugar de display:flex → cards se veían verticales
+  * Fix: incluir hybridStyle en los condicionales CSS (if cartaStyle || cartaListStyle || hybridStyle)
+  * Commit dedicado: 0882539
+
+- Verificación VLM (Android 390x844 + iOS iPhone 14 + Desktop 1280x800):
+  * Sticky bottom bar desktop: ✅ visible, botón "Subir al inicio" funciona
+  * Search overlay mobile: ✅ abre modal con "Total de platos indexados: 22" + grid de cards
+  * Search overlay desktop: ✅ abre modal centrado, filtra al escribir ("pollo" → 14 resultados)
+  * Hybrid mode mobile: ✅ cat-0 carrusel horizontal, cat-1 lista rappi vertical, cat-2 cards clásicas
+  * Hybrid mode desktop: ✅ todos los estilos renderizan correctamente
+  * 2-column layout desktop: ✅ 2 columnas con cards profesionales
+  * 2-column layout mobile: ✅ auto-colapsa a 1 columna (mejor legibilidad)
+  * Mobile bottom nav: ✅ 4 tabs (Inicio/Buscar/Favoritos/Pedido) visibles y funcionales
+
+- Aplicación a TODOS los clientes (antiguos + nuevos + futuros):
+  * DB migration agregó 3 columnas con defaults compatibles (hybrid=false, sticky=true, config=null)
+  * 22 menus existentes ahora tienen acceso a hybrid mode + sticky bar sin acción del usuario
+  * Menús nuevos heredan los defaults
+  * Backward compatibility: menús sin hybrid config usan rendering clásico (single/double/carta)
+  * theme_layout='grid' (menús antiguos) se mapea a 'double' en el editor
+
+- Commits pushed a origin/main:
+  * 36ff406: feat: hybrid menu style + sticky bottom bar + search overlay + layout fix
+  * aaa9ce6: fix: move search overlay functions to top level
+  * 0882539: fix: emit carta+ rappi-list CSS when hybridStyle is true
+
+Stage Summary:
+- 4 features implementadas y verificadas con VLM en Android/iOS/Desktop:
+  1. Layout: solo 1 col + 2 cols (grid 3 removido), auto-mapeo de 'grid' existente
+  2. Sticky bottom bar: delgada, always-visible en desktop, botón "Subir al inicio"
+  3. Search overlay: click en buscador → modal con TODOS los platos indexados + filtro live
+  4. Hybrid mode: per-category style (carousel/list/classic) con dropdown en editor
+- 2 bugs críticos encontrados y fixeados durante testing VLM:
+  - Search functions scoped a renderApp (no accesibles desde attachEvents)
+  - Carta/rappi CSS no emitida cuando solo hybridStyle estaba activo
+- DB producción actualizada (3 columnas, 22 menus con defaults compatibles)
+- Todos los cambios aplican a clientes antiguos + nuevos + futuros via defaults
+- Capturas en /home/z/my-project/download/ (8 PNGs: desktop, mobile, iOS, search, carousel, 2-col)
