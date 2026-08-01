@@ -1616,3 +1616,92 @@ Stage Summary:
 - 4 cuentas demo operativas en producción Supabase (login verificado)
 - Listas para publicidad: cada una muestra features distintas del plan correspondiente
 - URLs públicas: /r/polleria-pro, /r/polleria-prem, /r/polleria-full, etc.
+
+---
+Task ID: excel-xlsx-planfull-mozos-selects
+Agent: main (Super Z)
+Task: 5 mejoras solicitadas por usuario: (1) Excel export profesional XLSX, (2) Plan FULL desbloqueado para Dominios, (3) Mozos carrito sólido sin transparencias, (4) Recuadros blancos con texto negro en todos los selects, (5) Verificar MercadoPago con VLM
+
+Work Log:
+- VLM analizó 6 imágenes del usuario:
+  * Img 1: Excel CSV actual con todo en columnas A y B (data dump) — sin formato
+  * Img 2: Dashboard analytics con transparencias问题
+  * Img 3: Dominios page mostrando upsell "Upgrade a Pro" S/35/mes estando en plan FULL
+  * Img 4: Sidebar con candados dorados en Analíticas y Dominios
+  * Img 5: Mozo panel con tarjetas translúcidas (bg-white/5) y carrito con fondo semi-transparente
+  * Img 6: Reportes con dropdown "Últimos 7 días" azul sobre fondo blanco (debería ser negro)
+
+- Excel XLSX profesional (src/lib/excel-export.ts — NUEVO):
+  * ExcelJS + file-saver instalados
+  * exportWorkbook() genera .xlsx con múltiples hojas
+  * 5 hojas: Resumen KPIs, Embudo conversión, Top Platos (50), Mozos ranking, Menús stats
+  * Headers: bg dark navy + acento dorado + texto blanco bold
+  * Banded rows (white / very light gray)
+  * Frozen panes (3 filas: title + subtitle + header)
+  * Auto-filter en headers
+  * Title + subtitle rows con marca MenuPro y período
+  * Number formats: PEN '#,##0.00 "S/"', PCT '0.0%', INT '#,##0'
+  * Delta color coding: verde positivo / rojo negativo
+  * safeSheetName(): sanitiza nombres (max 31 chars, sin \\/?*[]:)
+
+- analytics-client.tsx:
+  * Reemplazada exportCSV() → exportXLSX() async
+  * Botón "Exportar CSV" → "Exportar Excel"
+  * Toast loading mientras genera XLSX
+  * 2 selects range: bg-white/5 text-white → bg-white text-black border-gray-200 shadow-sm font-medium
+
+- Plan FULL desbloqueado:
+  * domains-client.tsx línea 166: 'planId !== pro' → PLAN_ORDER.indexOf() >= indexOf('pro')
+    - Free: ve upsell
+    - Pro/Premium/Full: acceden a gestión de dominios normalmente
+    - isSuperAdmin: bypass
+  * api/domains/route.ts GET y POST: misma validación jerárquica
+  * api/menus/[id]/preset/route.ts: misma validación (temas pre-diseñados)
+  * Mensaje de error actualizado: "Disponible a partir del plan Pro"
+
+- Mozos (mozo/[token]/mozo-client.tsx) — eliminadas transparencias:
+  * Tabs superiores: bg-[#0a0a14]/95 backdrop-blur → bg-[#0a0a14] sólido
+  * Carrito footer: agregado shadow-2xl
+  * Modal 'Ver carrito' (details): bg-white/5 → bg-[#0a0a14] sólido + shadow-2xl + border-white/15
+  * Botón 'Seleccionar mesa': border-dashed border-white/20 → border-[#9d4edd]/40 bg-[#9d4edd]/10
+  * Search input: bg-white/5 → bg-[#15151f] sólido
+  * Mesa cards: bg-white/5 → bg-[#15151f] (no selected) / bg-[#9d4edd]/30 (selected)
+  * Comanda cards: bg-white/5 → bg-[#15151f] sólido
+  * Dish cards: bg-white/5 → bg-[#15151f] sólido
+  * Product image: wrapper div con bg-[#15151f] overflow-hidden para integración dark theme
+  * Form login mozo: removido backdrop-blur-sm (bg-white/[0.04] sólido)
+
+- Recuadros blancos con texto negro (11 selects en 7 archivos):
+  * analytics-client.tsx: 2 selects range
+  * reportes-client.tsx: 2 selects (range, branch)
+  * comandas-client.tsx: 2 selects (mesa, mozo)
+  * mesas-client.tsx: 1 select (estado mesa)
+  * inventario-client.tsx: 3 selects (unidad, plato, insumo)
+  * editor-client.tsx: 1 select native (option group type) + 1 SelectTrigger shadcn (currency)
+  * domains-client.tsx: 2 SelectTrigger + 2 SelectContent (menu select + link menu)
+  * Todos: bg-white border-gray-200 text-black font-medium shadow-sm
+  * SelectContent + SelectItem: bg-white text-black hover:bg-gray-100 focus:bg-gray-100
+
+- globals.css: regla global para nativos <select> <option>
+  * select option { background:#fff; color:#000 } — asegura contraste en popup nativo
+  * select.bg-white / select[class*="bg-white"] { background:#fff !important; color:#000 !important }
+
+- MercadoPago verificado:
+  * src/lib/mercadopago.ts: createPreapproval, getPreapproval, cancelPreapproval, verifyWebhookSignature HMAC, preapprovalStatusToPlan — TODO completo
+  * api/mercadopago/checkout/route.ts: POST crea PreApproval con planId en external_reference
+  * api/mercadopago/webhook/route.ts: signature verification fail-closed en prod, idempotente, email confirmación, admin notification
+  * api/mercadopago/cancel/route.ts: cancela suscripción
+  * billing-client.tsx: integra checkout
+  * Env vars requeridas en Vercel: MERCADOPAGO_ACCESS_TOKEN, MERCADOPAGO_WEBHOOK_SECRET, MERCADOPAGO_CURRENCY_ID=PEN
+  * Webhook URL: https://menudigital.pro/api/mercadopago/webhook (configurar en MP dashboard)
+
+- TypeScript: 0 errores en src/
+- Build: OK (33 rutas generadas)
+- Commit 3423208 pushed a origin/main
+
+Stage Summary:
+- Excel XLSX profesional reemplaza CSV con 5 hojas estilizadas, formato moneda/porcentaje, frozen panes, auto-filter
+- Plan FULL ya puede gestionar dominios y aplicar temas pre-diseñados sin candados incorrectos
+- Mozos: todos los elementos translúcidos (tabs, carrito, mesas, search, comandas) ahora sólidos
+- 11 selects en 7 archivos ahora bg-white text-black + regla CSS global para option popup nativo
+- MercadoPago: código 100% completo, solo faltan env vars en Vercel si no están configuradas
