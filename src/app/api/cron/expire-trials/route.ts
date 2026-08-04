@@ -5,7 +5,8 @@ import { createClient } from '@/lib/supabase/server';
  * GET /api/cron/expire-trials
  *
  * Cron job que expira trials vencidos.
- * Llamar cada 1 hora desde Vercel Cron.
+ * En Vercel Hobby: se ejecuta 1 vez al día (6 AM UTC = 1 AM hora Perú).
+ * Para más frecuencia, upgrade a Vercel Pro.
  *
  * Header requerido: x-cron-secret (configurar CRON_SECRET en Vercel)
  *
