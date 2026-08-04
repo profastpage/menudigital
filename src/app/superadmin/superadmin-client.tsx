@@ -73,6 +73,21 @@ interface UserRow {
   views_total: number;
   published_menus: number;
   dishes_count: number;
+  // Nuevos campos para perfil de cliente
+  is_demo_account?: boolean;
+  business_name?: string | null;
+  business_tax_id?: string | null;
+  business_phone?: string | null;
+  business_whatsapp?: string | null;
+  logo_url?: string | null;
+  photo_url?: string | null;
+  subscription_started_at?: string | null;
+  subscription_cancelled_at?: string | null;
+  last_payment_at?: string | null;
+  last_payment_amount?: number | null;
+  last_payment_currency?: string | null;
+  trial_ends_at?: string | null;
+  trial_plan?: string | null;
 }
 
 interface Stats {
@@ -676,15 +691,56 @@ export function SuperAdminClient({ admin }: { admin: AdminInfo }) {
                             </div>
                           </td>
 
-                          {/* Plan */}
+                          {/* Plan + MP status + días restantes */}
                           <td className="px-5 py-3">
-                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                              u.plan === 'pro'
-                                ? 'bg-emerald-500/20 text-emerald-400'
-                                : 'bg-white/10 text-white/60'
-                            }`}>
-                              {u.plan?.toUpperCase()}
-                            </span>
+                            <div className="flex flex-col gap-1">
+                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold w-fit ${
+                                u.plan === 'pro'
+                                  ? 'bg-emerald-500/20 text-emerald-400'
+                                  : u.plan === 'premium'
+                                  ? 'bg-purple-500/20 text-purple-300'
+                                  : u.plan === 'full'
+                                  ? 'bg-red-500/20 text-red-300'
+                                  : 'bg-white/10 text-white/60'
+                              }`}>
+                                {u.plan?.toUpperCase()}
+                              </span>
+                              {/* Badge de cuenta demo */}
+                              {u.is_demo_account && (
+                                <span className="px-1.5 py-0.5 rounded text-[9px] font-semibold bg-purple-500/10 text-purple-400 border border-purple-500/30 w-fit">
+                                  DEMO
+                                </span>
+                              )}
+                              {/* Estado MP */}
+                              {u.mp_status && (
+                                <span className={`text-[9px] ${
+                                  u.mp_status === 'authorized' ? 'text-green-400' :
+                                  u.mp_status === 'cancelled' ? 'text-red-400' :
+                                  u.mp_status === 'pending' ? 'text-orange-400' :
+                                  'text-white/40'
+                                }`}>
+                                  MP: {u.mp_status}
+                                </span>
+                              )}
+                              {/* Trial activo */}
+                              {u.trial_ends_at && new Date(u.trial_ends_at) > new Date() && (
+                                <span className="text-[9px] text-blue-300">
+                                  Trial: {u.trial_plan} ({Math.ceil((new Date(u.trial_ends_at).getTime() - Date.now()) / 86400000)}d)
+                                </span>
+                              )}
+                              {/* Días restantes de suscripción */}
+                              {u.current_period_end && u.mp_status === 'authorized' && (
+                                <span className="text-[9px] text-white/40">
+                                  Renueva: {new Date(u.current_period_end).toLocaleDateString('es-PE', { day: '2-digit', month: 'short' })}
+                                </span>
+                              )}
+                              {/* Cancelado */}
+                              {u.subscription_cancelled_at && (
+                                <span className="text-[9px] text-orange-400">
+                                  Canceló: {new Date(u.subscription_cancelled_at).toLocaleDateString('es-PE')}
+                                </span>
+                              )}
+                            </div>
                           </td>
 
                           {/* Menus */}

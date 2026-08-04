@@ -55,6 +55,9 @@ export async function POST(_req: NextRequest) {
         plan: 'free',
         mp_status: 'cancelled',
         current_period_end: null,
+        // Marcar fecha de cancelación (el usuario decidió no renovar)
+        subscription_cancelled_at: new Date().toISOString(),
+        subscription_ended_at: new Date().toISOString(),
       })
       .eq('id', user.id);
 

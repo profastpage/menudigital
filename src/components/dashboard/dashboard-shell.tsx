@@ -23,6 +23,7 @@ import {
   Lock,
   TrendingUp,
   BookOpen,
+  UserCircle,
 } from 'lucide-react';
 import type { Plan } from '@/lib/plans';
 import { isPlanAtLeast, type PlanId } from '@/lib/plans';
@@ -55,6 +56,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: '/dashboard/inventario', label: 'Inventario', icon: Package, premium: true },
   { href: '/dashboard/reportes', label: 'Reportes', icon: TrendingUp, full: true },
   { href: '/dashboard/billing', label: 'Planes', icon: CreditCard },
+  { href: '/dashboard/account', label: 'Mi Cuenta', icon: UserCircle },
   // Ayuda está ahora integrada en el botón de Soporte (sidebar + header móvil)
 ];
 

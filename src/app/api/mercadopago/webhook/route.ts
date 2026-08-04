@@ -109,6 +109,15 @@ export async function POST(req: NextRequest) {
           mp_status: info.status,
           mp_preapproval_id: dataId,
           current_period_end: currentPeriodEnd,
+          // Si es autorización nueva, marcar fecha de inicio y último pago
+          ...(info.status === 'authorized' ? {
+            subscription_started_at: new Date().toISOString(),
+            last_payment_at: new Date().toISOString(),
+            subscription_cancelled_at: null,
+            // Monto del último pago (del plan)
+            last_payment_amount: PLANS[plan]?.mpAmount || null,
+            last_payment_currency: process.env.MERCADOPAGO_CURRENCY_ID || 'PEN',
+          } : {}),
         })
         .eq('id', userId);
 
