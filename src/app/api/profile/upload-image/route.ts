@@ -3,6 +3,10 @@ import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { getClientIP, rateLimitResponse, RATE_LIMITS } from '@/lib/rate-limit';
 
+// Esta ruta maneja subida de archivos (multipart/form-data) → debe correr en Node.js runtime
+export const runtime = 'nodejs';
+export const maxDuration = 30; // 30 segundos para upload de imágenes
+
 /**
  * POST /api/profile/upload-image
  *
@@ -14,9 +18,6 @@ import { getClientIP, rateLimitResponse, RATE_LIMITS } from '@/lib/rate-limit';
  *
  * Returns:
  *   { success: true, url: 'https://...supabase.co/storage/v1/object/public/profiles/...' }
- *
- * El bucket 'profiles' debe existir en Supabase Storage con políticas públicas de lectura.
- * Si no existe, esta ruta lo crea automáticamente con el service client.
  */
 export async function POST(req: NextRequest) {
   const ip = getClientIP(req);
@@ -30,7 +31,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
-    const formData = await req.formData();
+    let formData: FormData;
+    try {
+      formData = await req.formData();
+    } catch (formErr) {
+      console.error('[api/profile/upload-image] formData parse error:', formErr);
+      return NextResponse.json(
+        { error: 'Error al leer formulario. Asegúrate de enviar multipart/form-data.' },
+        { status: 400 }
+      );
+    }
+
     const file = formData.get('file') as File | null;
     const type = (formData.get('type') as string) || 'photo';
 
