@@ -1,32 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
-import { getClientIP, rateLimitResponse, RATE_LIMITS } from '@/lib/rate-limit';
 
 // Esta ruta maneja subida de archivos (multipart/form-data) → debe correr en Node.js runtime
 export const runtime = 'nodejs';
-export const maxDuration = 30; // 30 segundos para upload de imágenes
+export const maxDuration = 30;
+export const dynamic = 'force-dynamic';
 
 /**
  * POST /api/profile/upload-image
  *
  * Sube una imagen (foto de perfil o logo del negocio) a Supabase Storage.
- *
- * Body (multipart/form-data):
- *   - file: File (required, max 5MB)
- *   - type: 'photo' | 'logo' (required)
- *
- * Returns:
- *   { success: true, url: 'https://...supabase.co/storage/v1/object/public/profiles/...' }
  */
 export async function POST(req: NextRequest) {
-  const ip = getClientIP(req);
-  const limited = rateLimitResponse(`profile-upload:${ip}`, RATE_LIMITS.default);
-  if (limited) return limited;
+  console.log('[upload-image] POST start, content-type:', req.headers.get('content-type'));
 
   try {
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user }, error: authErr } = await supabase.auth.getUser();
+    console.log('[upload-image] auth user:', user?.id, 'err:', authErr?.message);
     if (!user) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
@@ -34,16 +26,17 @@ export async function POST(req: NextRequest) {
     let formData: FormData;
     try {
       formData = await req.formData();
-    } catch (formErr) {
-      console.error('[api/profile/upload-image] formData parse error:', formErr);
+    } catch (formErr: any) {
+      console.error('[upload-image] formData parse error:', formErr?.message || formErr);
       return NextResponse.json(
-        { error: 'Error al leer formulario. Asegúrate de enviar multipart/form-data.' },
+        { error: `Error al leer formulario: ${formErr?.message || 'unknown'}` },
         { status: 400 }
       );
     }
 
     const file = formData.get('file') as File | null;
     const type = (formData.get('type') as string) || 'photo';
+    console.log('[upload-image] file:', file?.name, 'size:', file?.size, 'type:', type);
 
     if (!file) {
       return NextResponse.json({ error: 'Falta archivo file' }, { status: 400 });
