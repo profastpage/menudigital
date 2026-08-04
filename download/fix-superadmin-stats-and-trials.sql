@@ -157,21 +157,24 @@ CREATE OR REPLACE FUNCTION public.start_user_trial(
 )
 RETURNS JSON AS $$
 DECLARE
-  requesting_user RECORD;
   v_user_id UUID;
   v_email TEXT;
-  v_already_used BOOLEAN;
   v_current_plan TEXT;
+  v_is_active BOOLEAN;
+  v_trial_used_premium BOOLEAN;
+  v_trial_used_full BOOLEAN;
   v_trial_end TIMESTAMPTZ;
 BEGIN
-  SELECT id, email, plan, is_active INTO requesting_user, v_email, v_current_plan, requesting_user.is_active
+  -- Cargar todos los campos en variables escalares (no RECORD)
+  SELECT id, email, plan, is_active, trial_used_premium, trial_used_full
+    INTO v_user_id, v_email, v_current_plan, v_is_active, v_trial_used_premium, v_trial_used_full
     FROM profiles WHERE id = auth.uid();
 
   IF v_email IS NULL THEN
     RAISE EXCEPTION 'No autenticado';
   END IF;
 
-  IF requesting_user.is_active IS FALSE THEN
+  IF v_is_active IS FALSE THEN
     RAISE EXCEPTION 'Cuenta desactivada';
   END IF;
 
@@ -194,10 +197,10 @@ BEGIN
   END IF;
 
   -- Validar que no haya usado ya este trial
-  IF p_plan = 'premium' AND requesting_user.trial_used_premium THEN
+  IF p_plan = 'premium' AND v_trial_used_premium IS TRUE THEN
     RAISE EXCEPTION 'Ya usaste tu trial de Premium';
   END IF;
-  IF p_plan = 'full' AND requesting_user.trial_used_full THEN
+  IF p_plan = 'full' AND v_trial_used_full IS TRUE THEN
     RAISE EXCEPTION 'Ya usaste tu trial de Full';
   END IF;
 
@@ -304,7 +307,7 @@ BEGIN
     INTO v_user
     FROM profiles WHERE id = auth.uid();
 
-  IF v_user.plan IS NULL THEN
+  IF NOT FOUND THEN
     RAISE EXCEPTION 'No autenticado';
   END IF;
 
@@ -335,8 +338,8 @@ BEGIN
   END;
 
   -- Mostrar promo si han pasado 7 días desde el último dismiss
-  v_show_premium := (NOT v_user.trial_used_premium) AND v_dismissed_age_days >= 7;
-  v_show_full := (NOT v_user.trial_used_full) AND v_dismissed_age_days >= 7;
+  v_show_premium := (COALESCE(v_user.trial_used_premium, false) IS NOT true) AND v_dismissed_age_days >= 7;
+  v_show_full := (COALESCE(v_user.trial_used_full, false) IS NOT true) AND v_dismissed_age_days >= 7;
 
   RETURN json_build_object(
     'show_premium_trial', v_show_premium,
