@@ -40,6 +40,7 @@ import {
   Copy,
   Crown,
   Upload as UploadIcon,
+  Lock,
 } from 'lucide-react';
 import type { Plan } from '@/lib/plans';
 import type { MenuData } from '@/lib/menu-utils';
@@ -48,6 +49,7 @@ import {
 } from '@/lib/import-export';
 import { DashboardShell } from '@/components/dashboard/dashboard-shell';
 import { InstallAppButton } from '@/components/pwa/install-app-button';
+import { TrialPromoBanner } from '@/components/dashboard/trial-promo-banner';
 import { isPlanAtLeast, type PlanId } from '@/lib/plans';
 
 interface Props {
@@ -175,8 +177,18 @@ export function DashboardClient({ user, plan, menus, isSuperAdmin = false }: Pro
 
   const canCreate = plan.limits.maxMenus === -1 || menus.length < plan.limits.maxMenus;
 
+  // ⚠️ DOWNGRADE LOCK: Si el usuario tenía más menús creados (de un plan superior)
+  // y bajó de plan, los menús que exceden el límite actual quedan BLOQUEADOS.
+  // Solo puede editar/publicar los primeros N menús que su plan actual permite.
+  // Los excedentes NO se eliminan (preservación de datos) pero SÍ se bloquean.
+  const maxAllowedMenus = plan.limits.maxMenus === -1 ? Infinity : plan.limits.maxMenus;
+  const isMenuLocked = (index: number) => index >= maxAllowedMenus;
+
   return (
     <DashboardShell user={user} plan={plan} isSuperAdmin={isSuperAdmin}>
+      {/* 🎁 Banner de Trial Gratis (Premium 5d / Full 10d) — aparece aleatoriamente */}
+      <TrialPromoBanner planId={plan.id} />
+
       {/* Page title row */}
       <div className="flex items-center justify-between mb-6 gap-3">
         <div className="min-w-0">
@@ -278,14 +290,39 @@ export function DashboardClient({ user, plan, menus, isSuperAdmin = false }: Pro
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-          {menus.map((menu) => {
+          {menus.map((menu, index) => {
             const cover = (menu as any).theme_cover_url as string | null | undefined;
             const hasCover = !!cover;
+            const locked = isMenuLocked(index);
             return (
             <div
               key={menu.id}
-              className="group bg-white/[0.03] border border-white/10 rounded-2xl overflow-hidden hover:border-[#d4af37]/40 hover:shadow-xl hover:shadow-[#d4af37]/5 transition-all"
+              className={`group bg-white/[0.03] border rounded-2xl overflow-hidden transition-all relative ${
+                locked
+                  ? 'border-red-500/40 opacity-75'
+                  : 'border-white/10 hover:border-[#d4af37]/40 hover:shadow-xl hover:shadow-[#d4af37]/5'
+              }`}
             >
+              {/* 🔒 OVERLAY DE BLOQUEO por downgrade de plan */}
+              {locked && (
+                <div className="absolute inset-0 z-30 bg-black/70 backdrop-blur-sm flex flex-col items-center justify-center text-center p-4">
+                  <div className="w-12 h-12 rounded-full bg-red-500/20 border border-red-500/40 flex items-center justify-center mb-3">
+                    <Lock className="w-6 h-6 text-red-400" />
+                  </div>
+                  <div className="font-bold text-white text-sm mb-1">Menú bloqueado</div>
+                  <div className="text-xs text-white/60 mb-3 max-w-[200px]">
+                    Tu plan {plan.name} solo permite {maxAllowedMenus === Infinity ? '∞' : maxAllowedMenus} {maxAllowedMenus === 1 ? 'menú' : 'menús'}.
+                    Sube de plan para desbloquear este menú.
+                  </div>
+                  <Link
+                    href="/dashboard/billing"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-[#d4af37] to-[#f4d35e] text-[#1a1a2e] font-bold text-xs hover:opacity-90 transition"
+                  >
+                    <Crown className="w-3.5 h-3.5" />
+                    Subir de plan
+                  </Link>
+                </div>
+              )}
               {/* Preview header — clickeable para entrar al editor del menú */}
               <a
                 href={`/dashboard/${menu.id}`}
@@ -363,16 +400,29 @@ export function DashboardClient({ user, plan, menus, isSuperAdmin = false }: Pro
                 </button>
 
                 <div className="flex items-center gap-2">
-                  <Button
-                    size="sm"
-                    asChild
-                    className="flex-1 bg-white/5 border border-white/10 text-white hover:bg-white/10"
-                  >
-                    <a href={`/dashboard/${menu.id}`}>
-                      <Pencil className="w-3.5 h-3.5" />
-                      Editar
-                    </a>
-                  </Button>
+                  {locked ? (
+                    <Button
+                      size="sm"
+                      asChild
+                      className="flex-1 bg-gradient-to-r from-[#d4af37] to-[#f4d35e] text-[#1a1a2e] hover:opacity-90 font-bold"
+                    >
+                      <Link href="/dashboard/billing">
+                        <Crown className="w-3.5 h-3.5" />
+                        Desbloquear
+                      </Link>
+                    </Button>
+                  ) : (
+                    <Button
+                      size="sm"
+                      asChild
+                      className="flex-1 bg-white/5 border border-white/10 text-white hover:bg-white/10"
+                    >
+                      <a href={`/dashboard/${menu.id}`}>
+                        <Pencil className="w-3.5 h-3.5" />
+                        Editar
+                      </a>
+                    </Button>
+                  )}
 
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>

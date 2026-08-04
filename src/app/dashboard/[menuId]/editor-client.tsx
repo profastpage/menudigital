@@ -48,6 +48,8 @@ import {
   Youtube,
   Globe,
   Sparkles,
+  Crown,
+  Lock,
 } from 'lucide-react';
 import { COLORS, CURRENCIES, type Plan } from '@/lib/plans';
 import type { MenuData, ProfileData } from '@/lib/menu-utils';
@@ -60,6 +62,7 @@ interface Props {
   plan: Plan;
   profile: ProfileData;
   imagesCount: number;
+  lockedDueToDowngrade?: boolean;
 }
 
 interface LocalCategory {
@@ -93,7 +96,7 @@ interface LocalDish {
   options: LocalOptionGroup[];
 }
 
-export function EditorClient({ initialMenu, plan, profile, imagesCount }: Props) {
+export function EditorClient({ initialMenu, plan, profile, imagesCount, lockedDueToDowngrade = false }: Props) {
   const router = useRouter();
   const [menu, setMenu] = useState({
     name: initialMenu.name || '',
@@ -821,6 +824,44 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount }: Props)
 
   return (
     <div className="min-h-screen bg-[#07070b] text-white">
+      {/* 🔒 OVERLAY DE BLOQUEO por downgrade de plan */}
+      {lockedDueToDowngrade && (
+        <div className="fixed inset-0 z-[100] bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="max-w-md w-full bg-[#15152a] border border-red-500/30 rounded-2xl p-6 sm:p-8 text-center">
+            <div className="w-16 h-16 rounded-full bg-red-500/15 border border-red-500/40 flex items-center justify-center mx-auto mb-4">
+              <Lock className="w-8 h-8 text-red-400" />
+            </div>
+            <h2 className="text-xl sm:text-2xl font-bold mb-2">Este menú está bloqueado</h2>
+            <p className="text-sm text-white/60 mb-5">
+              Tu plan actual <span className="font-bold text-white">{plan.name}</span> permite solo{' '}
+              <span className="font-bold text-white">
+                {plan.limits.maxMenus === -1 ? '∞' : plan.limits.maxMenus}{' '}
+                {plan.limits.maxMenus === 1 ? 'menú' : 'menús'}
+              </span>.
+              Tienes más menús creados de los que tu plan permite (probablemente tenías un plan superior).
+            </p>
+            <p className="text-xs text-white/40 mb-5">
+              Tus datos NO se eliminaron — siguen guardados. Sube de plan para volver a editar este menú.
+            </p>
+            <div className="flex flex-col gap-2">
+              <a
+                href="/dashboard/billing"
+                className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-[#d4af37] to-[#f4d35e] text-[#1a1a2e] font-bold hover:opacity-90 transition"
+              >
+                <Crown className="w-4 h-4" />
+                Subir de plan ahora
+              </a>
+              <a
+                href="/dashboard"
+                className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white/70 hover:text-white hover:bg-white/10 transition text-sm"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                Volver a mis menús
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Top bar — mobile responsive */}
       <header className="border-b border-white/10 bg-[#0a0a14] backdrop-blur sticky top-0 z-40 safe-top">
         <div className="px-3 sm:px-6 py-2.5 sm:py-3 flex items-center justify-between gap-2 sm:gap-4">

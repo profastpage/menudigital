@@ -80,7 +80,10 @@ interface Stats {
   active_users: number;
   banned_users: number;
   pro_users: number;
+  premium_users: number;
+  full_users: number;
   free_users: number;
+  active_trials: number;
   super_admins: number;
   total_menus: number;
   published_menus: number;
@@ -93,6 +96,11 @@ interface Stats {
   recent_signups_30d: number;
   revenue_estimate_pen: number;
   revenue_estimate_usd: number;
+  mrr_breakdown?: {
+    pro: { count: number; amount_pen: number; price_pen: number };
+    premium: { count: number; amount_pen: number; price_pen: number };
+    full: { count: number; amount_pen: number; price_pen: number };
+  };
   top_menus_by_views: Array<{
     id: string;
     name: string;
@@ -100,6 +108,7 @@ interface Stats {
     views_count: number;
     owner_email: string;
     owner_name: string | null;
+    owner_plan?: string;
   }>;
 }
 
@@ -263,7 +272,11 @@ export function SuperAdminClient({ admin }: { admin: AdminInfo }) {
   const statCards = stats
     ? [
         { label: 'Total usuarios', value: stats.total_users, icon: Users, color: '#d4af37', sub: `${stats.active_users} activos · ${stats.banned_users} baneados` },
-        { label: 'Usuarios Pro', value: stats.pro_users, icon: Crown, color: '#22c55e', sub: `${stats.free_users} gratis` },
+        { label: 'Free', value: stats.free_users, icon: Users, color: '#6b7280', sub: 'Plan gratuito' },
+        { label: 'Pro', value: stats.pro_users, icon: Crown, color: '#d4af37', sub: 'S/ 35/mes' },
+        { label: 'Premium', value: stats.premium_users, icon: Crown, color: '#9d4edd', sub: 'S/ 99/mes' },
+        { label: 'Full', value: stats.full_users, icon: Crown, color: '#e63946', sub: 'S/ 199/mes' },
+        { label: 'Trials activos', value: stats.active_trials, icon: Activity, color: '#3b82f6', sub: '5d Premium · 10d Full' },
         { label: 'Registros 7 días', value: stats.recent_signups_7d, icon: TrendingUp, color: '#3b82f6', sub: `${stats.recent_signups_30d} en 30 días` },
         { label: 'Total menús', value: stats.total_menus, icon: MenuIcon, color: '#f97316', sub: `${stats.published_menus} publicados` },
         { label: 'Total platos', value: stats.total_dishes, icon: Hash, color: '#a855f7', sub: `${stats.total_categories} categorías` },
@@ -457,17 +470,51 @@ export function SuperAdminClient({ admin }: { admin: AdminInfo }) {
                 <div className="bg-gradient-to-br from-amber-500/10 to-transparent border border-amber-500/30 rounded-xl sm:rounded-2xl p-4 sm:p-6">
                   <h3 className="font-semibold mb-3 flex items-center gap-2 text-sm sm:text-base">
                     <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400" />
-                    Ingresos estimados
+                    MRR estimado (Ingresos recurrentes mensuales)
                   </h3>
                   <div className="text-3xl sm:text-4xl font-bold text-amber-400">
-                    S/ {stats.revenue_estimate_pen}
+                    S/ {stats.revenue_estimate_pen.toLocaleString()}
                     <span className="text-sm sm:text-base text-white/40 ml-2 block sm:inline">
-                      ≈ ${stats.revenue_estimate_usd} USD
+                      ≈ ${stats.revenue_estimate_usd.toLocaleString()} USD
                     </span>
                   </div>
-                  <p className="text-xs text-white/50 mt-2">
-                    {stats.pro_users} suscriptores Pro × S/35/mes
-                  </p>
+                  <div className="mt-3 space-y-1.5 text-xs sm:text-sm">
+                    {stats.mrr_breakdown && (
+                      <>
+                        <div className="flex justify-between items-center">
+                          <span className="flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-[#d4af37]"></span>
+                            Pro ({stats.mrr_breakdown.pro.count})
+                          </span>
+                          <span className="text-white/70 font-medium">
+                            S/ {stats.mrr_breakdown.pro.amount_pen.toLocaleString()} · S/35 c/u
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-[#9d4edd]"></span>
+                            Premium ({stats.mrr_breakdown.premium.count})
+                          </span>
+                          <span className="text-white/70 font-medium">
+                            S/ {stats.mrr_breakdown.premium.amount_pen.toLocaleString()} · S/99 c/u
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-[#e63946]"></span>
+                            Full ({stats.mrr_breakdown.full.count})
+                          </span>
+                          <span className="text-white/70 font-medium">
+                            S/ {stats.mrr_breakdown.full.amount_pen.toLocaleString()} · S/199 c/u
+                          </span>
+                        </div>
+                      </>
+                    )}
+                    <div className="border-t border-white/10 mt-2 pt-2 flex justify-between items-center">
+                      <span className="text-white/50">Trials activos (no pagan todavía)</span>
+                      <span className="text-blue-400 font-medium">{stats.active_trials}</span>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="bg-gradient-to-br from-emerald-500/10 to-transparent border border-emerald-500/30 rounded-xl sm:rounded-2xl p-4 sm:p-6">

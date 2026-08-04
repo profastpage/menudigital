@@ -1800,3 +1800,68 @@ Stage Summary:
 - DB producción actualizada (3 columnas, 22 menus con defaults compatibles)
 - Todos los cambios aplican a clientes antiguos + nuevos + futuros via defaults
 - Capturas en /home/z/my-project/download/ (8 PNGs: desktop, mobile, iOS, search, carousel, 2-col)
+
+---
+Task ID: superadmin-stats-fix-and-trials
+Agent: main (Super Z)
+Task: 4 issues del usuario:
+1. "Donde exactamente" en MercadoPago — explicar con captura
+2. Downgrade lock: si usuario tenía plan mayor y baja, los menús extras deben bloquearse
+3. Super admin debe contabilizar TODOS los planes (Free/Pro/Premium/Full), no solo Pro
+4. Trials gratuitos: 5 días Premium / 10 días Full, sin tarjeta, aparece aleatoriamente
+
+Work Log:
+- VLM analysis de 4 capturas:
+  * imagen 2: panel dev MP, app "Menu Pro", etapa 1/5 de integración
+  * imagen 3: dashboard usuario Free con 2 menús (excede límite de 1!) — confirma bug de downgrade
+  * imagen 4: super admin muestra solo "Usuarios Pro: 1" y "2 gratis" — falta Premium/Full
+  * imagen 5: dashboard con locks/candados del plan Free
+- Creado `supabase/fix-superadmin-stats-and-trials.sql` (idempotente):
+  * RECREATE admin_global_stats() con: free_users, pro_users, premium_users, full_users, active_trials, mrr_breakdown (pro×35 + premium×99 + full×199)
+  * Nuevas columnas en profiles: trial_plan, trial_ends_at, trial_started_at, trial_used_premium, trial_used_full, trial_card_tokenized, promo_dismissed_at
+  * Nuevas RPC: start_user_trial(plan, days, with_card), expire_user_trials(), check_trial_eligibility(), dismiss_trial_promo()
+  * Nueva vista admin_active_trials
+- Actualizado `src/app/superadmin/superadmin-client.tsx`:
+  * 12 stat cards en lugar de 8 (Free, Pro, Premium, Full, Trials, Total, Registros, Menús, Platos, Vistas, Dominios, Super admins)
+  * MRR card con desglose por plan (cantidad + monto + precio unitario)
+  * Top 10 menús ahora incluye owner_plan
+- Actualizado `src/app/api/admin/route.ts` fallback con nuevos campos y mrr_breakdown
+- Implementado DOWNGRADE LOCK en `src/app/dashboard/[menuId]/page.tsx`:
+  * Server-side check: si menuIndex >= maxMenus del plan actual, pasa lockedDueToDowngrade=true al editor
+  * NO elimina datos — solo bloquea edición
+- Actualizado `src/app/dashboard/[menuId]/editor-client.tsx`:
+  * Prop nueva lockedDueToDowngrade (default false)
+  * Overlay z-100 con candado rojo + CTA "Subir de plan" cuando está bloqueado
+  * Importados Crown + Lock de lucide-react
+- Actualizado `src/app/dashboard/dashboard-client.tsx`:
+  * maxAllowedMenus = plan.limits.maxMenus (-1 = Infinity)
+  * isMenuLocked(index) = index >= maxAllowedMenus
+  * Card de menú muestra overlay con candado + CTA "Desbloquear"
+  * Botón "Editar" cambia a "Desbloquear" cuando está locked
+- Creados 4 endpoints nuevos:
+  * `/api/billing/trial/eligibility` GET → check_trial_eligibility RPC
+  * `/api/billing/trial/start` POST → start_user_trial RPC (sin tarjeta por ahora)
+  * `/api/billing/trial/dismiss` POST → dismiss_trial_promo RPC
+  * `/api/cron/expire-trials` GET (con x-cron-secret) → expire_user_trials RPC
+- Creado `vercel.json` con cron cada hora (`0 * * * *`) para expirar trials
+- Creado `src/components/dashboard/trial-promo-banner.tsx`:
+  * Llama a /api/billing/trial/eligibility al cargar
+  * 50% aleatorio de mostrar (para no ser invasivo)
+  * Card premium con gradient del color del plan (Premium morado / Full rojo)
+  * Botón "Probar N días gratis" → POST /api/billing/trial/start
+  * Botón X para cerrar (dispara dismiss_trial_promo, no se muestra por 7 días)
+  * Muestra features específicos del plan (Full: multi-sucursal+POS, Premium: mesas+mozos+comandas)
+  * Lista de beneficios: sin tarjeta, cancela cuando quieras, datos guardados
+- Integrado TrialPromoBanner al inicio del dashboard (después del DashboardShell, antes del título)
+- Actualizado `.env.example` con CRON_SECRET
+- Verificado TypeScript: 0 errores en src/
+- Verificado Next.js build: 24 páginas + endpoints OK
+- Copiado SQL a `/home/z/my-project/download/fix-superadmin-stats-and-trials.sql` para subir a Supabase
+
+Stage Summary:
+- ✅ Super admin ahora contabiliza Free + Pro + Premium + Full + Trials activos + MRR real con desglose
+- ✅ Downgrade lock implementado client-side (overlay card) + server-side (editor bloqueado)
+- ✅ Trials gratis (Premium 5d / Full 10d) SIN tarjeta, aparece aleatoriamente (50%)
+- ✅ Cron job automático cada hora para expirar trials vencidos
+- ⚠️ USUARIO DEBE: (1) ejecutar SQL `supabase/fix-superadmin-stats-and-trials.sql` en Supabase SQL Editor, (2) agregar CRON_SECRET en Vercel
+- Pendiente: git push a origin/main
