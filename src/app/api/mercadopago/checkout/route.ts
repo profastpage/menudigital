@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
   try {
     const result = await createPreapproval({
       payerEmail: profile.email,
-      reason: `MenuPro ${plan.name} — Suscripción mensual`,
+      reason: `Menu Pro - Plan ${plan.name}`,
       amount: plan.mpAmount,
       userId: user.id,
       planId,
