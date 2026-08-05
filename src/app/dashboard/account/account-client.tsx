@@ -9,6 +9,7 @@ import { DashboardShell } from '@/components/dashboard/dashboard-shell';
 import { toast } from 'sonner';
 import {
   User,
+  UserCircle,
   Building2,
   CreditCard,
   Camera,

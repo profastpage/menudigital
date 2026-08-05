@@ -20,7 +20,7 @@ import { getClientIP, rateLimitResponse, RATE_LIMITS } from '@/lib/rate-limit';
  */
 export async function PATCH(req: NextRequest) {
   const ip = getClientIP(req);
-  const limited = rateLimitResponse(`profile-update:${ip}`, RATE_LIMITS.default);
+  const limited = rateLimitResponse(`profile-update:${ip}`, RATE_LIMITS.api);
   if (limited) return limited;
 
   try {

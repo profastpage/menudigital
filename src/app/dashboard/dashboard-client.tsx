@@ -179,10 +179,26 @@ export function DashboardClient({ user, plan, menus, isSuperAdmin = false }: Pro
 
   // ⚠️ DOWNGRADE LOCK: Si el usuario tenía más menús creados (de un plan superior)
   // y bajó de plan, los menús que exceden el límite actual quedan BLOQUEADOS.
-  // Solo puede editar/publicar los primeros N menús que su plan actual permite.
-  // Los excedentes NO se eliminan (preservación de datos) pero SÍ se bloquean.
+  // Solo puede editar/publicar los primeros N menús que su plan actual permite
+  // (los N más VIEJOS — los más antiguos son los que el usuario ha estado usando
+  // más tiempo, así que son los que debe poder seguir editando).
+  // Los excedentes (más nuevos) NO se eliminan pero SÍ se bloquean.
+  //
+  // IMPORTANTE: El lock se basa en created_at (no en index del array), porque
+  // el array `menus` viene ordenado DESC (más nuevo primero) para display,
+  // pero el editor usa ASC (más viejo primero) para calcular menuIndex.
+  // Sin esta sincronización, el dashboard mostraba como "editable" un menú
+  // que el editor después bloqueaba.
   const maxAllowedMenus = plan.limits.maxMenus === -1 ? Infinity : plan.limits.maxMenus;
-  const isMenuLocked = (index: number) => index >= maxAllowedMenus;
+  const sortedByCreatedAsc = [...menus].sort((a, b) => {
+    const aTime = new Date(a.created_at || 0).getTime();
+    const bTime = new Date(b.created_at || 0).getTime();
+    return aTime - bTime;
+  });
+  const editableMenuIds = new Set(
+    sortedByCreatedAsc.slice(0, maxAllowedMenus === Infinity ? undefined : maxAllowedMenus).map(m => m.id)
+  );
+  const isMenuLocked = (menuId: string) => !editableMenuIds.has(menuId);
 
   return (
     <DashboardShell user={user} plan={plan} isSuperAdmin={isSuperAdmin}>
@@ -293,7 +309,7 @@ export function DashboardClient({ user, plan, menus, isSuperAdmin = false }: Pro
           {menus.map((menu, index) => {
             const cover = (menu as any).theme_cover_url as string | null | undefined;
             const hasCover = !!cover;
-            const locked = isMenuLocked(index);
+            const locked = isMenuLocked(menu.id);
             return (
             <div
               key={menu.id}
@@ -311,8 +327,8 @@ export function DashboardClient({ user, plan, menus, isSuperAdmin = false }: Pro
                   </div>
                   <div className="font-bold text-white text-sm mb-1">Menú bloqueado</div>
                   <div className="text-xs text-white/60 mb-3 max-w-[200px]">
-                    Tu plan {plan.name} solo permite {maxAllowedMenus === Infinity ? '∞' : maxAllowedMenus} {maxAllowedMenus === 1 ? 'menú' : 'menús'}.
-                    Sube de plan para desbloquear este menú.
+                    Tu plan {plan.name} permite solo {maxAllowedMenus === Infinity ? 'ilimitados' : maxAllowedMenus} {maxAllowedMenus === 1 ? 'menú' : 'menús'}.
+                    Los menús más antiguos quedan editables; este es un excedente. Sube de plan para desbloquearlo.
                   </div>
                   <Link
                     href="/dashboard/billing"
