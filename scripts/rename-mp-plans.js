@@ -2,26 +2,28 @@
 /**
  * scripts/rename-mp-plans.js
  *
- * Renombra los PreApproval Plans de MercadoPago para que tengan un nombre
- * profesional consistente con la marca:
+ * Renombra las suscripciones PreApproval de MercadoPago para que tengan
+ * un nombre profesional consistente con la marca:
  *
  *   S/ 35  → "Menu Pro - Plan Pro"
  *   S/ 99  → "Menu Pro - Plan Premium"
  *   S/ 199 → "Menu Pro - Plan Full"
  *
- * También actualiza la descripción con el detalle de beneficios.
+ * NOTA: MercadoPago deprecó el endpoint /preapproval_plans/search.
+ * Este script renombra las SUSCRIPCIONES PreApproval (que es lo que
+ * tu código crea por cada checkout). Los planes TEMPLATE del dashboard
+ * de MP deben renombrarse manualmente en la web de MP.
  *
  * Uso:
  *   MERCADOPAGO_ACCESS_TOKEN=APP_USR-xxxxx node scripts/rename-mp-plans.js
  *
- * Opcional (modo seguro por defecto):
- *   DRY_RUN=1 node scripts/rename-mp-plans.js   → solo lista, no actualiza
+ * Opciones:
+ *   DRY_RUN=1 → solo lista, no actualiza
  */
 
 const fs = require('fs');
 const path = require('path');
 
-// Cargar .env.local si existe
 function loadEnv(p) {
   if (!fs.existsSync(p)) return;
   for (const line of fs.readFileSync(p, 'utf8').split('\n')) {
@@ -45,25 +47,18 @@ const DRY_RUN = process.env.DRY_RUN === '1' || process.argv.includes('--dry-run'
 
 if (!TOKEN) {
   console.error('\n❌ Falta MERCADOPAGO_ACCESS_TOKEN.');
-  console.error('   Exporta la variable antes de ejecutar:');
   console.error('   MERCADOPAGO_ACCESS_TOKEN=APP_USR-xxxxx node scripts/rename-mp-plans.js\n');
   process.exit(1);
 }
 
-// Mapeo monto → { nombre, descripción }
+// Mapeo monto → { nombre }
 const PLAN_BY_AMOUNT = {
-  35: {
-    name: 'Menu Pro - Plan Pro',
-    description: 'Menús digitales ilimitados (hasta 3), QR, analytics, branding propio. Suscripción mensual.',
-  },
-  99: {
-    name: 'Menu Pro - Plan Premium',
-    description: 'Todo lo de Pro + gestión de mesas, mozos y comandas en tiempo real. Multi-sucursal (2). Suscripción mensual.',
-  },
-  199: {
-    name: 'Menu Pro - Plan Full',
-    description: 'Todo lo de Premium + multi-sucursal ilimitada (5+), POS avanzado, soporte prioritario. Suscripción mensual.',
-  },
+  35:  { name: 'Menu Pro - Plan Pro',     desc: 'Menús digitales ilimitados (hasta 3), QR, analytics, branding propio.' },
+  35.0:{ name: 'Menu Pro - Plan Pro',     desc: 'Menús digitales ilimitados (hasta 3), QR, analytics, branding propio.' },
+  99:  { name: 'Menu Pro - Plan Premium', desc: 'Todo lo de Pro + gestión de mesas, mozos y comandas en tiempo real.' },
+  99.0:{ name: 'Menu Pro - Plan Premium', desc: 'Todo lo de Pro + gestión de mesas, mozos y comandas en tiempo real.' },
+  199: { name: 'Menu Pro - Plan Full',    desc: 'Todo lo de Premium + multi-sucursal ilimitada, POS avanzado.' },
+  199.0:{ name: 'Menu Pro - Plan Full',   desc: 'Todo lo de Premium + multi-sucursal ilimitada, POS avanzado.' },
 };
 
 async function mpApi(endpoint, method = 'GET', body) {
@@ -81,21 +76,20 @@ async function mpApi(endpoint, method = 'GET', body) {
   return { status: res.status, json };
 }
 
-async function listAllPlans() {
-  console.log('\n📡 Listando PreApproval Plans en MercadoPago...\n');
+async function listAllSubscriptions() {
+  console.log('\n📡 Listando PreApproval subscriptions en MercadoPago...\n');
 
   const all = [];
   let offset = 0;
   const limit = 50;
 
-  // MP devuelve hasta 50 por página
   while (true) {
-    const r = await mpApi(`/preapproval_plans/search?limit=${limit}&offset=${offset}`);
+    const r = await mpApi(`/preapproval/search?limit=${limit}&offset=${offset}`);
     if (r.status !== 200) {
-      console.error(`❌ Error listando planes: ${r.status}`, r.json);
+      console.error(`❌ Error listando: ${r.status}`, r.json);
       process.exit(1);
     }
-    const results = r.json.results || r.json.elements || [];
+    const results = r.json.results || [];
     if (results.length === 0) break;
     all.push(...results);
     if (results.length < limit) break;
@@ -105,24 +99,24 @@ async function listAllPlans() {
   return all;
 }
 
-async function updatePlan(plan) {
-  const amount = plan.auto_recurring?.transaction_amount;
+async function updateSubscription(sub) {
+  const amount = sub.auto_recurring?.transaction_amount;
   const match = PLAN_BY_AMOUNT[amount];
 
   if (!match) {
-    console.log(`   ⏭  S/ ${amount} — no coincide con ningún plan de Menu Pro, se omite`);
+    console.log(`   ⏭  S/ ${amount} — no coincide con plan de Menu Pro, se omite (id: ${sub.id})`);
     return { skipped: true };
   }
 
-  const currentName = plan.reason || '(sin nombre)';
+  const currentName = sub.reason || '(sin nombre)';
   const newName = match.name;
 
   if (currentName === newName) {
-    console.log(`   ✓  S/ ${amount} — ya tiene el nombre correcto: "${newName}"`);
+    console.log(`   ✓  S/ ${amount} — ya tiene nombre correcto: "${newName}" (id: ${sub.id})`);
     return { already: true };
   }
 
-  console.log(`   ✏  S/ ${amount} — renombrando:`);
+  console.log(`   ✏  S/ ${amount} — renombrando (id: ${sub.id}):`);
   console.log(`       antes: "${currentName}"`);
   console.log(`       ahora: "${newName}"`);
 
@@ -131,7 +125,7 @@ async function updatePlan(plan) {
     return { wouldUpdate: true };
   }
 
-  const r = await mpApi(`/preapproval_plans/${plan.id}`, 'PUT', {
+  const r = await mpApi(`/preapproval/${sub.id}`, 'PUT', {
     reason: newName,
   });
 
@@ -146,28 +140,21 @@ async function updatePlan(plan) {
 
 async function main() {
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  console.log('  Menu Pro — Renombrar planes en MercadoPago');
+  console.log('  Menu Pro — Renombrar suscripciones en MercadoPago');
   console.log(`  Modo: ${DRY_RUN ? 'DRY-RUN (solo lectura)' : 'ACTIVO (actualiza)'}`);
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
-  const plans = await listAllPlans();
-  console.log(`   Total planes encontrados: ${plans.length}\n`);
+  const subs = await listAllSubscriptions();
+  console.log(`   Total suscripciones encontradas: ${subs.length}\n`);
 
-  if (plans.length === 0) {
-    console.log('   ℹ  No hay planes en tu cuenta de MP. Si nunca creaste planes');
-    console.log('       manuales, esto es normal — tu código crea suscripciones');
-    console.log('       individuales (PreApproval) por cada checkout.');
-    console.log('\n   Si quieres crear planes reutilizables en MP dashboard,');
-    console.log('   los nombres sugeridos son:');
-    Object.entries(PLAN_BY_AMOUNT).forEach(([amt, p]) => {
-      console.log(`     S/ ${amt} → "${p.name}"`);
-    });
+  if (subs.length === 0) {
+    console.log('   ℹ  No hay suscripciones aún. Las nuevas usarán el formato correcto.');
     return;
   }
 
   let updated = 0, already = 0, skipped = 0, errors = 0;
-  for (const p of plans) {
-    const r = await updatePlan(p);
+  for (const s of subs) {
+    const r = await updateSubscription(s);
     if (r.updated) updated++;
     else if (r.already) already++;
     else if (r.skipped) skipped++;
@@ -175,18 +162,26 @@ async function main() {
   }
 
   console.log('\n📊 Resumen:');
-  console.log(`   ${updated} actualizados`);
-  console.log(`   ${already} ya estaban correctos`);
-  console.log(`   ${skipped} omitidos (no son de Menu Pro)`);
+  console.log(`   ${updated} actualizadas`);
+  console.log(`   ${already} ya estaban correctas`);
+  console.log(`   ${skipped} omitidas (no son de Menu Pro)`);
   console.log(`   ${errors} errores`);
 
   if (DRY_RUN) {
-    console.log('\nℹ  Estuviste en modo DRY-RUN. Para aplicar los cambios:');
+    console.log('\nℹ  Estuviste en modo DRY-RUN. Para aplicar:');
     console.log('   node scripts/rename-mp-plans.js');
   } else {
-    console.log('\n✅ Listo. Los planes nuevos se crearán automáticamente');
-    console.log('   con el nombre correcto desde el código (checkout route).');
+    console.log('\n✅ Listo. Los checkouts nuevos usarán el formato correcto automáticamente.');
   }
+
+  console.log('\n📌 NOTA: Los planes TEMPLATE que creaste manualmente en el dashboard');
+  console.log('   de MercadoPago (ej: "QSS Plan Growth - xxx") no se pueden renombrar');
+  console.log   ('   vía API — MP deprecó ese endpoint. Renombralos manualmente en:');
+  console.log('   https://www.mercadopago.com.pe/suscripciones/planes');
+  console.log('   Nombres sugeridos:');
+  console.log('     S/ 35  → "Menu Pro - Plan Pro"');
+  console.log('     S/ 99  → "Menu Pro - Plan Premium"');
+  console.log('     S/ 199 → "Menu Pro - Plan Full"');
 }
 
 main().catch(err => {
