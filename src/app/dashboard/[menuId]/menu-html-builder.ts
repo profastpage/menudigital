@@ -80,9 +80,10 @@ export function buildMenuHTML(data: MenuData, opts?: { isPreview?: boolean }): s
   html += '</head>\n';
   html += '<body>\n';
   html += '<div id="app"></div>\n';
-  // ─── BOTTOM NAV (5 botones fijos, ultra premium) ───
-  // Inicio · Buscar · Favoritos · Instalar App · Pedido
+  // ─── BOTTOM NAV (6 botones fijos, ultra premium) ───
+  // Inicio · Buscar · Favoritos · Instalar App · Pedido · Subir 🔼 (ultra pequeño)
   // Siempre visible (no requiere scroll). Safe-area aware.
+  // El botón 🔼 es ultra pequeño (flex:0.6) y solo aparece tras scroll > 400px (.visible-after-scroll)
   html += '<nav class="mobile-bottom-nav" id="mobileBottomNav" aria-label="Navegación principal">\n';
   // 1. Inicio
   html += '  <button class="mbn-item active" data-action="home" aria-label="Inicio">\n';
@@ -99,8 +100,8 @@ export function buildMenuHTML(data: MenuData, opts?: { isPreview?: boolean }): s
   html += '    <span class="mbn-icon-wrap"><span class="mbn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></span><span class="mbn-badge" id="mbnFavCount" style="display:none;">0</span></span>\n';
   html += '    <span>Favoritos</span>\n';
   html += '  </button>\n';
-  // 4. Instalar App (PWA install)
-  html += '  <button class="mbn-item" data-action="install" aria-label="Instalar App" id="mbnInstallBtn">\n';
+  // 4. Instalar App (PWA install) — se oculta tras instalar (.installed → display:none)
+  html += '  <button class="mbn-item mbn-install-item" data-action="install" aria-label="Instalar App" id="mbnInstallBtn">\n';
   html += '    <span class="mbn-icon-wrap"><span class="mbn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></span></span>\n';
   html += '    <span>Instalar</span>\n';
   html += '  </button>\n';
@@ -108,6 +109,11 @@ export function buildMenuHTML(data: MenuData, opts?: { isPreview?: boolean }): s
   html += '  <button class="mbn-item mbn-cart-item" data-action="cart" aria-label="Ver pedido">\n';
   html += '    <span class="mbn-icon-wrap"><span class="mbn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg></span><span class="mbn-badge" id="mbnCartCount" style="display:none;">0</span></span>\n';
   html += '    <span class="mbn-cart-label"><span class="mbn-cart-text">Pedido</span><span class="mbn-cart-price" id="mbnCartTotal"></span></span>\n';
+  html += '  </button>\n';
+  // 6. Subir 🔼 — ultra pequeño (flex:0.55), solo visible tras scroll > 400px
+  html += '  <button class="mbn-item mbn-top-btn" data-action="scrollTop" aria-label="Subir al inicio" id="mbnTopBtn">\n';
+  html += '    <span class="mbn-icon-wrap"><span class="mbn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg></span></span>\n';
+  html += '    <span>Subir</span>\n';
   html += '  </button>\n';
   html += '</nav>\n';
   // PWA install tooltip / iOS instructions overlay
@@ -131,37 +137,38 @@ export function buildMenuHTML(data: MenuData, opts?: { isPreview?: boolean }): s
   html += '    <div class="favorites-body" id="favoritesBody"></div>\n';
   html += '  </div>\n';
   html += '</div>\n';
-  // Floating "scroll to top" button — aparece tras scroll > 600px (mobile-first)
-  // Solo visible en mobile (<640px) — en desktop el nav chip "Inicio" cumple la misma función
-  html += '<button class="scroll-top-btn" id="scrollTopBtn" aria-label="Volver arriba">\n';
-  html += '  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>\n';
-  html += '</button>\n';
-  // Floating theme toggle button — siempre visible (top-right, below .nav)
-  // Permite al cliente alternar dark/light theme. Persistencia en localStorage.
-  // En preview del dashboard NO se muestra (el dueño controla theme_dark_mode desde el editor)
-  if (!isPreview) {
-    html += '<button class="theme-toggle-btn" id="themeToggleBtn" aria-label="Cambiar tema" title="Cambiar tema">\n';
-    html += '  <svg class="theme-toggle-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>\n';
-    html += '  <svg class="theme-toggle-icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>\n';
-    html += '</button>\n';
-  }
-  // Mini-header sticky — barra superior con nombre del restaurante + estado
-  // Aparece al hacer scroll > 80px y permanece fijo mientras se navega el menú
-  html += '<div class="mini-header" id="miniHeader" aria-hidden="true">\n';
+  // Mini-header sticky — barra superior SIEMPRE VISIBLE con logo + nombre + toggle tema + estado.
+  // Reemplaza al mini-header anterior (que solo aparecía en scroll > 80px).
+  // El toggle de tema está integrado aquí (ya NO es un botón flotante separado).
+  html += '<div class="mini-header" id="miniHeader" aria-hidden="false">\n';
   html += '  <div class="mini-header-left">\n';
   html += '    <img class="mini-header-logo" id="miniHeaderLogo" alt="" />\n';
   html += '    <span class="mini-header-name" id="miniHeaderName"></span>\n';
   html += '  </div>\n';
-  html += '  <span class="mini-header-status open" id="miniHeaderStatus">Abierto</span>\n';
+  html += '  <div class="mini-header-right">\n';
+  // Theme toggle integrado en el header superior (NO es botón flotante)
+  if (!isPreview) {
+    html += '    <button class="mini-header-theme-toggle theme-toggle-btn" id="themeToggleBtn" aria-label="Cambiar tema" title="Cambiar tema">\n';
+    html += '      <svg class="theme-toggle-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>\n';
+    html += '      <svg class="theme-toggle-icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>\n';
+    html += '    </button>\n';
+  }
+  html += '    <span class="mini-header-status open" id="miniHeaderStatus">Abierto</span>\n';
+  html += '  </div>\n';
   html += '</div>\n';
-  // Sticky bottom bar — barra inferior delgada (desktop) con botón "Subir al inicio"
+  // ─── BOTTOM CATEGORIES BAR (fixed, scroll spy + clickable) ───
+  // Barra fija en la parte inferior con TODAS las categorías. Visible siempre.
+  // Scroll spy: al desplazarse por una categoría, el chip correspondiente se activa automáticamente.
+  // Clickeable: clic en un chip → scroll suave a esa categoría.
+  html += '<div class="bottom-cats-bar" id="bottomCatsBar" aria-label="Categorías">\n';
+  html += '  <div class="bottom-cats-inner" id="bottomCatsInner"></div>\n';
+  html += '</div>\n';
+  // Sticky bottom bar — barra inferior delgada (desktop) con botón "Subir al inicio" ultra pequeño
   // Solo se renderiza si stickyTopBar está activo. En mobile se oculta vía CSS.
   if (stickyTopBar) {
     html += '<div class="sticky-top-bar" id="stickyTopBar">\n';
-    html += '  <span class="sticky-top-bar-label">Inicio</span>\n';
     html += '  <button class="sticky-top-bar-btn" id="stickyTopBtn" aria-label="Subir al inicio">\n';
     html += '    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>\n';
-    html += '    Subir al inicio\n';
     html += '  </button>\n';
     html += '</div>\n';
   }
@@ -288,9 +295,11 @@ function buildCSS(opts: ThemeOpts): string {
   // pero con opacidad reducida en light mode para no romper el cálido del cream.
   c += '*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}';
   c += 'html{scroll-behavior:smooth;-webkit-text-size-adjust:100%;}';
-  c += `body{font-family:var(--font-main);background:var(--bg-0);color:var(--text);min-height:100vh;padding-bottom:calc(110px + env(safe-area-inset-bottom, 0px));position:relative;-webkit-overflow-scrolling:touch;}`;
-  // En desktop (>=640px) la bottom-nav está oculta → no necesita padding extra
-  c += '@media(min-width:640px){body{padding-bottom:0;}}';
+  // Body: padding-top para mini-header SIEMPRE visible (~54px) + padding-bottom para bottom nav + bottom cats bar
+  // Mobile: bottom-nav (54px) + bottom-cats-bar (44px) = ~98px + safe-area
+  c += `body{font-family:var(--font-main);background:var(--bg-0);color:var(--text);min-height:100vh;padding-top:calc(54px + env(safe-area-inset-top, 0px));padding-bottom:calc(98px + env(safe-area-inset-bottom, 0px));position:relative;-webkit-overflow-scrolling:touch;}`;
+  // En desktop (>=640px): no hay bottom-nav, pero hay sticky-top-bar (44px) + bottom-cats-bar (44px) = 88px
+  c += '@media(min-width:640px){body{padding-top:calc(54px + env(safe-area-inset-top, 0px));padding-bottom:calc(88px + env(safe-area-inset-bottom, 0px));}}';
   // Orbes decorativos (orbs) — visibles en ambos temas, pero con menor opacidad en light mode
   c += 'body::before,body::after{content:"";position:fixed;width:500px;height:500px;border-radius:50%;filter:blur(140px);opacity:0.18;z-index:0;pointer-events:none;transition:opacity 0.4s;}';
   c += 'body::before{background:var(--accent);top:-200px;right:-150px;}';
@@ -355,7 +364,9 @@ function buildCSS(opts: ThemeOpts): string {
   // IMPORTANTE: NO usar overflow-y:hidden ni max-width:100vw aquí —
   // en iOS Safari puede bloquear el scroll vertical de toda la página.
   // Solo overflow-x:auto es suficiente para scroll horizontal de los chips.
-  c += '.nav{position:sticky;top:0;background:var(--nav-bg);backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);border-bottom:1px solid var(--border);z-index:100;padding:12px 0;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;box-sizing:border-box;}';
+  c += '.nav{position:sticky;top:54px;background:var(--nav-bg);backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);border-bottom:1px solid var(--border);z-index:100;padding:12px 0;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;box-sizing:border-box;}';
+  // En mobile: ocultar el .nav superior — las categorías ahora están en la bottom-cats-bar (fixed bottom)
+  c += '@media(max-width:639px){.nav{display:none !important;}}';
   c += '.nav::-webkit-scrollbar{display:none;}';
   c += '.nav-inner{display:flex;gap:8px;padding:0 16px;max-width:100%;box-sizing:border-box;}';
   // Tap target ≥44px (Apple HIG / Material spec) — touch-friendly mobile-first
@@ -372,8 +383,8 @@ function buildCSS(opts: ThemeOpts): string {
 
   // Section
   const sectionMaxW = layout === 'single' ? '640px' : '1100px';
-  // scroll-margin-top: compensa el header sticky (.nav ~58px) al hacer click en chip de categoría
-  c += `.section{padding:24px 20px 8px;max-width:${sectionMaxW};margin:0 auto;width:100%;scroll-margin-top:70px;}`;
+  // scroll-margin-top: compensa el mini-header SIEMPRE visible (~54px) + 16px gap al hacer click en chip de categoría
+  c += `.section{padding:24px 20px 8px;max-width:${sectionMaxW};margin:0 auto;width:100%;scroll-margin-top:calc(70px + env(safe-area-inset-top, 0px));}`;
   // En desktop: single layout usa 2 columnas para aprovechar mejor el espacio
   c += '@media(min-width:880px){.section.single-layout{max-width:920px;}.section.single-layout .dish-grid{grid-template-columns:repeat(2,1fr);gap:18px;}}';
   c += '.section-title{font-size:21px;font-weight:700;margin-bottom:18px;display:flex;align-items:center;gap:12px;letter-spacing:-0.3px;}';
@@ -493,8 +504,14 @@ function buildCSS(opts: ThemeOpts): string {
     c += '.dish-lightbox-desc{font-size:15px;color:var(--text-soft);line-height:1.6;margin:0 0 22px;}';
     c += '@media(min-width:640px){.dish-lightbox-desc{font-size:16px;line-height:1.65;}}';
     // Sticky CTA bar — siempre visible en la parte inferior del modal (no se mueve con scroll)
-    c += '.dish-lightbox-cta{flex-shrink:0;padding:14px 20px calc(18px + env(safe-area-inset-bottom, 0px));background:var(--lightbox-bg);border-top:1px solid var(--border);box-shadow:0 -4px 16px rgba(0,0,0,0.15);}';
-    c += '.dish-lightbox-add{width:100%;background:linear-gradient(135deg,var(--accent),rgba(var(--accent-rgb),0.85));color:#fff;border:none;padding:16px 22px;border-radius:var(--radius);font-size:16px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;transition:all 0.2s;box-shadow:0 8px 24px rgba(var(--accent-rgb),0.45);-webkit-tap-highlight-color:transparent;}';
+    c += '.dish-lightbox-cta{flex-shrink:0;padding:14px 20px calc(18px + env(safe-area-inset-bottom, 0px));background:var(--lightbox-bg);border-top:1px solid var(--border);box-shadow:0 -4px 16px rgba(0,0,0,0.15);display:flex;align-items:center;gap:10px;}';
+    // ─── Small "Volver" button (bottom-left corner of lightbox) ───
+    // Ultra-small circular button with arrow-left icon. Returns to the exact scroll position.
+    c += '.dish-lightbox-back{flex-shrink:0;width:42px;height:42px;border-radius:50%;background:var(--glass-strong);color:var(--text);border:1px solid var(--border-strong);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s;-webkit-tap-highlight-color:transparent;}';
+    c += '@media(hover:hover){.dish-lightbox-back:hover{background:var(--accent);color:#fff;border-color:var(--accent);transform:translateX(-2px);}}';
+    c += '.dish-lightbox-back:active{transform:scale(0.92);}';
+    c += '.dish-lightbox-back svg{width:18px;height:18px;}';
+    c += '.dish-lightbox-add{flex:1;background:linear-gradient(135deg,var(--accent),rgba(var(--accent-rgb),0.85));color:#fff;border:none;padding:16px 22px;border-radius:var(--radius);font-size:16px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;transition:all 0.2s;box-shadow:0 8px 24px rgba(var(--accent-rgb),0.45);-webkit-tap-highlight-color:transparent;}';
     c += '.dish-lightbox-add:hover{transform:translateY(-2px);box-shadow:0 12px 32px rgba(var(--accent-rgb),0.6);}';
     c += '.dish-lightbox-add:active{transform:translateY(0);}';
     c += '.dish-lightbox-add.added{background:linear-gradient(135deg,#22c55e,#16a34a);box-shadow:0 8px 24px rgba(34,197,94,0.4);}';
@@ -618,10 +635,21 @@ function buildCSS(opts: ThemeOpts): string {
   c += '.mbn-cart-price:empty{display:none;}';
   c += '.mbn-cart-item:has(.mbn-cart-price:not(:empty)){color:var(--accent-text);background:rgba(var(--accent-rgb),0.08);border-radius:14px;}';
   c += '.mbn-cart-item:has(.mbn-cart-price:not(:empty)) .mbn-cart-text{color:var(--accent-text);font-weight:700;}';
-  // Add bottom padding so content isn't hidden behind bottom nav (mobile only)
-  c += '@media(max-width:639px){#app{padding-bottom:calc(110px + env(safe-area-inset-bottom, 0px));}.menu-footer{padding-bottom:calc(20px + env(safe-area-inset-bottom, 0px));}}';
+  // Add bottom padding so content isn't hidden behind bottom nav + bottom cats bar (mobile only)
+  c += '@media(max-width:639px){#app{padding-bottom:calc(160px + env(safe-area-inset-bottom, 0px));}.menu-footer{padding-bottom:calc(20px + env(safe-area-inset-bottom, 0px));}}';
   // Hide bottom nav when favorites-overlay/install-overlay/modal/lightbox/cart-modal is open
-  c += '@media(max-width:639px){.mobile-bottom-nav{transition:transform 0.3s cubic-bezier(0.32,0.72,0,1),opacity 0.25s;}body:has(.dish-lightbox.visible) .mobile-bottom-nav,body:has(.modal-overlay.visible) .mobile-bottom-nav,body:has(.favorites-overlay.visible) .mobile-bottom-nav,body:has(.pwa-install-overlay.visible) .mobile-bottom-nav{transform:translateY(110%);opacity:0;pointer-events:none;}}';
+  c += '@media(max-width:639px){.mobile-bottom-nav{transition:transform 0.3s cubic-bezier(0.32,0.72,0,1),opacity 0.25s;}body:has(.dish-lightbox.visible) .mobile-bottom-nav,body:has(.modal-overlay.visible) .mobile-bottom-nav,body:has(.favorites-overlay.visible) .mobile-bottom-nav,body:has(.pwa-install-overlay.visible) .mobile-bottom-nav,body:has(.search-overlay.visible) .mobile-bottom-nav{transform:translateY(110%);opacity:0;pointer-events:none;}}';
+  // ─── Install button: hidden cuando la app ya está instalada (.installed class) ───
+  // El evento appinstalled agrega .installed al botón → display:none lo oculta completamente
+  c += '.mbn-install-item.installed{display:none !important;}';
+  // Si el modo standalone ya está activo (PWA instalada), ocultar también
+  c += '@media all and (display-mode: standalone){.mbn-install-item{display:none !important;}}';
+  // ─── Top button (ultra small) — flex menor, texto más pequeño, solo activo tras scroll ───
+  c += '.mbn-top-btn{flex:0.6;font-size:9.5px !important;min-height:50px;opacity:0.55;transition:opacity 0.25s,transform 0.2s;}';
+  c += '.mbn-top-btn .mbn-icon svg{width:18px;height:18px;}';
+  c += '.mbn-top-btn.visible-after-scroll{opacity:1;}';
+  c += '@media(hover:hover){.mbn-top-btn:hover{background:rgba(var(--accent-rgb),0.1);color:var(--accent);}}';
+  c += '.mbn-top-btn:active{transform:scale(0.9);}';
 
   // ─── Favorite button (heart icon) on each dish ───
   c += '.dish-fav-btn{position:absolute;top:8px;right:8px;width:34px;height:34px;border-radius:50%;background:rgba(0,0,0,0.55);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:none;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:3;transition:transform 0.2s,background 0.2s;-webkit-tap-highlight-color:transparent;}';
@@ -679,21 +707,14 @@ function buildCSS(opts: ThemeOpts): string {
   c += '.fav-item-add svg{width:14px;height:14px;}';
   c += '.fav-item-remove{background:transparent;color:var(--text-muted);border:none;padding:4px 8px;font-size:11px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px;-webkit-tap-highlight-color:transparent;}';
   c += '.fav-item-remove:hover{color:#ef4444;}';
-  // Floating "scroll to top" button — mobile only, aparece tras 600px scroll
-  // Posicionado arriba de la bottom-nav (bottom:84px) para no pisar el nav
-  c += '.scroll-top-btn{position:fixed;right:16px;bottom:calc(84px + env(safe-area-inset-bottom, 0px));width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,var(--accent),rgba(var(--accent-rgb),0.85));color:#fff;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 20px rgba(var(--accent-rgb),0.4),0 2px 8px rgba(0,0,0,0.25);z-index:94;opacity:0;transform:translateY(20px) scale(0.85);pointer-events:none;transition:all 0.3s cubic-bezier(0.32,0.72,0,1);-webkit-tap-highlight-color:transparent;}';
-  c += '.scroll-top-btn svg{width:20px;height:20px;}';
-  c += '.scroll-top-btn.visible{opacity:1;transform:translateY(0) scale(1);pointer-events:auto;}';
-  c += '.scroll-top-btn:active{transform:scale(0.9);}';
-  c += '@media(min-width:640px){.scroll-top-btn{display:none;}}';
-  // Theme toggle button — visible siempre (mobile + desktop), top-right abajo del .nav sticky
-  // Diseño glassmorphism que combina con el nav. Muestra sol o luna según tema actual.
-  c += '.theme-toggle-btn{position:fixed;top:calc(12px + 50px);right:14px;width:44px;height:44px;border-radius:50%;background:var(--glass-strong);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid var(--border-strong);color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:99;box-shadow:0 4px 14px rgba(0,0,0,0.18);transition:all 0.25s cubic-bezier(0.32,0.72,0,1);-webkit-tap-highlight-color:transparent;opacity:0.9;}';
-  // Cuando el mini-header es visible, empujar el theme-toggle-btn hacia abajo para no chocar
-  c += 'body.mini-header-visible .theme-toggle-btn{top:calc(64px + env(safe-area-inset-top, 0px)) !important;}';
-  c += '@media(hover:hover){.theme-toggle-btn:hover{transform:scale(1.08);opacity:1;background:var(--accent);color:#fff;border-color:var(--accent);}}';
-  c += '.theme-toggle-btn:active{transform:scale(0.92);}';
-  c += '.theme-toggle-btn svg{width:18px;height:18px;}';
+  // (eliminado) .scroll-top-btn — el botón de subir está integrado al nav inferior (.mbn-top-btn)
+
+  // Theme toggle button — ahora integrado en el mini-header (no es flotante)
+  // Estilos para .theme-toggle-btn cuando está dentro del .mini-header
+  c += '.mini-header-theme-toggle{flex-shrink:0;width:36px;height:36px;border-radius:50%;background:var(--glass-strong);border:1px solid var(--border-strong);color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.25s cubic-bezier(0.32,0.72,0,1);-webkit-tap-highlight-color:transparent;}';
+  c += '@media(hover:hover){.mini-header-theme-toggle:hover{transform:scale(1.08);background:var(--accent);color:#fff;border-color:var(--accent);}}';
+  c += '.mini-header-theme-toggle:active{transform:scale(0.92);}';
+  c += '.mini-header-theme-toggle svg{width:18px;height:18px;}';
   // Mostrar solo el icono del tema OPUESTO al actual (indicar a qué va a cambiar)
   // Por defecto (sin data-theme), el tema es el del dueño → mostrar icono del opuesto
   c += '.theme-toggle-icon-sun{display:none;}';
@@ -711,20 +732,39 @@ function buildCSS(opts: ThemeOpts): string {
   }
   // En mobile, mover el botón para no chocar con scroll-top-btn (right:14px ya está ok, son verticales)
 
-  // ─── MINI-HEADER STICKY (siempre visible al hacer scroll) ───
-  // Barra superior compacta con nombre del restaurante + estado (Abierto/Cerrado)
-  // Aparece SOLAMENTE cuando el usuario hace scroll > 80px (no compite con el header hero).
-  // Cuando está visible, el .nav (chips) se pega DEBAJO de él.
-  c += '.mini-header{position:fixed;top:0;left:0;right:0;z-index:101;background:var(--nav-bg);backdrop-filter:blur(22px) saturate(180%);-webkit-backdrop-filter:blur(22px) saturate(180%);border-bottom:1px solid var(--border);box-shadow:0 4px 20px rgba(0,0,0,0.18);padding:10px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;transform:translateY(-100%);transition:transform 0.35s cubic-bezier(0.32,0.72,0,1);-webkit-tap-highlight-color:transparent;box-sizing:border-box;padding-top:calc(10px + env(safe-area-inset-top, 0px));}';
-  c += '.mini-header.visible{transform:translateY(0);}';
+  // ─── MINI-HEADER STICKY (SIEMPRE VISIBLE) ───
+  // Barra superior compacta con nombre del restaurante + toggle tema + estado (Abierto/Cerrado)
+  // Ahora SIEMPRE visible en el top (ya NO aparece solo al hacer scroll).
+  // Esto asegura que el toggle de tema esté siempre accesible en la parte superior.
+  c += '.mini-header{position:fixed;top:0;left:0;right:0;z-index:101;background:var(--nav-bg);backdrop-filter:blur(22px) saturate(180%);-webkit-backdrop-filter:blur(22px) saturate(180%);border-bottom:1px solid var(--border);box-shadow:0 4px 20px rgba(0,0,0,0.18);padding:10px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;transform:translateY(0);transition:transform 0.35s cubic-bezier(0.32,0.72,0,1);-webkit-tap-highlight-color:transparent;box-sizing:border-box;padding-top:calc(10px + env(safe-area-inset-top, 0px));}';
   c += '.mini-header-left{display:flex;align-items:center;gap:10px;min-width:0;flex:1;}';
   c += '.mini-header-logo{width:32px;height:32px;border-radius:50%;object-fit:cover;flex-shrink:0;background:var(--glass);border:1px solid var(--border);}';
   c += '.mini-header-name{font-size:15px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;letter-spacing:-0.2px;}';
+  c += '.mini-header-right{display:flex;align-items:center;gap:8px;flex-shrink:0;}';
   c += '.mini-header-status{font-size:11px;font-weight:600;padding:3px 8px;border-radius:10px;flex-shrink:0;}';
   c += '.mini-header-status.open{background:rgba(34,197,94,0.18);color:#22c55e;border:1px solid rgba(34,197,94,0.35);}';
   c += '.mini-header-status.closed{background:rgba(239,68,68,0.18);color:#ef4444;border:1px solid rgba(239,68,68,0.35);}';
-  // Cuando el mini-header es visible, el .nav (chips) debe pegarse DEBAJO de él
-  c += '.nav.with-mini-header{top:54px !important;}';
+  // (eliminado) .nav.with-mini-header — ya no se necesita porque .nav está oculto en mobile
+
+  // ─── BOTTOM CATEGORIES BAR (fixed, scroll spy + clickable) ───
+  // Barra FIJA en la parte inferior con TODAS las categorías. Visible SIEMPRE.
+  // En mobile: se posiciona arriba de la .mobile-bottom-nav (bottom:54px+safe-area).
+  // En desktop: se posiciona arriba de la .sticky-top-bar (bottom:44px).
+  // Cada chip es clickeable → scroll suave a la categoría.
+  // Scroll spy: al hacer scroll, el chip de la categoría visible se activa automáticamente.
+  c += '.bottom-cats-bar{position:fixed;left:0;right:0;bottom:calc(54px + env(safe-area-inset-bottom, 0px));background:var(--bottom-nav-bg);backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);border-top:1px solid var(--border);z-index:96;padding:8px 4px;box-shadow:0 -2px 12px rgba(0,0,0,0.12);transform:translateY(0);transition:transform 0.3s cubic-bezier(0.32,0.72,0,1);}';
+  // En desktop (>=640px): la bottom-cats-bar se posiciona arriba de la sticky-top-bar
+  c += '@media(min-width:640px){.bottom-cats-bar{bottom:calc(44px + env(safe-area-inset-bottom, 0px));}}';
+  c += '.bottom-cats-inner{display:flex;gap:8px;padding:0 8px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;scroll-behavior:smooth;}';
+  c += '.bottom-cats-inner::-webkit-scrollbar{display:none;}';
+  // Chip de categoría — mismo diseño que .nav-item pero un poco más compacto
+  c += '.bcat-item{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;padding:9px 16px;background:var(--glass);border:1px solid var(--border);border-radius:22px;color:var(--text-soft);font-size:13px;font-weight:600;cursor:pointer;transition:all 0.25s cubic-bezier(0.4,0,0.2,1);display:flex;align-items:center;gap:6px;min-height:40px;flex-shrink:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}';
+  c += '@media(hover:hover){.bcat-item:hover{background:var(--glass-strong);color:var(--text);transform:translateY(-1px);}}';
+  c += '.bcat-item:active{transform:scale(0.96);}';
+  c += '.bcat-item.active{background:linear-gradient(135deg,var(--accent),rgba(var(--accent-rgb),0.85));color:#fff;border-color:transparent;box-shadow:0 4px 14px rgba(var(--accent-rgb),0.4);}';
+  c += '.bcat-item-icon{font-size:14px;line-height:1;}';
+  // Ocultar bottom-cats-bar cuando lightbox/modal/favorites-overlay está abierto (UX: focus en modal)
+  c += 'body:has(.dish-lightbox.visible) .bottom-cats-bar,body:has(.modal-overlay.visible) .bottom-cats-bar,body:has(.favorites-overlay.visible) .bottom-cats-bar,body:has(.pwa-install-overlay.visible) .bottom-cats-bar,body:has(.search-overlay.visible) .bottom-cats-bar{transform:translateY(110%);pointer-events:none;}';
 
   // ─── MODO CARTA (PedidosYa/Rappi horizontal carousel) ───
   // Solo se activa cuando THEME.cartaStyle=true.
@@ -798,21 +838,21 @@ function buildCSS(opts: ThemeOpts): string {
     c += '.rappi-item-add svg{width:14px;height:14px;}';
   }
 
-  // ─── STICKY BOTTOM BAR (desktop, thin) ───
-  // Barra inferior delgada siempre visible (desktop ≥640px) con botón "Subir al inicio".
-  // En mobile el mobile-bottom-nav cumple la misma función (botón Inicio).
+  // ─── STICKY BOTTOM BAR (desktop, ultra-thin) ───
+  // Barra inferior ultra-delgada siempre visible (desktop ≥640px) con botón "Subir al inicio" ultra pequeño.
+  // En mobile el mobile-bottom-nav cumple la misma función (botón Inicio + 🔼).
   if (stickyTopBar) {
     c += '.sticky-top-bar{position:fixed;bottom:0;left:0;right:0;height:44px;background:var(--bottom-nav-bg);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:1px solid var(--border);display:flex;align-items:center;justify-content:center;gap:14px;padding:0 16px;z-index:93;box-shadow:0 -2px 12px rgba(0,0,0,0.12);transform:translateY(0);transition:transform 0.3s cubic-bezier(0.32,0.72,0,1);}';
     c += '.sticky-top-bar.hidden{transform:translateY(110%);}';
     // Hidden on mobile (mobile-bottom-nav covers this need)
     c += '@media(max-width:639px){.sticky-top-bar{display:none !important;}}';
-    // Padding for desktop body to avoid overlap
+    // Padding for desktop body to avoid overlap (sticky-top-bar 44px)
     c += '@media(min-width:640px){body{padding-bottom:44px;}}';
-    c += '.sticky-top-bar-btn{display:flex;align-items:center;gap:7px;background:linear-gradient(135deg,var(--accent),rgba(var(--accent-rgb),0.85));color:#fff;border:none;padding:7px 18px;border-radius:22px;font-size:12.5px;font-weight:700;cursor:pointer;box-shadow:0 3px 10px rgba(var(--accent-rgb),0.35);transition:all 0.2s;font-family:var(--font-main);-webkit-tap-highlight-color:transparent;}';
-    c += '.sticky-top-bar-btn:hover{transform:translateY(-1px);box-shadow:0 5px 14px rgba(var(--accent-rgb),0.5);}';
-    c += '.sticky-top-bar-btn:active{transform:translateY(0);}';
-    c += '.sticky-top-bar-btn svg{width:14px;height:14px;}';
-    c += '.sticky-top-bar-label{font-size:11px;color:var(--text-muted);font-weight:500;letter-spacing:0.3px;}';
+    // Ultra-small "Subir" button — solo icono, sin texto
+    c += '.sticky-top-bar-btn{display:flex;align-items:center;justify-content:center;width:34px;height:34px;background:linear-gradient(135deg,var(--accent),rgba(var(--accent-rgb),0.85));color:#fff;border:none;border-radius:50%;cursor:pointer;box-shadow:0 3px 10px rgba(var(--accent-rgb),0.35);transition:all 0.2s;font-family:var(--font-main);-webkit-tap-highlight-color:transparent;}';
+    c += '.sticky-top-bar-btn:hover{transform:translateY(-1px) scale(1.05);box-shadow:0 5px 14px rgba(var(--accent-rgb),0.5);}';
+    c += '.sticky-top-bar-btn:active{transform:translateY(0) scale(0.95);}';
+    c += '.sticky-top-bar-btn svg{width:16px;height:16px;}';
     // Hide sticky bar when modal/lightbox open on desktop
     c += 'body:has(.dish-lightbox.visible) .sticky-top-bar,body:has(.modal-overlay.visible) .sticky-top-bar{transform:translateY(110%);opacity:0;pointer-events:none;}';
   }
@@ -1202,8 +1242,8 @@ function buildJS(opts: JSOpts): string {
   s += '  showMobileNavOnMobile();\n';
   s += '  if(typeof restoreDishFromURL==="function"){restoreDishFromURL();}\n';
 
-  // Helper getCategoryIcon
-  s += 'function getCategoryIcon(name){var n=(name||"").toLowerCase();if(n.indexOf("entr")>=0||n.indexOf("aperit")>=0)return "🥗";if(n.indexOf("sopa")>=0||n.indexOf("caldo")>=0)return "🍜";if(n.indexOf("pasta")>=0)return "🍝";if(n.indexOf("parrilla")>=0||n.indexOf("grill")>=0||n.indexOf("carne")>=0)return "🥩";if(n.indexOf("pollo")>=0)return "🍗";if(n.indexOf("pesca")>=0||n.indexOf("maris")>=0)return "🐟";if(n.indexOf("postre")>=0)return "🍰";if(n.indexOf("bebida")>=0||n.indexOf("drink")>=0)return "🥤";if(n.indexOf("trago")>=0||n.indexOf("cocktail")>=0||n.indexOf("bar")>=0)return "🍸";if(n.indexOf("desay")>=0)return "🍳";if(n.indexOf("pizza")>=0)return "🍕";if(n.indexOf("burger")>=0||n.indexOf("hambur")>=0)return "🍔";if(n.indexOf("ensal")>=0)return "🥗";if(n.indexOf("sushi")>=0)return "🍣";if(n.indexOf("taco")>=0||n.indexOf("mexic")>=0)return "🌮";if(n.indexOf(" asia")>=0||n.indexOf("chino")>=0||n.indexOf("wok")>=0)return "🥡";if(n.indexOf("vegan")>=0||n.indexOf("veggie")>=0)return "🌱";if(n.indexOf("cafe")>=0||n.indexOf("coffee")>=0)return "☕";return "🍴";}\n';
+  // (eliminado de aquí) Helper getCategoryIcon — ahora definido al TOP LEVEL (ver abajo)
+  // para que sea accesible tanto desde renderApp como desde la IIFE que puebla bottom-cats-bar.
 
   // searchInput event listener (si showSearch)
   // Click en el input → abre overlay con TODOS los platos indexados + filtro en vivo
@@ -1212,6 +1252,9 @@ function buildJS(opts: JSOpts): string {
 
   s += '  updateCart();\n';
   s += '}\n'; // closes renderApp
+
+  // Helper getCategoryIcon — TOP LEVEL (accessible from renderApp, attachEvents, y la IIFE de bottom-cats-bar)
+  s += 'function getCategoryIcon(name){var n=(name||"").toLowerCase();if(n.indexOf("entr")>=0||n.indexOf("aperit")>=0)return "🥗";if(n.indexOf("sopa")>=0||n.indexOf("caldo")>=0)return "🍜";if(n.indexOf("pasta")>=0)return "🍝";if(n.indexOf("parrilla")>=0||n.indexOf("grill")>=0||n.indexOf("carne")>=0)return "🥩";if(n.indexOf("pollo")>=0)return "🍗";if(n.indexOf("pesca")>=0||n.indexOf("maris")>=0)return "🐟";if(n.indexOf("postre")>=0)return "🍰";if(n.indexOf("bebida")>=0||n.indexOf("drink")>=0)return "🥤";if(n.indexOf("trago")>=0||n.indexOf("cocktail")>=0||n.indexOf("bar")>=0)return "🍸";if(n.indexOf("desay")>=0)return "🍳";if(n.indexOf("pizza")>=0)return "🍕";if(n.indexOf("burger")>=0||n.indexOf("hambur")>=0)return "🍔";if(n.indexOf("ensal")>=0)return "🥗";if(n.indexOf("sushi")>=0)return "🍣";if(n.indexOf("taco")>=0||n.indexOf("mexic")>=0)return "🌮";if(n.indexOf(" asia")>=0||n.indexOf("chino")>=0||n.indexOf("wok")>=0)return "🥡";if(n.indexOf("vegan")>=0||n.indexOf("veggie")>=0)return "🌱";if(n.indexOf("cafe")>=0||n.indexOf("coffee")>=0)return "☕";return "🍴";}\n';
 
   // ─── Search functions (TOP LEVEL — accessible from attachEvents) ───
   if (showSearch) {
@@ -1363,13 +1406,16 @@ function buildJS(opts: JSOpts): string {
     s += '    });\n';
     s += '  });\n';
   }
-  s += '  document.querySelectorAll(".nav-item").forEach(function(item){\n';
+  s += '  document.querySelectorAll(".nav-item, .bcat-item").forEach(function(item){\n';
   s += '    item.addEventListener("click",function(){\n';
-  s += '      document.querySelectorAll(".nav-item").forEach(function(n){n.classList.remove("active");});\n';
-  s += '      this.classList.add("active");\n';
   s += '      var idx=parseInt(this.dataset.idx);\n';
+  s += '      document.querySelectorAll(".nav-item, .bcat-item").forEach(function(n){n.classList.remove("active");});\n';
+  s += '      document.querySelectorAll(".nav-item[data-idx=\\""+idx+"\\"], .bcat-item[data-idx=\\""+idx+"\\"]").forEach(function(n){n.classList.add("active");});\n';
   s += '      var el=document.getElementById("cat-"+idx);\n';
   s += '      if(el){var top=el.getBoundingClientRect().top+window.pageYOffset-70;window.scrollTo({top:top,behavior:"smooth"});}\n';
+  s += '      // Auto-scroll the bottom-cats-inner to make the clicked chip visible\n';
+  s += '      var bcat=this;\n';
+  s += '      if(bcat.classList.contains("bcat-item")&&bcat.parentNode){bcat.parentNode.scrollLeft=bcat.offsetLeft-(bcat.parentNode.offsetWidth/2)+(bcat.offsetWidth/2);}\n';
   s += '    });\n';
   s += '  });\n';
   s += '  document.getElementById("cartBar").addEventListener("click",openModal);\n';
@@ -1391,23 +1437,22 @@ function buildJS(opts: JSOpts): string {
     s += '  var soOv=document.getElementById("searchOverlay");\n';
     s += '  if(soOv){soOv.addEventListener("click",function(e){if(e.target===soOv)closeSearchOverlay();});}\n';
   }
-  // ─── Sticky top bar (desktop): "Subir al inicio" button ───
+  // ─── Sticky top bar (desktop): "Subir al inicio" button (ultra-small) ───
   if (stickyTopBar) {
     s += '  var stbBtn=document.getElementById("stickyTopBtn");\n';
     s += '  if(stbBtn){stbBtn.addEventListener("click",function(){window.scrollTo({top:0,behavior:"smooth"});});}\n';
   }
-  // Scroll-to-top button: show after 600px scroll, hide when modal is open (via CSS :has)
-  s += '  var scrollTopBtn=document.getElementById("scrollTopBtn");\n';
-  s += '  if(scrollTopBtn){\n';
-  s += '    var updateScrollTop=function(){if(window.pageYOffset>600){scrollTopBtn.classList.add("visible");}else{scrollTopBtn.classList.remove("visible");}};\n';
-  s += '    window.addEventListener("scroll",updateScrollTop,{passive:true});\n';
-  s += '    scrollTopBtn.addEventListener("click",function(){window.scrollTo({top:0,behavior:"smooth"});});\n';
-  s += '    updateScrollTop();\n';
+  // ─── Mobile bottom nav: "Subir" button (.mbn-top-btn) — toggle visibility on scroll ───
+  // Ultra-small button visible after 400px scroll. Click → scroll to top.
+  s += '  var mbnTopBtn=document.getElementById("mbnTopBtn");\n';
+  s += '  if(mbnTopBtn){\n';
+  s += '    var updateMbnTopBtn=function(){if(window.pageYOffset>400){mbnTopBtn.classList.add("visible-after-scroll");}else{mbnTopBtn.classList.remove("visible-after-scroll");}};\n';
+  s += '    window.addEventListener("scroll",updateMbnTopBtn,{passive:true});\n';
+  s += '    updateMbnTopBtn();\n';
   s += '  }\n';
   // Theme toggle: cycle dark↔light, persist in localStorage (key: menupro-theme)
-  // Si el usuario resetea (clear localStorage) vuelve al tema por defecto del dueño
-  s += '  var themeToggleBtn=document.getElementById("themeToggleBtn");\n';
-  s += '  if(themeToggleBtn){\n';
+  // Wired a TODOS los .theme-toggle-btn (ahora hay uno dentro del mini-header, no un botón flotante)
+  s += '  document.querySelectorAll(".theme-toggle-btn").forEach(function(themeToggleBtn){\n';
   s += '    themeToggleBtn.addEventListener("click",function(){\n';
   s += '      var current="default";\n';
   s += '      var attr=document.documentElement.getAttribute("data-theme");\n';
@@ -1419,7 +1464,7 @@ function buildJS(opts: JSOpts): string {
   s += '      document.documentElement.setAttribute("data-theme",next);\n';
   s += '      try{localStorage.setItem("menupro-theme",next);}catch(e){}\n';
   s += '    });\n';
-  s += '  }\n';
+  s += '  });\n';
   // Dish image error handler — uses event delegation (clean, no nested escapes)
   // Si la imagen del plato falla al cargar, se reemplaza por un placeholder con la letra inicial
   // Cubre: .dish-img (original) + .carta-card-img (carta carousel) + .rappi-item-img (lista Rappi)
@@ -1545,6 +1590,11 @@ function buildJS(opts: JSOpts): string {
     s += '  content.appendChild(noteWrap);\n';
     s += '  inner.appendChild(content);\n';
     s += '  var cta=document.createElement("div");cta.className="dish-lightbox-cta";\n';
+    // ─── Small "Volver" button (bottom-left corner) — returns to the exact scroll position in the menu ───\n';
+    s += '  var backBtn=document.createElement("button");backBtn.className="dish-lightbox-back";backBtn.setAttribute("aria-label","Volver a la carta");backBtn.title="Volver a la carta";\n';
+    s += '  backBtn.innerHTML="<svg viewBox=\\\"0 0 24 24\\\" fill=\\\"none\\\" stroke=\\\"currentColor\\\" stroke-width=\\\"2.5\\\" stroke-linecap=\\\"round\\\" stroke-linejoin=\\\"round\\\"><path d=\\\"M19 12H5M12 19l-7-7 7-7\\\"/></svg>";\n';
+    s += '  backBtn.addEventListener("click",closeDishLightbox);\n';
+    s += '  cta.appendChild(backBtn);\n';
     s += '  var addBtn=document.createElement("button");addBtn.className="dish-lightbox-add";\n';
     s += '  addBtn.innerHTML="<svg width=\\"20\\" height=\\"20\\" viewBox=\\"0 0 24 24\\" fill=\\"none\\" stroke=\\"currentColor\\" stroke-width=\\"2.5\\" stroke-linecap=\\"round\\" stroke-linejoin=\\"round\\"><path d=\\"M12 5v14M5 12h14\\"/></svg>Agregar al pedido";\n';
     s += '  addBtn.addEventListener("click",function(){var opts=getSelectedOptionsSnapshot();var noteEl=document.querySelector(".dish-note-input");var noteVal=noteEl?noteEl.value.trim():"";addToCart(catIdx,dishIdx,null,opts,noteVal);addBtn.classList.add("added");addBtn.innerHTML="<svg width=\\\"20\\\" height=\\\"20\\\" viewBox=\\\"0 0 24 24\\\" fill=\\\"none\\\" stroke=\\\"currentColor\\\" stroke-width=\\\"3\\\" stroke-linecap=\\\"round\\\" stroke-linejoin=\\\"round\\\"><polyline points=\\\"20 6 9 17 4 12\\\"/></svg> Agregado";setTimeout(closeDishLightbox,900);});\n';
@@ -1566,13 +1616,19 @@ function buildJS(opts: JSOpts): string {
     s += 'function closeDishLightbox(skipHistory){var lightbox=document.getElementById("dishLightbox");if(lightbox){lightbox.classList.remove("visible");lightbox.innerHTML="";document.body.style.overflow="";}if(!skipHistory&&window.location.pathname.match(/\\/p\\/\\d+-\\d+$/)){window.history.back();}}\n';
   }
 
-  // Update active nav
+  // Update active nav (top .nav + bottom .bcat-item) — used as fallback (IntersectionObserver is primary)
   s += 'function updateActiveNav(){\n';
   s += '  var scrollPos=window.pageYOffset+100;\n';
   s += '  var sections=document.querySelectorAll(".section");\n';
   s += '  var activeIdx=0;\n';
   s += '  for(var i=0;i<sections.length;i++){if(sections[i].offsetTop<=scrollPos)activeIdx=i;}\n';
-  s += '  document.querySelectorAll(".nav-item").forEach(function(n,i){n.classList.toggle("active",i===activeIdx);});\n';
+  s += '  document.querySelectorAll(".nav-item, .bcat-item").forEach(function(n,i){\n';
+  s += '    var idx=parseInt(n.dataset.idx);\n';
+  s += '    n.classList.toggle("active",idx===activeIdx);\n';
+  s += '  });\n';
+  s += '  // Auto-center the active chip in the bottom-cats-inner\n';
+  s += '  var inner=document.getElementById("bottomCatsInner");\n';
+  s += '  if(inner){var activeChip=inner.querySelector(".bcat-item[data-idx=\\""+activeIdx+"\\"]");if(activeChip){inner.scrollLeft=activeChip.offsetLeft-(inner.offsetWidth/2)+(activeChip.offsetWidth/2);}}\n';
   s += '}\n';
   // Add to cart
   s += 'function addToCart(catIdx,dishIdx,btn,options,note){\n';
@@ -1621,16 +1677,17 @@ function buildJS(opts: JSOpts): string {
   s += '}\n';
   // Show mobile bottom nav — ALWAYS visible (no scroll trigger, no width filter)
   s += 'function showMobileNavOnMobile(){var nav=document.getElementById("mobileBottomNav");if(nav)nav.classList.add("visible");}\n';
-  // Mobile bottom nav actions (5 buttons: home/search/favorites/install/cart)
+  // Mobile bottom nav actions (6 buttons: home/search/favorites/install/cart/scrollTop)
   s += 'function setupMobileBottomNav(){\n';
   s += '  document.querySelectorAll(".mbn-item").forEach(function(btn){\n';
   s += '    btn.addEventListener("click",function(){\n';
   s += '      var action=this.dataset.action;\n';
-  s += '      // Instalar App y Favoritos son modales — no cambian el "active"\n';
-  s += '      if(action!=="install"&&action!=="favorites"){\n';
+  s += '      // Instalar App, Favoritos y Subir son acciones puntuales — no cambian el "active"\n';
+  s += '      if(action!=="install"&&action!=="favorites"&&action!=="scrollTop"){\n';
   s += '        document.querySelectorAll(".mbn-item").forEach(function(b){b.classList.remove("active");});this.classList.add("active");\n';
   s += '      }\n';
   s += '      if(action==="home"){window.scrollTo({top:0,behavior:"smooth"});}\n';
+  s += '      else if(action==="scrollTop"){window.scrollTo({top:0,behavior:"smooth"});}\n';
   s += '      else if(action==="search"){if(typeof openSearchOverlay==="function"){openSearchOverlay();}else{var si=document.getElementById("searchInput");if(si){si.focus();si.scrollIntoView({behavior:"smooth",block:"center"});}}}\n';
   s += '      else if(action==="cart"){openModal();}\n';
   s += '      else if(action==="favorites"){openFavoritesModal();}\n';
@@ -1855,16 +1912,14 @@ function buildJS(opts: JSOpts): string {
   s += '  window.open(url,"_blank");\n';
   s += '}\n';
   s += 'renderApp();\n';
-  // ─── Mini-header sticky: aparece al hacer scroll > 80px ───
-  // Muestra el logo + nombre del restaurante + estado (Abierto/Cerrado).
-  // Cuando está visible, el .nav (chips de categorías) se pega debajo.
+  // ─── Mini-header: SIEMPRE visible (no se oculta al hacer scroll) ───
+  // Poblar con datos del restaurante + inicializar.
   s += '(function(){\n';
   s += '  var mh=document.getElementById("miniHeader");\n';
   s += '  if(!mh){return;}\n';
   s += '  var mhLogo=document.getElementById("miniHeaderLogo");\n';
   s += '  var mhName=document.getElementById("miniHeaderName");\n';
   s += '  var mhStatus=document.getElementById("miniHeaderStatus");\n';
-  s += '  var nav=document.querySelector(".nav");\n';
   s += '  // Poblar con datos del restaurante\n';
   s += '  if(mhName&&RESTAURANT.name){mhName.textContent=RESTAURANT.name;}\n';
   s += '  if(mhLogo&&RESTAURANT.logo_url){mhLogo.src=imgMedium(RESTAURANT.logo_url);mhLogo.onerror=function(){this.style.display="none";};}else if(mhLogo){mhLogo.style.display="none";}\n';
@@ -1872,15 +1927,55 @@ function buildJS(opts: JSOpts): string {
   s += '  var isOpen=true;var now=new Date();var h=now.getHours();\n';
   s += '  if(h<10||h>=23){isOpen=false;}\n';
   s += '  if(mhStatus){mhStatus.textContent=isOpen?"Abierto":"Cerrado";mhStatus.className="mini-header-status "+(isOpen?"open":"closed");}\n';
-  s += '  // Mostrar/ocultar al hacer scroll (threshold 80px)\n';
-  s += '  var lastY=0,ticking=false;\n';
-  s += '  function updateMini(){var y=window.scrollY||window.pageYOffset;\n';
-  s += '    if(y>80){mh.classList.add("visible");mh.setAttribute("aria-hidden","false");if(nav){nav.classList.add("with-mini-header");}document.body.classList.add("mini-header-visible");}\n';
-  s += '    else{mh.classList.remove("visible");mh.setAttribute("aria-hidden","true");if(nav){nav.classList.remove("with-mini-header");}document.body.classList.remove("mini-header-visible");}\n';
-  s += '    ticking=false;\n';
+  s += '  // mini-header SIEMPRE visible — no necesita scroll trigger\n';
+  s += '})();\n';
+  // ─── PWA: si ya está instalada (display-mode: standalone), ocultar botón Install al cargar ───
+  s += '(function(){\n';
+  s += '  var isStandalone=window.matchMedia("(display-mode: standalone)").matches||window.navigator.standalone===true;\n';
+  s += '  if(isStandalone){var ib=document.getElementById("mbnInstallBtn");if(ib){ib.classList.add("installed");}}\n';
+  s += '})();\n';
+  // ─── BOTTOM CATEGORIES BAR: poblar chips + scroll spy ───
+  // Llena la bottom-cats-bar con los mismos chips que el .nav superior.
+  // Implementa scroll spy: al desplazarse por una categoría, el chip activo se actualiza solo.
+  s += '(function(){\n';
+  s += '  var inner=document.getElementById("bottomCatsInner");\n';
+  s += '  if(!inner){return;}\n';
+  s += '  var html="";\n';
+  s += '  RESTAURANT.categories.forEach(function(cat,i){\n';
+  s += '    var icon=THEME.showSearch?getCategoryIcon(cat.name):"";\n';
+  s += '    html+="<div class=\\"bcat-item"+(i===0?" active":"")+"\\" data-idx=\\""+i+"\\">"+(icon?"<span class=\\"bcat-item-icon\\">"+icon+"</span>":"")+escapeHtml(cat.name)+"</div>";\n';
+  s += '  });\n';
+  s += '  inner.innerHTML=html;\n';
+  s += '  // Wire up click events for the new bottom-cats chips\n';
+  s += '  inner.querySelectorAll(".bcat-item").forEach(function(item){\n';
+  s += '    item.addEventListener("click",function(){\n';
+  s += '      var idx=parseInt(this.dataset.idx);\n';
+  s += '      document.querySelectorAll(".nav-item, .bcat-item").forEach(function(n){n.classList.remove("active");});\n';
+  s += '      document.querySelectorAll(\'.nav-item[data-idx="\'+idx+\'"], .bcat-item[data-idx="\'+idx+\'"]\').forEach(function(n){n.classList.add("active");});\n';
+  s += '      var el=document.getElementById("cat-"+idx);\n';
+  s += '      if(el){var top=el.getBoundingClientRect().top+window.pageYOffset-70;window.scrollTo({top:top,behavior:"smooth"});}\n';
+  s += '      // Auto-scroll the bottom-cats-inner to make the clicked chip visible\n';
+  s += '      this.parentNode.scrollLeft=this.offsetLeft-(this.parentNode.offsetWidth/2)+(this.offsetWidth/2);\n';
+  s += '    });\n';
+  s += '  });\n';
+  s += '  // ─── Scroll spy: usa IntersectionObserver para detectar la categoría visible ───\n';
+  s += '  if("IntersectionObserver" in window){\n';
+  s += '    var sections=document.querySelectorAll(".section");\n';
+  s += '    var spy=new IntersectionObserver(function(entries){\n';
+  s += '      entries.forEach(function(entry){\n';
+  s += '        if(entry.isIntersecting){\n';
+  s += '          var idx=Array.prototype.indexOf.call(sections,entry.target);\n';
+  s += '          if(idx<0)return;\n';
+  s += '          document.querySelectorAll(".nav-item, .bcat-item").forEach(function(n){n.classList.remove("active");});\n';
+  s += '          document.querySelectorAll(\'.nav-item[data-idx="\'+idx+\'"], .bcat-item[data-idx="\'+idx+\'"]\').forEach(function(n){n.classList.add("active");});\n';
+  s += '          // Auto-scroll the bottom-cats-inner to center the active chip\n';
+  s += '          var activeChip=inner.querySelector(\'.bcat-item[data-idx="\'+idx+\'"]\');\n';
+  s += '          if(activeChip&&activeChip.parentNode){activeChip.parentNode.scrollLeft=activeChip.offsetLeft-(activeChip.parentNode.offsetWidth/2)+(activeChip.offsetWidth/2);}\n';
+  s += '        }\n';
+  s += '      });\n';
+  s += '    },{rootMargin:"-70px 0px -60% 0px",threshold:0});\n';
+  s += '    sections.forEach(function(sec){spy.observe(sec);});\n';
   s += '  }\n';
-  s += '  window.addEventListener("scroll",function(){if(!ticking){window.requestAnimationFrame(updateMini);ticking=true;}},{passive:true});\n';
-  s += '  updateMini();\n';
   s += '})();\n';
   // Inicializar auto-scroll del carrusel Destacados DESPUÉS de renderApp
   // (necesita que #destacadosTrack exista en el DOM)

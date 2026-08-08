@@ -2,8 +2,87 @@ import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 import { buildMenuHTML } from '@/app/dashboard/[menuId]/menu-html-builder';
 import type { MenuData } from '@/lib/menu-utils';
+import type { Metadata } from 'next';
 
 export const dynamic = 'force-dynamic';
+
+// ─── OG Image dinámica por plan ───
+// Premium/Full → foto de perfil (logo_url) de la carta del cliente
+// Free/Pro → imagen oficial de Menú Digital Pro (/og-image.png)
+const SITE_ORIGIN = process.env.NEXT_PUBLIC_SITE_URL || 'https://menudigital.pro';
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  const supabase = await createClient();
+
+  const { data: menu } = await supabase
+    .from('menus')
+    .select('id, name, description, slug, logo_url, user_id')
+    .eq('slug', slug)
+    .eq('is_published', true)
+    .single();
+
+  if (!menu) {
+    return {
+      title: 'Menú no encontrado',
+      description: 'El menú que buscas no existe o no está publicado.',
+    };
+  }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('plan')
+    .eq('id', menu.user_id)
+    .single();
+
+  const plan = profile?.plan || 'free';
+  const isPremiumOrFull = plan === 'premium' || plan === 'full';
+
+  // OG image: Premium/Full → logo_url del cliente (con fallback a og-image.png si no hay logo)
+  // Free/Pro → /og-image.png (oficial Menú Digital Pro)
+  let ogImageUrl = `${SITE_ORIGIN}/og-image.png`;
+  if (isPremiumOrFull && menu.logo_url) {
+    // Si la URL ya es absoluta (Supabase Storage), usarla tal cual.
+    // Si es relativa, prefijar con SITE_ORIGIN.
+    ogImageUrl = menu.logo_url.startsWith('http')
+      ? menu.logo_url
+      : `${SITE_ORIGIN}${menu.logo_url}`;
+  }
+
+  const title = `${menu.name} — Carta Digital`;
+  const description =
+    menu.description || `Mira la carta de ${menu.name} y haz tu pedido por WhatsApp.`;
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      type: 'website',
+      siteName: 'MenuPro',
+      url: `${SITE_ORIGIN}/r/${menu.slug}`,
+      images: [
+        {
+          url: ogImageUrl,
+          width: 1200,
+          height: 630,
+          alt: menu.name,
+        },
+      ],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: [ogImageUrl],
+    },
+  };
+}
 
 export default async function PublicMenuPage({
   params,
@@ -94,15 +173,6 @@ async function registerView(menuId: string) {
   });
   // Incrementar contador
   await supabase.rpc('increment_menu_views', { menu_uuid: menuId });
-}
-
-// Desactivar headers que cacheen demasiado
-export async function generateMetadata() {
-  return {
-    other: {
-      'Cache-Control': 'no-cache, no-store, must-revalidate',
-    },
-  };
 }
 
 // Reexportar NextResponse para evitar tree-shake (no se usa pero evita warnings)

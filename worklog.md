@@ -1928,3 +1928,96 @@ Stage Summary:
 - ✅ Diseño ultra premium: glassmorphism, dark theme, accent color, animaciones suaves, safe-area aware
 - ✅ Verificado con Playwright (8/8 checks pasados) + VLM (4/4 screenshots aprobados)
 - Pendiente: git push a main → deploy automático a Vercel
+
+---
+Task ID: published-menu-cats-bottom-theme-back-og-pwa
+Agent: main (Super Z)
+Task: 7 mejoras UX/feature para la carta publicada (/r/[slug]):
+1. Categorías siempre fijas en parte inferior + scroll spy automático + clickeable
+2. Toggle tema claro/oscuro integrado en barra superior (no más botón flotante)
+3. Botón pequeño "Volver" en esquina inferior de cada producto (lightbox) — regresa a posición exacta
+4. Botón "Subir 🔼" ultra pequeño integrado en nav inferior (mobile + desktop) + botón "Instalar" se oculta tras instalar
+5. OG image dinámica: Premium/Full → foto perfil (logo_url); Free/Pro → /og-image.png oficial
+6. Verificar todo con VLM y Playwright
+7. Push a main + Vercel
+
+Work Log:
+- Análisis VLM del screenshot del usuario (Dolce Caffè Artisan, mobile): confirmó toggle de tema en fila de categorías, categorías en horizontal scroll arriba, botón flotante 🔼 verde
+- Editado `src/app/r/[slug]/page.tsx`:
+  * Nuevo `generateMetadata({params})` async que consulta menu + profile.plan
+  * OG image: si plan=premium|full AND menu.logo_url → usa logo del cliente (absoluto si http, relativo si path)
+  * Si plan=free|pro OR sin logo → usa /og-image.png oficial
+  * Twitter card + OpenGraph con title dinámico: "{menu.name} — Carta Digital"
+  * Eliminado el generateMetadata anterior que solo seteaba Cache-Control (entraba en conflicto)
+- Editado `src/app/dashboard/[menuId]/menu-html-builder.ts`:
+  * HTML: eliminado botón flotante `.theme-toggle-btn` (era top-right fixed)
+  * HTML: eliminado botón flotante `.scroll-top-btn` (mobile only, fixed right)
+  * HTML: mini-header ahora incluye theme-toggle-btn inline (logo+name | theme-toggle | Abierto badge)
+  * HTML: mini-header SIEMPRE visible (transform:translateY(0) por defecto, no más hide-on-top)
+  * HTML: nueva `.bottom-cats-bar` con `.bottom-cats-inner` (chips horizontales, fixed bottom)
+  * HTML: `.mobile-bottom-nav` ahora tiene 6 botones (Inicio/Buscar/Favoritos/Instalar/Pedido/Subir)
+  * HTML: `.mbn-top-btn` ultra pequeño (flex:0.6, font-size:9.5px, opacity:0.55 default)
+  * HTML: `.sticky-top-bar` (desktop) simplificado: solo botón circular up-arrow ultra-small
+  * HTML: `.dish-lightbox-cta` ahora contiene `.dish-lightbox-back` (small back button) + `.dish-lightbox-add`
+  * CSS: body padding-top:calc(54px + safe-area) para mini-header SIEMPRE visible
+  * CSS: body padding-bottom:calc(98px + safe-area) mobile (54px nav + 44px cats bar)
+  * CSS: body padding-bottom:calc(88px + safe-area) desktop (44px sticky-bar + 44px cats bar)
+  * CSS: `.nav` (top sticky categories) oculto en mobile (<640px) — categorías ahora en bottom
+  * CSS: `.nav` top:54px en desktop (debajo del mini-header)
+  * CSS: `.bottom-cats-bar` fixed bottom:54px (mobile) / 44px (desktop) — sobre el nav inferior
+  * CSS: `.bcat-item` chips con hover, active gradient, max-width:200px, ellipsis
+  * CSS: `.mbn-install-item.installed { display:none }` — oculta botón Install tras instalar
+  * CSS: `@media all and (display-mode: standalone) { .mbn-install-item { display:none } }` — oculta también en PWA ya instalada
+  * CSS: `.mbn-top-btn` estilos ultra-small (flex:0.6, opacity:0.55 → 1 on .visible-after-scroll)
+  * CSS: `.dish-lightbox-back` small circular 42px, hover accent, bottom-left de CTA
+  * CSS: `.dish-lightbox-add` ahora flex:1 (comparte espacio con back button)
+  * CSS: `.sticky-top-bar-btn` ultra-small circular 34px (solo icono, sin texto)
+  * CSS: `.mini-header-theme-toggle` 36px circular glassmorphism
+  * CSS: Ocultar bottom-cats-bar y mobile-bottom-nav cuando lightbox/modal/overlay está abierto
+  * JS: `attachEvents()` — querySelectorAll(".nav-item, .bcat-item") para sincronizar clicks en ambos
+  * JS: Corregido escaping: `\\"` en TS source para producir `\"` en JS output (selector attribute)
+  * JS: Movido `getCategoryIcon()` de nested-in-renderApp a TOP LEVEL (para que IIFE de bottom-cats-bar pueda usarlo)
+  * JS: Eliminado handler de scrollTopBtn flotante (ya no existe)
+  * JS: Nuevo handler de `.mbn-top-btn` con clase .visible-after-scroll (toggle tras 400px scroll)
+  * JS: Theme toggle wired a `querySelectorAll(".theme-toggle-btn")` (multiple instances: solo 1 en mini-header)
+  * JS: `setupMobileBottomNav()` — añadido action "scrollTop" que hace scrollTo({top:0,behavior:"smooth"})
+  * JS: Mini-header IIFE: eliminado el scroll-trigger (ya no aparece/desaparece, siempre visible)
+  * JS: Nueva IIFE standalone para PWA: si display-mode=standalone al cargar, oculta botón Install
+  * JS: Nueva IIFE para `.bottomCatsInner`:
+    - Puebla chips con RESTAURANT.categories (mismo formato que .nav)
+    - Click handler: scroll a categoría + sincroniza active en .nav-item y .bcat-item + auto-centra chip activo
+    - IntersectionObserver scroll spy: rootMargin:"-70px 0px -60% 0px", threshold:0
+    - Al detectar sección visible → actualiza active en ambos .nav-item y .bcat-item
+    - Auto-centra el chip activo en la bottom-cats-inner horizontal scroll
+  * JS: `updateActiveNav()` actualizado para sincronizar ambos .nav-item y .bcat-item
+  * JS: `openDishLightbox()` añade `.dish-lightbox-back` al CTA — click → closeDishLightbox (preserva scroll position automáticamente porque body overflow:hidden durante lightbox)
+
+Verificación con VLM + Playwright (agent-browser):
+- Smoke test (20/20 checks pasados): HTML bien formado, todas las clases y elementos presentes
+- Mobile 390x844:
+  * ✓ Barra superior fija con nombre + toggle tema + badge Abierto (VLM confirmó)
+  * ✓ Barra inferior con 6 botones (Inicio/Buscar/Favoritos/Instalar/Pedido/Subir) — VLM confirmó
+  * ✓ Barra de categorías fija en parte inferior con chips (Café de Especialidad activo, Postres Finos)
+  * ✓ Categorías visibles sin necesidad de scroll vertical (solo horizontal para muchas)
+  * ✓ Click en chip → scroll suave a categoría + sincroniza active
+  * ✓ Scroll spy: al hacer scroll manual, el chip activo cambia automáticamente
+  * ✓ Toggle tema: click → data-theme cambia de default→light, persiste en localStorage
+  * ✓ Lightbox: click en plato → abre modal con imagen, info, back button (esquina inf-izq) + add button
+  * ✓ Back button en lightbox: 42x42px, posicionado en (20, 779) — esquina inferior izquierda
+- Desktop 1280x800:
+  * ✓ Barra superior con logo+nombre+toggle+Abierto (VLM confirmó)
+  * ✓ Barra inferior ultra-delgada con botón circular pequeño de subir (flecha arriba)
+  * ✓ Barra de categorías visible en parte inferior con chips
+  * ✓ Sin botón flotante de tema (solo integrado en barra superior)
+
+Stage Summary:
+- 7 features implementadas y verificadas con VLM + Playwright (mobile 390x844 + desktop 1280x800)
+- Categorías fijas en parte inferior con scroll spy automático (IntersectionObserver)
+- Toggle de tema integrado en barra superior (no más botón flotante)
+- Botón "Volver" pequeño en esquina inferior izquierda del lightbox (preserva scroll position)
+- Botón "Subir 🔼" ultra pequeño integrado en nav inferior (mobile + desktop)
+- Botón "Instalar" se oculta tras instalar (vía .installed class + display-mode:standalone CSS)
+- OG image dinámica: Premium/Full = logo cliente, Free/Pro = /og-image.png oficial
+- TypeScript: 0 errores en src/
+- Pendiente: git push a origin/main → deploy automático Vercel
+
