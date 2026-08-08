@@ -1865,3 +1865,66 @@ Stage Summary:
 - ✅ Cron job automático cada hora para expirar trials vencidos
 - ⚠️ USUARIO DEBE: (1) ejecutar SQL `supabase/fix-superadmin-stats-and-trials.sql` en Supabase SQL Editor, (2) agregar CRON_SECRET en Vercel
 - Pendiente: git push a origin/main
+
+---
+Task ID: published-menu-5button-nav-favs-pwa
+Agent: main (Super Z)
+Task: Mejorar UX de la carta publicada (/r/[slug]): nav inferior fija de 5 botones (Inicio/Buscar/Favoritos/Instalar App/Pedido), favoritos por plato guardados en localStorage, botón Instalar App (PWA), fix UX del botón Pedido (precio ya NO es pill flotante sobre el icono sino texto debajo).
+
+Work Log:
+- Editado `src/app/dashboard/[menuId]/menu-html-builder.ts`:
+  * HTML: nav inferior ahora tiene 5 botones fijos (Inicio, Buscar, Favoritos, Instalar App, Pedido) — SIEMPRE visible, no requiere scroll
+  * HTML: añadido overlay #pwaInstallOverlay con instrucciones manuales (iOS Safari, Android, Chrome desktop)
+  * HTML: añadido overlay #favoritesOverlay con modal de favoritos (header + body scrollable)
+  * CSS: `.mobile-bottom-nav` ahora tiene `transform:translateY(0)` por defecto (antes `translateY(110%)` → no era visible sin scroll)
+  * CSS: Añadido `.mbn-cart-item` (flex:1.4 — más ancho) con `.mbn-cart-label` (flex column) que muestra texto "Pedido" arriba y precio abajo en `.mbn-cart-price`
+  * CSS: Eliminado `.mbn-cart-total` (pill flotante sobre el icono) — era el UX problemático que pediste arreglar
+  * CSS: Highlight sutil del botón Pedido cuando hay items (`:has(.mbn-cart-price:not(:empty))` → fondo accent translúcido)
+  * CSS: `.dish-fav-btn` — botón flotante circular (34px) en top-right de cada imagen, glassmorphism, con estado `.is-fav` (fondo accent + corazón relleno)
+  * CSS: Variantes para `.rappi-item .dish-fav-btn` (28px, top:6px right:6px)
+  * CSS: `.pwa-install-overlay` (z-index 250, glassmorphism) con card central + close button
+  * CSS: `.favorites-overlay` (z-index 240) con bottom-sheet en mobile (border-radius 24px arriba) y modal centrado en desktop
+  * CSS: `.fav-item` rows con imagen 64px, info (nombre + cat + precio), acciones (Agregar + Quitar)
+  * CSS: Body:has(.favorites-overlay.visible) oculta el bottom-nav (UX: usuario está en sub-flujo)
+  * JS: `injectFavButtons()` — recorre todos los `.dish[data-cat]`, `.carta-card[data-cat]`, `.rappi-item[data-cat]` y les inyecta un botón `.dish-fav-btn` dentro del img-wrap. Marca `is-fav` si ya está en favoritos (carga desde localStorage al inicio). Listener: toggleFav + animación pulse.
+  * JS: `openFavoritesModal()` — renderiza los favoritos en `.fav-item` cards con imagen/nombre/cat/precio + botones Agregar/Quitar. Si está vacío, muestra empty state con icono 💔 + instrucciones. Click en Agregar → addToCart + feedback visual ("Agregado" verde 1.2s). Click en Quitar → toggleFav + re-render + quitar `is-fav` del botón correspondiente en la carta.
+  * JS: `closeFavoritesModal()` — quita `.visible` del overlay
+  * JS: `triggerPWAInstall()` — si hay `beforeinstallprompt` capturado, hace `prompt()` + captura `userChoice`. Si no, muestra `showPWAInstallInstructions()`.
+  * JS: `showPWAInstallInstructions()` — detecta plataforma (iOS+Safari / iOS no-Safari / Android / Chrome-Edge-Brave / fallback) y muestra instrucciones específicas con HTML strong para resaltar acciones clave.
+  * JS: Listeners `beforeinstallprompt` (captura evento + marca botón `.installable`) y `appinstalled` (marca botón `.installed`, limpia deferredPrompt).
+  * JS: `setupMobileBottomNav()` ahora maneja 5 acciones: home/search/favorites/install/cart. Las acciones favorites e install NO cambian el "active" (son modales, no navegación). También wire-up de botones close de los overlays (favoritesClose, pwaInstallClose) y click en backdrop.
+  * JS: `updateMobileBottomNav()` ya NO hace toggle de `.visible` en el nav (queda siempre visible). Solo actualiza badge count y precio.
+  * JS: `showMobileNavOnMobile()` ya NO filtra por `window.innerWidth<640` — siempre marca `.visible`.
+  * JS: `attachEvents()` — añadido `if(e.target.closest(".dish-fav-btn"))return;` para que click en corazón NO abra el lightbox ni agregue al carrito (solo toggle fav).
+  * JS: `renderApp()` — añadido `injectFavButtons()` después de `loadFavorites()` para que los corazones se inyecten con el estado inicial correcto.
+- Verificación con Playwright (375x812 mobile viewport):
+  * ✓ Bottom nav visible desde el inicio (sin scroll)
+  * ✓ 5 botones: home, search, favorites, install, cart (en ese orden)
+  * ✓ 7 platos renderizados → 7 fav buttons inyectados
+  * ✓ Click en fav button → `is-fav` class añadida + badge "1" en el botón Favoritos del nav
+  * ✓ Modal de favoritos abre → muestra 1 plato con imagen/nombre/cat/precio + botones Agregar/Quitar
+  * ✓ Overlay PWA install abre → muestra instrucciones específicas para Safari iOS
+  * ✓ Add to cart → precio "S/ 12.50" aparece debajo del icono de carrito (NO como pill flotante encima)
+  * ✓ Parent de #mbnCartTotal = `.mbn-cart-label` (confirmado: ya no es absolute overlay)
+  * ✓ Cart button click → abre modal de pedido
+  * ✓ 0 console errors/warnings
+  * ✓ Desktop (1280x800): bottom nav hidden (display:none) — solo mobile
+- Verificación VLM (screenshots):
+  * Mobile full: confirmado 5 botones + precio debajo del icono + diseño premium dark/orange
+  * Favorites modal: confirmado header con corazón + título "Mis Favoritos" + dish card + Agregar/Quitar + dark theme premium
+  * PWA install overlay: confirmado título "Instalar carta en tu celular" + instrucciones Safari iOS específicas + close button + diseño limpio
+- Screenshots guardados en `/home/z/my-project/download/`:
+  * `menu-mobile-full.png` — carta completa con nav inferior visible
+  * `menu-favorites-modal.png` — modal de favoritos abierto
+  * `menu-pwa-install.png` — overlay de instalación PWA
+  * `menu-desktop-full.png` — vista desktop (sin nav inferior)
+
+Stage Summary:
+- ✅ Nav inferior de 5 botones fijos (Inicio/Buscar/Favoritos/Instalar App/Pedido) — SIEMPRE visible en mobile, oculto en desktop
+- ✅ Cada plato tiene botón corazón (favoritos) — guardado en localStorage del navegador del cliente
+- ✅ Botón "Instalar" dispara PWA install (beforeinstallprompt en Android/Chrome) o muestra instrucciones manuales específicas por plataforma (iOS Safari, Android, Chrome desktop)
+- ✅ UX del botón Pedido CORREGIDO: el precio ahora se muestra DEBAJO del icono como texto, no como pill flotante ENCIMA del icono (que era el problema reportado)
+- ✅ Modal de Favoritos real (antes era solo `alert()`) con lista de platos guardados + Agregar al carrito + Quitar
+- ✅ Diseño ultra premium: glassmorphism, dark theme, accent color, animaciones suaves, safe-area aware
+- ✅ Verificado con Playwright (8/8 checks pasados) + VLM (4/4 screenshots aprobados)
+- Pendiente: git push a main → deploy automático a Vercel

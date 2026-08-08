@@ -80,25 +80,57 @@ export function buildMenuHTML(data: MenuData, opts?: { isPreview?: boolean }): s
   html += '</head>\n';
   html += '<body>\n';
   html += '<div id="app"></div>\n';
-  // Mobile bottom nav (Inicio/Buscar/Favoritos/Carrito) — solo visible en mobile via CSS
-  html += '<nav class="mobile-bottom-nav" id="mobileBottomNav" aria-label="Navegación móvil">\n';
+  // ─── BOTTOM NAV (5 botones fijos, ultra premium) ───
+  // Inicio · Buscar · Favoritos · Instalar App · Pedido
+  // Siempre visible (no requiere scroll). Safe-area aware.
+  html += '<nav class="mobile-bottom-nav" id="mobileBottomNav" aria-label="Navegación principal">\n';
+  // 1. Inicio
   html += '  <button class="mbn-item active" data-action="home" aria-label="Inicio">\n';
   html += '    <span class="mbn-icon-wrap"><span class="mbn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></span></span>\n';
   html += '    <span>Inicio</span>\n';
   html += '  </button>\n';
+  // 2. Buscar
   html += '  <button class="mbn-item" data-action="search" aria-label="Buscar">\n';
   html += '    <span class="mbn-icon-wrap"><span class="mbn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></span></span>\n';
   html += '    <span>Buscar</span>\n';
   html += '  </button>\n';
+  // 3. Favoritos (con badge)
   html += '  <button class="mbn-item" data-action="favorites" aria-label="Favoritos">\n';
   html += '    <span class="mbn-icon-wrap"><span class="mbn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></span><span class="mbn-badge" id="mbnFavCount" style="display:none;">0</span></span>\n';
   html += '    <span>Favoritos</span>\n';
   html += '  </button>\n';
-  html += '  <button class="mbn-item" data-action="cart" aria-label="Carrito">\n';
-  html += '    <span class="mbn-icon-wrap"><span class="mbn-cart-total" id="mbnCartTotal"></span><span class="mbn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg></span><span class="mbn-badge" id="mbnCartCount" style="display:none;">0</span></span>\n';
-  html += '    <span>Pedido</span>\n';
+  // 4. Instalar App (PWA install)
+  html += '  <button class="mbn-item" data-action="install" aria-label="Instalar App" id="mbnInstallBtn">\n';
+  html += '    <span class="mbn-icon-wrap"><span class="mbn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></span></span>\n';
+  html += '    <span>Instalar</span>\n';
+  html += '  </button>\n';
+  // 5. Pedido (carrito con precio debajo, no pill flotante encima)
+  html += '  <button class="mbn-item mbn-cart-item" data-action="cart" aria-label="Ver pedido">\n';
+  html += '    <span class="mbn-icon-wrap"><span class="mbn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg></span><span class="mbn-badge" id="mbnCartCount" style="display:none;">0</span></span>\n';
+  html += '    <span class="mbn-cart-label"><span class="mbn-cart-text">Pedido</span><span class="mbn-cart-price" id="mbnCartTotal"></span></span>\n';
   html += '  </button>\n';
   html += '</nav>\n';
+  // PWA install tooltip / iOS instructions overlay
+  html += '<div class="pwa-install-overlay" id="pwaInstallOverlay" aria-hidden="true">\n';
+  html += '  <div class="pwa-install-card">\n';
+  html += '    <div class="pwa-install-icon">📱</div>\n';
+  html += '    <div class="pwa-install-content">\n';
+  html += '      <div class="pwa-install-title">Instalar carta en tu celular</div>\n';
+  html += '      <div class="pwa-install-steps" id="pwaInstallSteps">Cargando instrucciones…</div>\n';
+  html += '    </div>\n';
+  html += '  </div>\n';
+  html += '  <button class="pwa-install-close" id="pwaInstallClose" aria-label="Cerrar">&times;</button>\n';
+  html += '</div>\n';
+  // Favorites modal (overlay)
+  html += '<div class="favorites-overlay" id="favoritesOverlay" aria-hidden="true">\n';
+  html += '  <div class="favorites-modal">\n';
+  html += '    <div class="favorites-header">\n';
+  html += '      <div class="favorites-title"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg> Mis Favoritos</div>\n';
+  html += '      <button class="favorites-close" id="favoritesClose" aria-label="Cerrar">&times;</button>\n';
+  html += '    </div>\n';
+  html += '    <div class="favorites-body" id="favoritesBody"></div>\n';
+  html += '  </div>\n';
+  html += '</div>\n';
   // Floating "scroll to top" button — aparece tras scroll > 600px (mobile-first)
   // Solo visible en mobile (<640px) — en desktop el nav chip "Inicio" cumple la misma función
   html += '<button class="scroll-top-btn" id="scrollTopBtn" aria-label="Volver arriba">\n';
@@ -564,9 +596,10 @@ function buildCSS(opts: ThemeOpts): string {
     c += '.dish-option-counter .count{min-width:22px;text-align:center;font-size:13px;font-weight:700;color:var(--text);}';
   }
 
-  // ─── Mobile bottom navigation bar (Inicio/Buscar/Favoritos/Carrito) ───
+  // ─── Mobile bottom navigation bar (Inicio/Buscar/Favoritos/Instalar App/Pedido) ───
   // z-index:95 = stays below modal (200) and lightbox (300), above content
-  c += '.mobile-bottom-nav{position:fixed;bottom:0;left:0;right:0;background:var(--bottom-nav-bg);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:1px solid var(--border);display:flex;justify-content:space-around;align-items:stretch;padding:6px 4px calc(6px + env(safe-area-inset-bottom, 0px));z-index:95;box-shadow:0 -4px 20px rgba(0,0,0,0.18);transform:translateY(110%);transition:transform 0.35s cubic-bezier(0.32,0.72,0,1);}';
+  // SIEMPRE visible (no requiere scroll). Safe-area aware.
+  c += '.mobile-bottom-nav{position:fixed;bottom:0;left:0;right:0;background:var(--bottom-nav-bg);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:1px solid var(--border);display:flex;justify-content:space-around;align-items:stretch;padding:6px 4px calc(6px + env(safe-area-inset-bottom, 0px));z-index:95;box-shadow:0 -4px 20px rgba(0,0,0,0.18);transform:translateY(0);}';
   c += '.mobile-bottom-nav.visible{transform:translateY(0);}';
   c += '@media(min-width:640px){.mobile-bottom-nav{display:none;}}';
   c += '.mbn-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:8px 4px calc(4px + env(safe-area-inset-bottom, 0px));background:transparent;border:none;color:var(--text-soft);cursor:pointer;font-size:10.5px;font-weight:600;letter-spacing:0.2px;position:relative;transition:all 0.2s;-webkit-tap-highlight-color:transparent;border-radius:10px;min-height:54px;overflow:visible;}';
@@ -577,16 +610,75 @@ function buildCSS(opts: ThemeOpts): string {
   c += '.mbn-icon svg{width:22px;height:22px;}';
   // Badge count (item count) — small circle on top-right of icon
   c += '.mbn-badge{position:absolute;top:-4px;right:-8px;min-width:16px;height:16px;border-radius:8px;background:var(--accent);color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 4px;box-shadow:0 2px 6px rgba(var(--accent-rgb),0.5);z-index:2;}';
-  // Cart total pill — displayed ABOVE the icon, full price visible (no truncation)
-  c += '.mbn-cart-total{position:absolute;top:-14px;left:50%;transform:translateX(-50%);background:var(--accent);color:#fff;font-size:10px;font-weight:800;padding:3px 8px;border-radius:10px;white-space:nowrap;box-shadow:0 3px 8px rgba(var(--accent-rgb),0.5);z-index:2;max-width:90px;overflow:hidden;text-overflow:ellipsis;}';
-  c += '.mbn-cart-total:empty{display:none;}';
+  // ─── Cart button UX: price shown BELOW label (no pill floating over icon) ───
+  c += '.mbn-cart-item{flex:1.4;}';
+  c += '.mbn-cart-label{display:flex;flex-direction:column;align-items:center;line-height:1.1;gap:1px;}';
+  c += '.mbn-cart-text{font-size:10.5px;font-weight:600;color:var(--text-soft);}';
+  c += '.mbn-cart-price{font-size:11px;font-weight:800;color:var(--accent-text);max-width:84px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}';
+  c += '.mbn-cart-price:empty{display:none;}';
+  c += '.mbn-cart-item:has(.mbn-cart-price:not(:empty)){color:var(--accent-text);background:rgba(var(--accent-rgb),0.08);border-radius:14px;}';
+  c += '.mbn-cart-item:has(.mbn-cart-price:not(:empty)) .mbn-cart-text{color:var(--accent-text);font-weight:700;}';
   // Add bottom padding so content isn't hidden behind bottom nav (mobile only)
-  // FIX: usar #app (id) no .app (class) — el div es <div id="app">
-  // 110px = nav height (~66px) + safe-area + extra breathing room
   c += '@media(max-width:639px){#app{padding-bottom:calc(110px + env(safe-area-inset-bottom, 0px));}.menu-footer{padding-bottom:calc(20px + env(safe-area-inset-bottom, 0px));}}';
-  // Hide bottom nav when modal/lightbox/cart-modal is open (UX: el usuario está en un sub-flujo)
-  // Triggers: .dish-lightbox.visible, .modal-overlay.visible (cart modal)
-  c += '@media(max-width:639px){.mobile-bottom-nav{transition:transform 0.3s cubic-bezier(0.32,0.72,0,1),opacity 0.25s;}body:has(.dish-lightbox.visible) .mobile-bottom-nav,body:has(.modal-overlay.visible) .mobile-bottom-nav{transform:translateY(110%);opacity:0;pointer-events:none;}}';
+  // Hide bottom nav when favorites-overlay/install-overlay/modal/lightbox/cart-modal is open
+  c += '@media(max-width:639px){.mobile-bottom-nav{transition:transform 0.3s cubic-bezier(0.32,0.72,0,1),opacity 0.25s;}body:has(.dish-lightbox.visible) .mobile-bottom-nav,body:has(.modal-overlay.visible) .mobile-bottom-nav,body:has(.favorites-overlay.visible) .mobile-bottom-nav,body:has(.pwa-install-overlay.visible) .mobile-bottom-nav{transform:translateY(110%);opacity:0;pointer-events:none;}}';
+
+  // ─── Favorite button (heart icon) on each dish ───
+  c += '.dish-fav-btn{position:absolute;top:8px;right:8px;width:34px;height:34px;border-radius:50%;background:rgba(0,0,0,0.55);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:none;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:3;transition:transform 0.2s,background 0.2s;-webkit-tap-highlight-color:transparent;}';
+  c += '.dish-fav-btn:active{transform:scale(0.85);}';
+  c += '.dish-fav-btn svg{width:18px;height:18px;transition:fill 0.2s,stroke 0.2s;}';
+  c += '.dish-fav-btn.is-fav{background:rgba(var(--accent-rgb),0.95);color:#fff;}';
+  c += '.dish-fav-btn.is-fav svg{fill:#fff;}';
+  c += '@media(hover:hover){.dish-fav-btn:hover{transform:scale(1.1);background:rgba(0,0,0,0.7);}.dish-fav-btn.is-fav:hover{background:var(--accent);}}';
+  // En rappi-list el fav va top-left de la imagen
+  c += '.rappi-item .dish-fav-btn{top:6px;right:6px;width:28px;height:28px;}';
+  c += '.rappi-item .dish-fav-btn svg{width:14px;height:14px;}';
+  // En expanded/classic card el fav va top-right de la imagen
+  c += '.dish-img-wrap .dish-fav-btn{top:8px;right:8px;}';
+
+  // ─── PWA install overlay (tooltip con instrucciones iOS/fallback) ───
+  c += '.pwa-install-overlay{position:fixed;inset:0;background:rgba(7,7,11,0.72);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);z-index:250;display:flex;align-items:center;justify-content:center;padding:24px;opacity:0;pointer-events:none;transition:opacity 0.25s;}';
+  c += '.pwa-install-overlay.visible{opacity:1;pointer-events:auto;}';
+  c += '.pwa-install-card{background:var(--bg-1);border:1px solid var(--border-strong);border-radius:20px;padding:24px;max-width:380px;width:100%;box-shadow:0 24px 60px rgba(0,0,0,0.5);display:flex;gap:16px;align-items:flex-start;position:relative;transform:scale(0.95);transition:transform 0.3s cubic-bezier(0.32,0.72,0,1);}';
+  c += '.pwa-install-overlay.visible .pwa-install-card{transform:scale(1);}';
+  c += '.pwa-install-icon{font-size:36px;flex-shrink:0;}';
+  c += '.pwa-install-content{flex:1;min-width:0;}';
+  c += '.pwa-install-title{font-size:16px;font-weight:700;color:var(--text);margin-bottom:8px;letter-spacing:-0.2px;}';
+  c += '.pwa-install-steps{font-size:13px;color:var(--text-muted);line-height:1.5;}';
+  c += '.pwa-install-steps strong{color:var(--text);font-weight:600;}';
+  c += '.pwa-install-close{position:absolute;top:8px;right:8px;width:32px;height:32px;border-radius:50%;background:transparent;border:none;color:var(--text-soft);font-size:24px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background 0.15s;-webkit-tap-highlight-color:transparent;}';
+  c += '.pwa-install-close:hover{background:var(--glass);}';
+
+  // ─── Favorites overlay (modal con lista de platos favoritos) ───
+  c += '.favorites-overlay{position:fixed;inset:0;background:rgba(7,7,11,0.72);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);z-index:240;display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity 0.25s;}';
+  c += '.favorites-overlay.visible{opacity:1;pointer-events:auto;}';
+  c += '.favorites-modal{background:var(--bg-1);border:1px solid var(--border-strong);border-radius:24px 24px 0 0;max-width:520px;width:100%;max-height:85vh;display:flex;flex-direction:column;box-shadow:0 -10px 40px rgba(0,0,0,0.4);transform:translateY(110%);transition:transform 0.35s cubic-bezier(0.32,0.72,0,1);padding-bottom:env(safe-area-inset-bottom, 0px);}';
+  c += '.favorites-overlay.visible .favorites-modal{transform:translateY(0);}';
+  c += '@media(min-width:640px){.favorites-overlay{align-items:center;}.favorites-modal{border-radius:20px;max-height:80vh;}}';
+  c += '.favorites-header{display:flex;align-items:center;justify-content:space-between;padding:18px 20px 14px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg-1);border-radius:24px 24px 0 0;z-index:2;}';
+  c += '.favorites-title{display:flex;align-items:center;gap:10px;font-size:17px;font-weight:700;color:var(--text);letter-spacing:-0.3px;}';
+  c += '.favorites-title svg{width:22px;height:22px;color:var(--accent);fill:var(--accent);}';
+  c += '.favorites-close{width:36px;height:36px;border-radius:50%;background:var(--glass);border:none;color:var(--text-soft);font-size:22px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background 0.15s;-webkit-tap-highlight-color:transparent;}';
+  c += '.favorites-close:hover{background:var(--glass-strong);color:var(--text);}';
+  c += '.favorites-body{padding:14px 20px 20px;overflow-y:auto;overscroll-behavior:contain;}';
+  c += '.fav-empty{text-align:center;padding:40px 20px;color:var(--text-muted);font-size:14px;}';
+  c += '.fav-empty-icon{font-size:48px;margin-bottom:12px;opacity:0.5;}';
+  c += '.fav-item{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);align-items:center;}';
+  c += '.fav-item:last-child{border-bottom:none;}';
+  c += '.fav-item-img{flex:0 0 64px;width:64px;height:64px;border-radius:12px;overflow:hidden;background:var(--glass);}';
+  c += '.fav-item-img img{width:100%;height:100%;object-fit:cover;}';
+  c += '.fav-item-img-placeholder{width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--accent),rgba(var(--accent-rgb),0.55));color:#fff;font-size:24px;font-weight:900;}';
+  c += '.fav-item-info{flex:1;min-width:0;}';
+  c += '.fav-item-name{font-size:14px;font-weight:600;color:var(--text);margin-bottom:2px;line-height:1.3;}';
+  c += '.fav-item-cat{font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;}';
+  c += '.fav-item-price{font-size:15px;font-weight:800;color:var(--accent-text);margin-top:4px;}';
+  c += '.fav-item-actions{display:flex;flex-direction:column;gap:6px;align-items:flex-end;}';
+  c += '.fav-item-add{background:var(--accent);color:#fff;border:none;padding:8px 14px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px;transition:transform 0.15s,background 0.15s;font-family:var(--font-main);-webkit-tap-highlight-color:transparent;}';
+  c += '.fav-item-add:hover{transform:translateY(-1px);}';
+  c += '.fav-item-add:active{transform:scale(0.95);}';
+  c += '.fav-item-add svg{width:14px;height:14px;}';
+  c += '.fav-item-remove{background:transparent;color:var(--text-muted);border:none;padding:4px 8px;font-size:11px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px;-webkit-tap-highlight-color:transparent;}';
+  c += '.fav-item-remove:hover{color:#ef4444;}';
   // Floating "scroll to top" button — mobile only, aparece tras 600px scroll
   // Posicionado arriba de la bottom-nav (bottom:84px) para no pisar el nav
   c += '.scroll-top-btn{position:fixed;right:16px;bottom:calc(84px + env(safe-area-inset-bottom, 0px));width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,var(--accent),rgba(var(--accent-rgb),0.85));color:#fff;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 20px rgba(var(--accent-rgb),0.4),0 2px 8px rgba(0,0,0,0.25);z-index:94;opacity:0;transform:translateY(20px) scale(0.85);pointer-events:none;transition:all 0.3s cubic-bezier(0.32,0.72,0,1);-webkit-tap-highlight-color:transparent;}';
@@ -1106,6 +1198,7 @@ function buildJS(opts: JSOpts): string {
   s += '  setupMobileBottomNav();\n';
   s += '  loadFavorites();\n';
   s += '  updateFavBadge();\n';
+  s += '  injectFavButtons();\n';
   s += '  showMobileNavOnMobile();\n';
   s += '  if(typeof restoreDishFromURL==="function"){restoreDishFromURL();}\n';
 
@@ -1247,11 +1340,13 @@ function buildJS(opts: JSOpts): string {
   s += '  });\n';
   // Dish click → abrir lightbox (si está activado) o agregar al carrito
   // Selectores combinados: .dish (original) + .carta-card + .rappi-item
+  // Excluir clics en: add-btn, carta-card-add, rappi-item-add, dish-fav-btn (corazón favorito)
   if (showGallery) {
     s += '  document.querySelectorAll(".dish, .carta-card, .rappi-item").forEach(function(d){\n';
     s += '    d.addEventListener("click",function(e){\n';
     s += '      if(e.target.classList.contains("add-btn")||e.target.classList.contains("carta-card-add")||e.target.classList.contains("rappi-item-add"))return;\n';
     s += '      if(e.target.closest(".carta-card-add")||e.target.closest(".rappi-item-add")||e.target.closest(".add-btn"))return;\n';
+    s += '      if(e.target.closest(".dish-fav-btn"))return;\n';
     s += '      var catIdx=parseInt(this.dataset.cat);\n';
     s += '      var dishIdx=parseInt(this.dataset.dish);\n';
     s += '      openDishLightbox(catIdx,dishIdx);\n';
@@ -1261,6 +1356,7 @@ function buildJS(opts: JSOpts): string {
     s += '  document.querySelectorAll(".dish, .carta-card, .rappi-item").forEach(function(d){\n';
     s += '    d.addEventListener("click",function(e){\n';
     s += '      if(e.target.closest(".carta-card-add")||e.target.closest(".rappi-item-add")||e.target.closest(".add-btn"))return;\n';
+    s += '      if(e.target.closest(".dish-fav-btn"))return;\n';
     s += '      var catIdx=parseInt(this.dataset.cat);\n';
     s += '      var dishIdx=parseInt(this.dataset.dish);\n';
     s += '      addToCart(catIdx,dishIdx);\n';
@@ -1515,37 +1611,185 @@ function buildJS(opts: JSOpts): string {
   s += '  updateMobileBottomNav(count,total);\n';
   s += '  renderCartItems();\n';
   s += '}\n';
-  // Update mobile bottom nav cart badge + total
+  // Update mobile bottom nav cart badge + total (nav stays always visible)
   s += 'function updateMobileBottomNav(count,total){\n';
   s += '  var badge=document.getElementById("mbnCartCount");\n';
   s += '  var totalEl=document.getElementById("mbnCartTotal");\n';
-  s += '  var nav=document.getElementById("mobileBottomNav");\n';
-  s += '  if(!badge||!totalEl||!nav)return;\n';
-  s += '  if(count>0){badge.style.display="flex";badge.textContent=count;nav.classList.add("visible");}else{badge.style.display="none";nav.classList.remove("visible");}\n';
+  s += '  if(!badge||!totalEl)return;\n';
+  s += '  if(count>0){badge.style.display="flex";badge.textContent=count;}else{badge.style.display="none";}\n';
   s += '  totalEl.textContent=count>0?formatPrice(total):"";\n';
   s += '}\n';
-  // Show mobile bottom nav after small scroll on mobile
-  s += 'function showMobileNavOnMobile(){if(window.innerWidth<640){var nav=document.getElementById("mobileBottomNav");if(nav)nav.classList.add("visible");}}\n';
-  // Mobile bottom nav actions
+  // Show mobile bottom nav — ALWAYS visible (no scroll trigger, no width filter)
+  s += 'function showMobileNavOnMobile(){var nav=document.getElementById("mobileBottomNav");if(nav)nav.classList.add("visible");}\n';
+  // Mobile bottom nav actions (5 buttons: home/search/favorites/install/cart)
   s += 'function setupMobileBottomNav(){\n';
   s += '  document.querySelectorAll(".mbn-item").forEach(function(btn){\n';
   s += '    btn.addEventListener("click",function(){\n';
   s += '      var action=this.dataset.action;\n';
-  s += '      document.querySelectorAll(".mbn-item").forEach(function(b){b.classList.remove("active");});this.classList.add("active");\n';
+  s += '      // Instalar App y Favoritos son modales — no cambian el "active"\n';
+  s += '      if(action!=="install"&&action!=="favorites"){\n';
+  s += '        document.querySelectorAll(".mbn-item").forEach(function(b){b.classList.remove("active");});this.classList.add("active");\n';
+  s += '      }\n';
   s += '      if(action==="home"){window.scrollTo({top:0,behavior:"smooth"});}\n';
   s += '      else if(action==="search"){if(typeof openSearchOverlay==="function"){openSearchOverlay();}else{var si=document.getElementById("searchInput");if(si){si.focus();si.scrollIntoView({behavior:"smooth",block:"center"});}}}\n';
   s += '      else if(action==="cart"){openModal();}\n';
-  s += '      else if(action==="favorites"){toggleFavoritesModal();}\n';
+  s += '      else if(action==="favorites"){openFavoritesModal();}\n';
+  s += '      else if(action==="install"){triggerPWAInstall();}\n';
   s += '    });\n';
   s += '  });\n';
+  s += '  // Wire up favorites close button + backdrop\n';
+  s += '  var favClose=document.getElementById("favoritesClose");\n';
+  s += '  if(favClose){favClose.addEventListener("click",closeFavoritesModal);}\n';
+  s += '  var favOv=document.getElementById("favoritesOverlay");\n';
+  s += '  if(favOv){favOv.addEventListener("click",function(e){if(e.target===favOv)closeFavoritesModal();});}\n';
+  s += '  // Wire up PWA install overlay close\n';
+  s += '  var pwaClose=document.getElementById("pwaInstallClose");\n';
+  s += '  if(pwaClose){pwaClose.addEventListener("click",closePWAInstallOverlay);}\n';
+  s += '  var pwaOv=document.getElementById("pwaInstallOverlay");\n';
+  s += '  if(pwaOv){pwaOv.addEventListener("click",function(e){if(e.target===pwaOv)closePWAInstallOverlay();});}\n';
   s += '}\n';
-  // Favorites (saved in localStorage)
+  // ─── Favorites (saved in localStorage) ───
   s += 'var favorites=[];\n';
   s += 'function loadFavorites(){try{favorites=JSON.parse(localStorage.getItem("mp_favs")||"[]");}catch(e){favorites=[];}}\n';
   s += 'function saveFavorites(){try{localStorage.setItem("mp_favs",JSON.stringify(favorites));}catch(e){}}\n';
   s += 'function toggleFav(catIdx,dishIdx){var k=catIdx+"-"+dishIdx;var i=favorites.indexOf(k);if(i>=0){favorites.splice(i,1);}else{favorites.push(k);}saveFavorites();updateFavBadge();}\n';
   s += 'function updateFavBadge(){var b=document.getElementById("mbnFavCount");if(!b)return;if(favorites.length>0){b.style.display="flex";b.textContent=favorites.length;}else{b.style.display="none";}}\n';
-  s += 'function toggleFavoritesModal(){alert("Favoritos: "+favorites.length+" plato(s) guardado(s). Próximamente vista de favoritos dedicada.");}\n';
+  // Inject fav button (heart) on every dish card with image-wrap
+  s += 'function injectFavButtons(){\n';
+  s += '  var cards=document.querySelectorAll(".dish[data-cat], .carta-card[data-cat], .rappi-item[data-cat]");\n';
+  s += '  cards.forEach(function(card){\n';
+  s += '    if(card.querySelector(".dish-fav-btn"))return;\n';
+  s += '    var catIdx=card.dataset.cat,dishIdx=card.dataset.dish;\n';
+  s += '    var imgWrap=card.querySelector(".dish-img-wrap, .carta-card-img-wrap, .rappi-item-img-wrap");\n';
+  s += '    if(!imgWrap)return;\n';
+  s += '    var btn=document.createElement("button");\n';
+  s += '    btn.className="dish-fav-btn";\n';
+  s += '    btn.setAttribute("data-cat",catIdx);\n';
+  s += '    btn.setAttribute("data-dish",dishIdx);\n';
+  s += '    btn.setAttribute("aria-label","Agregar a favoritos");\n';
+  s += '    btn.innerHTML=\'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>\';\n';
+  s += '    var k=catIdx+"-"+dishIdx;\n';
+  s += '    if(favorites.indexOf(k)>=0){btn.classList.add("is-fav");}\n';
+  s += '    btn.addEventListener("click",function(e){\n';
+  s += '      e.stopPropagation();e.preventDefault();\n';
+  s += '      toggleFav(catIdx,dishIdx);\n';
+  s += '      var kk=catIdx+"-"+dishIdx;\n';
+  s += '      if(favorites.indexOf(kk)>=0){btn.classList.add("is-fav");}else{btn.classList.remove("is-fav");}\n';
+  s += '      // Pequeño pulse\n';
+  s += '      btn.style.transform="scale(1.3)";\n';
+  s += '      setTimeout(function(){btn.style.transform="";},200);\n';
+  s += '    });\n';
+  s += '    imgWrap.appendChild(btn);\n';
+  s += '  });\n';
+  s += '}\n';
+  // Open favorites modal (real, replaces old alert)
+  s += 'function openFavoritesModal(){\n';
+  s += '  var overlay=document.getElementById("favoritesOverlay");\n';
+  s += '  var body=document.getElementById("favoritesBody");\n';
+  s += '  if(!overlay||!body)return;\n';
+  s += '  if(favorites.length===0){\n';
+  s += '    body.innerHTML=\'<div class="fav-empty"><div class="fav-empty-icon">\\u{1F494}</div><div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:4px;">Sin favoritos a\\u00fan</div><div style="font-size:12px;line-height:1.5;">Toca el \\u00edcono del coraz\\u00f3n en cualquier plato para guardarlo aqu\\u00ed y pedirlo m\\u00e1s r\\u00e1pido la pr\\u00f3xima vez.</div></div>\';\n';
+  s += '  }else{\n';
+  s += '    var html="";\n';
+  s += '    favorites.forEach(function(k){\n';
+  s += '      var parts=k.split("-");var catIdx=parseInt(parts[0]);var dishIdx=parseInt(parts[1]);\n';
+  s += '      var cat=RESTAURANT.categories[catIdx];if(!cat)return;\n';
+  s += '      var dish=(cat.dishes||[])[dishIdx];if(!dish)return;\n';
+  s += '      var letter=(dish.name||"P").charAt(0).toUpperCase();\n';
+  s += '      html+="<div class=\\"fav-item\\">";\n';
+  s += '      html+="<div class=\\"fav-item-img\\">";\n';
+  s += '      if(dish.image_url){html+="<img src=\\""+escapeHtml(imgMedium(dish.image_url))+"\\" alt=\\""+escapeHtml(dish.name||"")+"\\" loading=\\"lazy\\"/>";}\n';
+  s += '      else{html+="<div class=\\"fav-item-img-placeholder\\">"+escapeHtml(letter)+"</div>";}\n';
+  s += '      html+="</div>";\n';
+  s += '      html+="<div class=\\"fav-item-info\\">";\n';
+  s += '      html+="<div class=\\"fav-item-name\\">"+escapeHtml(dish.name||"Plato")+"</div>";\n';
+  s += '      html+="<div class=\\"fav-item-cat\\">"+escapeHtml(cat.name||"")+"</div>";\n';
+  s += '      html+="<div class=\\"fav-item-price\\">"+formatPrice(dish.price)+"</div>";\n';
+  s += '      html+="</div>";\n';
+  s += '      html+="<div class=\\"fav-item-actions\\">";\n';
+  s += '      html+="<button class=\\"fav-item-add\\" data-cat=\\""+catIdx+"\\" data-dish=\\""+dishIdx+"\\"><svg viewBox=\\"0 0 24 24\\" fill=\\"none\\" stroke=\\"currentColor\\" stroke-width=\\"3\\" stroke-linecap=\\"round\\" stroke-linejoin=\\"round\\"><path d=\\"M12 5v14M5 12h14\\"/></svg>Agregar</button>";\n';
+  s += '      html+="<button class=\\"fav-item-remove\\" data-cat=\\""+catIdx+"\\" data-dish=\\""+dishIdx+"\\">Quitar</button>";\n';
+  s += '      html+="</div></div>";\n';
+  s += '    });\n';
+  s += '    body.innerHTML=html;\n';
+  s += '    body.querySelectorAll(".fav-item-add").forEach(function(btn){\n';
+  s += '      btn.addEventListener("click",function(){\n';
+  s += '        var ci=parseInt(this.dataset.cat),di=parseInt(this.dataset.dish);\n';
+  s += '        addToCart(ci,di);\n';
+  s += '        // Feedback visual\n';
+  s += '        this.innerHTML=\'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Agregado\';\n';
+  s += '        this.style.background="#22c55e";\n';
+  s += '        var self=this;setTimeout(function(){self.innerHTML=\'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>Agregar\';self.style.background="";},1200);\n';
+  s += '      });\n';
+  s += '    });\n';
+  s += '    body.querySelectorAll(".fav-item-remove").forEach(function(btn){\n';
+  s += '      btn.addEventListener("click",function(){\n';
+  s += '        var ci=this.dataset.cat,di=this.dataset.dish;\n';
+  s += '        toggleFav(ci,di);\n';
+  s += '        document.querySelectorAll(\'.dish-fav-btn[data-cat="\'+ci+\'"][data-dish="\'+di+\'"]\').forEach(function(b){b.classList.remove("is-fav");});\n';
+  s += '        openFavoritesModal();\n';
+  s += '      });\n';
+  s += '    });\n';
+  s += '  }\n';
+  s += '  overlay.classList.add("visible");\n';
+  s += '  overlay.setAttribute("aria-hidden","false");\n';
+  s += '}\n';
+  s += 'function closeFavoritesModal(){\n';
+  s += '  var overlay=document.getElementById("favoritesOverlay");\n';
+  s += '  if(overlay){overlay.classList.remove("visible");overlay.setAttribute("aria-hidden","true");}\n';
+  s += '}\n';
+  // Legacy alias (in case some legacy call uses toggleFavoritesModal)
+  s += 'function toggleFavoritesModal(){openFavoritesModal();}\n';
+  // ─── PWA install logic ───
+  s += 'var pwaDeferredPrompt=null;\n';
+  s += 'window.addEventListener("beforeinstallprompt",function(e){\n';
+  s += '  e.preventDefault();\n';
+  s += '  pwaDeferredPrompt=e;\n';
+  s += '  var btn=document.getElementById("mbnInstallBtn");\n';
+  s += '  if(btn){btn.classList.add("installable");}\n';
+  s += '  return false;\n';
+  s += '});\n';
+  s += 'window.addEventListener("appinstalled",function(){\n';
+  s += '  var btn=document.getElementById("mbnInstallBtn");\n';
+  s += '  if(btn){btn.classList.remove("installable");btn.classList.add("installed");}\n';
+  s += '  pwaDeferredPrompt=null;\n';
+  s += '});\n';
+  s += 'function triggerPWAInstall(){\n';
+  s += '  if(pwaDeferredPrompt){\n';
+  s += '    pwaDeferredPrompt.prompt();\n';
+  s += '    pwaDeferredPrompt.userChoice.then(function(){pwaDeferredPrompt=null;});\n';
+  s += '  }else{\n';
+  s += '    showPWAInstallInstructions();\n';
+  s += '  }\n';
+  s += '}\n';
+  s += 'function showPWAInstallInstructions(){\n';
+  s += '  var overlay=document.getElementById("pwaInstallOverlay");\n';
+  s += '  var steps=document.getElementById("pwaInstallSteps");\n';
+  s += '  if(!overlay||!steps)return;\n';
+  s += '  var ua=navigator.userAgent||"";\n';
+  s += '  var isIOS=/iphone|ipad|ipod/i.test(ua)&&!/crios/i.test(ua);\n';
+  s += '  var isSafari=/safari/i.test(ua)&&!/chrome|crios|fxios/i.test(ua);\n';
+  s += '  var isStandalone=window.matchMedia("(display-mode: standalone)").matches||window.navigator.standalone===true;\n';
+  s += '  if(isStandalone){\n';
+  s += '    steps.innerHTML="<strong>\\u00a1Ya tienes la app instalada!</strong><br>Est\\u00e1s viendo esta carta desde la versi\\u00f3n instalada en tu celular.";\n';
+  s += '  }else if(isIOS&&isSafari){\n';
+  s += '    steps.innerHTML="Toca el bot\\u00f3n <strong>Compartir</strong> (cuadrado con flecha hacia arriba) abajo en Safari y luego <strong>\\u00abA\\u00f1adir a pantalla de inicio\\u00bb</strong>.";\n';
+  s += '  }else if(isIOS){\n';
+  s += '    steps.innerHTML="Abre esta carta en <strong>Safari</strong> para instalarla. Luego: <strong>Compartir \\u2192 A\\u00f1adir a pantalla de inicio</strong>.";\n';
+  s += '  }else if(/android/i.test(ua)){\n';
+  s += '    steps.innerHTML="En el men\\u00fa del navegador (\\u22ee), toca <strong>\\u00abA\\u00f1adir a pantalla de inicio\\u00bb</strong> o <strong>\\u00abInstalar app\\u00bb</strong>.";\n';
+  s += '  }else if(/chrome|edge|brave/i.test(ua)){\n';
+  s += '    steps.innerHTML="En el men\\u00fa del navegador (\\u22ee), busca <strong>\\u00abInstalar MenuPro\\u2026\\u00bb</strong> o <strong>\\u00abA\\u00f1adir a pantalla de inicio\\u00bb</strong>.";\n';
+  s += '  }else{\n';
+  s += '    steps.innerHTML="A\\u00f1ade esta p\\u00e1gina a tus marcadores para acceder m\\u00e1s r\\u00e1pido.";\n';
+  s += '  }\n';
+  s += '  overlay.classList.add("visible");\n';
+  s += '  overlay.setAttribute("aria-hidden","false");\n';
+  s += '}\n';
+  s += 'function closePWAInstallOverlay(){\n';
+  s += '  var overlay=document.getElementById("pwaInstallOverlay");\n';
+  s += '  if(overlay){overlay.classList.remove("visible");overlay.setAttribute("aria-hidden","true");}\n';
+  s += '}\n';
   // Render cart items
   s += 'function renderCartItems(){\n';
   s += '  var container=document.getElementById("cartItems");\n';
