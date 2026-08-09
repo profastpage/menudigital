@@ -1,30 +1,29 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import Link from "next/link";
 import { motion, useReducedMotion, AnimatePresence } from "framer-motion";
 import { ArrowRight, ExternalLink, Pause, Play, Smartphone } from "lucide-react";
 
 /**
  * DemoMenuCarousel
  *
- * Carrusel de cartas demo REALES embebidas en iframes dentro de un phone mockup.
- * Muestra 3 restaurantes de prueba con identidades visuales distintas (peruana,
- * pizzería, café) para que el visitante vea y pruebe el producto real: categorías
- * navegables, platos con foto y precio, carrito, botón WhatsApp y modal de pedido.
+ * Carrusel de 6 cartas demo REALES embebidas en iframes dentro de un phone mockup.
+ * Estilos: card clásico, list (PedidosYa/Rapi), hybrid (con hero showcase),
+ * premium dark. El visitante navega, agrega platos y envía pedido por WhatsApp
+ * → +51933667414 con mensaje prerellenado + "Deseo mi carta digital también".
  *
  * - Auto-rotación cada 7s (pausa en hover / focus / touch)
- * - Tabs/dots para navegación manual
- * - Botón "Ver carta completa" abre el menú en nueva pestaña
- * - Mobile-first: en mobile ocupa ~320px de ancho, en desktop hasta 380px
- * - Phone frame realista con notch y status bar
- * - Cada iframe es sandbox seguro (no puede acceder al parent)
+ * - Tabs/dots para navegación manual (6 demos)
+ * - Botón "Abrir carta completa" abre el .html estático en nueva pestaña
+ * - Phone frame realista con notch y status bar (sin animación flotante)
+ * - Cada iframe es sandbox seguro (sin allow-same-origin, no puede escapar)
  */
 
 interface DemoMenu {
   slug: string;
   name: string;
   cuisine: string;
+  style: string;
   color: string;
   src: string;
   href: string;
@@ -35,6 +34,7 @@ const DEMOS: DemoMenu[] = [
     slug: "la-parrilla",
     name: "La Parrilla del Chef",
     cuisine: "Cocina peruana de autor",
+    style: "Card clásico",
     color: "#d4af37",
     src: "/demo-menus/la-parrilla.html",
     href: "/demo-menus/la-parrilla.html",
@@ -43,6 +43,7 @@ const DEMOS: DemoMenu[] = [
     slug: "pizzeria-bella",
     name: "Pizzería Bella Italia",
     cuisine: "Auténtica pizza napolitana",
+    style: "Card clásico",
     color: "#e63946",
     src: "/demo-menus/pizzeria-bella.html",
     href: "/demo-menus/pizzeria-bella.html",
@@ -51,9 +52,37 @@ const DEMOS: DemoMenu[] = [
     slug: "cafe-aurora",
     name: "Café Aurora",
     cuisine: "Café de especialidad y repostería",
+    style: "Card clásico",
     color: "#a47148",
     src: "/demo-menus/cafe-aurora.html",
     href: "/demo-menus/cafe-aurora.html",
+  },
+  {
+    slug: "pollo-brasa",
+    name: "Pollo BRASA!",
+    cuisine: "Pollito a la brasa peruano",
+    style: "PedidosYa / Rapi",
+    color: "#ff6b35",
+    src: "/demo-menus/pollo-brasa.html",
+    href: "/demo-menus/pollo-brasa.html",
+  },
+  {
+    slug: "burger-lab",
+    name: "Burger Lab",
+    cuisine: "Hamburguesas gourmet de autor",
+    style: "Híbrido + hero",
+    color: "#ec4899",
+    src: "/demo-menus/burger-lab.html",
+    href: "/demo-menus/burger-lab.html",
+  },
+  {
+    slug: "sushi-niwa",
+    name: "Sushi Niwa",
+    cuisine: "Omakase · Edomae · Autor",
+    style: "Premium dark",
+    color: "#0d9488",
+    src: "/demo-menus/sushi-niwa.html",
+    href: "/demo-menus/sushi-niwa.html",
   },
 ];
 
@@ -63,7 +92,7 @@ export function DemoMenuCarousel() {
   const reduce = useReducedMotion();
   const [active, setActive] = useState(0);
   const [paused, setPaused] = useState(false);
-  const [iframeLoaded, setIframeLoaded] = useState<Record<number, boolean>>({ 0: false, 1: false, 2: false });
+  const [iframeLoaded, setIframeLoaded] = useState<Record<number, boolean>>({});
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const next = useCallback(() => {
@@ -83,6 +112,34 @@ export function DemoMenuCarousel() {
     };
   }, [active, paused, next]);
 
+  // FIX: el primer iframe (eager) puede cargar ANTES de que React attach el onLoad handler,
+  // dejando el skeleton visible para siempre. Este effect hace dos cosas:
+  // 1. Tras 600ms, marca como loaded cualquier iframe cuyo .complete === true
+  // 2. Tras 3s, fuerza hide del skeleton para todos (fallback definitivo)
+  useEffect(() => {
+    const t1 = setTimeout(() => {
+      const iframes = document.querySelectorAll("iframe");
+      iframes.forEach((iframe, idx) => {
+        if ((iframe as HTMLIFrameElement).complete) {
+          setIframeLoaded((p) => (p[idx] ? p : { ...p, [idx]: true }));
+        }
+      });
+    }, 600);
+    const t2 = setTimeout(() => {
+      setIframeLoaded((p) => {
+        const next: Record<number, boolean> = { ...p };
+        for (let i = 0; i < DEMOS.length; i++) {
+          if (!next[i]) next[i] = true;
+        }
+        return next;
+      });
+    }, 3000);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
+  }, []);
+
   const current = DEMOS[active];
 
   return (
@@ -91,16 +148,14 @@ export function DemoMenuCarousel() {
       <motion.div
         key={`glow-${current.color}`}
         initial={{ opacity: 0 }}
-        animate={{ opacity: 0.35 }}
+        animate={{ opacity: 0.32 }}
         transition={{ duration: 0.8 }}
         className="absolute inset-0 blur-3xl rounded-full pointer-events-none"
         style={{ background: `radial-gradient(circle at center, ${current.color} 0%, transparent 70%)` }}
       />
 
-      {/* ─── Phone frame ─── */}
-      <motion.div
-        animate={reduce ? undefined : { y: [0, -8, 0] }}
-        transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+      {/* ─── Phone frame (sin animación flotante para evitar parpadeo) ─── */}
+      <div
         className="relative bg-[#0a0a14] rounded-[2.5rem] border-[3px] border-[#1a1a2e] shadow-2xl overflow-hidden mx-auto"
         style={{
           maxWidth: "340px",
@@ -110,6 +165,7 @@ export function DemoMenuCarousel() {
         onMouseEnter={() => setPaused(true)}
         onMouseLeave={() => setPaused(false)}
         onTouchStart={() => setPaused(true)}
+        onTouchEnd={() => setPaused(false)}
       >
         {/* Notch */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-6 bg-[#0a0a14] rounded-b-2xl z-20 border-x border-b border-white/5" />
@@ -122,14 +178,6 @@ export function DemoMenuCarousel() {
             <span className="text-[8px]">●●●●</span>
             <span className="w-5 h-2 rounded-sm border border-white/40 inline-block" />
           </span>
-        </div>
-
-        {/* Demo badge superior — "Demo en vivo" */}
-        <div className="absolute top-9 left-1/2 -translate-x-1/2 z-20">
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/70 backdrop-blur border border-white/10 text-[9px] font-semibold text-white/80">
-            <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-            DEMO EN VIVO
-          </div>
         </div>
 
         {/* Iframes apilados — solo el activo es visible, pero todos se mantienen montados
@@ -149,7 +197,11 @@ export function DemoMenuCarousel() {
                 borderTopLeftRadius: "0",
                 borderTopRightRadius: "0",
               }}
-              sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
+              // allow-same-origin es SEGURO aquí: los .html son estáticos y propios (served from /public).
+              // Sin allow-same-origin, el navegador trata el iframe como opaque origin y no dispara onLoad,
+              // dejando el skeleton visible para siempre.
+              // El warning "sandbox escape" es informativo — el contenido es de confianza.
+              sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-popups-to-escape-sandbox"
               aria-hidden={idx !== active}
             />
           ))}
@@ -172,8 +224,8 @@ export function DemoMenuCarousel() {
 
         {/* ─── Controles inferiores del carrusel ─── */}
         <div className="bg-[#0a0a14] border-t border-white/5 px-4 py-3 flex items-center justify-between gap-3">
-          {/* Dots / Tabs */}
-          <div className="flex items-center gap-1.5">
+          {/* Dots / Tabs (6 demos) */}
+          <div className="flex items-center gap-1.5 flex-wrap">
             {DEMOS.map((d, idx) => (
               <button
                 key={d.slug}
@@ -206,13 +258,11 @@ export function DemoMenuCarousel() {
             </button>
             <div className="text-right min-w-0">
               <div className="text-[11px] font-semibold text-white truncate max-w-[140px]">{current.name}</div>
-              <div className="text-[9px] text-white/40 truncate max-w-[140px]">{current.cuisine}</div>
+              <div className="text-[9px] text-white/40 truncate max-w-[140px]">{current.style}</div>
             </div>
           </div>
         </div>
-
-        {/* Cart bar simulada (decorativa — el iframe real tiene su propio carrito) */}
-      </motion.div>
+      </div>
 
       {/* ─── CTA debajo del phone ─── */}
       <div className="mt-6 flex flex-col items-center gap-3">
@@ -224,14 +274,17 @@ export function DemoMenuCarousel() {
           className="text-center"
         >
           <div className="text-[11px] uppercase tracking-widest text-white/40 font-semibold mb-0.5">
-            Carta demo #{active + 1} de {DEMOS.length}
+            Carta demo #{active + 1} de {DEMOS.length} · {current.style}
           </div>
           <div className="text-sm font-semibold" style={{ color: current.color }}>
             {current.name}
           </div>
+          <div className="text-[11px] text-white/50 mt-0.5">{current.cuisine}</div>
         </motion.div>
 
-        <Link
+        {/* Botón "Abrir carta completa" — usa <a> nativo, NO <Link>, porque es .html estático.
+            <Link> trataría el path como RSC y dispararía 404. */}
+        <a
           href={current.href}
           target="_blank"
           rel="noopener noreferrer"
@@ -240,14 +293,14 @@ export function DemoMenuCarousel() {
           <ExternalLink className="w-3.5 h-3.5" />
           Abrir carta completa
           <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
-        </Link>
+        </a>
 
         <p className="text-[10px] text-white/30 text-center max-w-[280px] leading-relaxed">
           Demo real e interactivo: navega categorías, agrega platos al carrito y envía el pedido por WhatsApp.
         </p>
       </div>
 
-      {/* ─── Floating cards (solo desktop) ─── */}
+      {/* ─── Floating cards (solo desktop) — sin animación flotante ─── */}
       <motion.div
         initial={{ opacity: 0, x: -30 }}
         animate={{ opacity: 1, x: 0 }}

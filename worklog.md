@@ -2126,3 +2126,105 @@ Stage Summary:
 - 3 archivos estáticos generados en /public/demo-menus/ (~75 KB total). Script reusable para generar más cartas demo en el futuro.
 - Sin errores de consola. Sin warnings críticos. Mobile-first verificado.
 - Listo para git push a main + deploy Vercel.
+
+---
+Task ID: 6-demos-no-flicker-whatsapp-fix
+Agent: main (Super Z)
+Task: 6 cartas embebidas (añadir PedidosYa/Rapi + Híbrido + Premium dark), eliminar parpadeo, arreglar sandbox warning + 404 RSC, WhatsApp de TODAS las cartas a +51933667414 con mensaje prerellenado + emoji "Deseo mi carta digital también 🍽️✨", revisar con VLM.
+
+Work Log:
+- Reescrito /home/z/my-project/scripts/generate-demo-menus.js: ahora genera 6 cartas con 3 estilos distintos
+  * 1. La Parrilla del Chef (card, dorado #d4af37, peruana) — existente
+  * 2. Pizzería Bella Italia (card, rojo #e63946, italiana) — existente
+  * 3. Café Aurora (card, marrón #a47148, café) — existente
+  * 4. Pollo BRASA! (list, naranja #ff6b35, peruana) — NUEVO estilo PedidosYa/Rapi
+    - Layout vertical con imágenes grandes (600x400) por plato
+    - Badge "MÁS VENDIDO" en primer plato de cada categoría
+    - Info de delivery "Delivery 30-45 min · Pickup gratis"
+    - Secciones con emojis (🔥 👨‍👩‍👧‍👦 🍟 🥤)
+  * 5. Burger Lab (hybrid, magenta #ec4899, burgers) — NUEVO estilo híbrido
+    - Hero showcase con carrusel de 3 imágenes grandes (auto-rotación 4s)
+    - Dots navegables sobre el hero
+    - Precio + nombre del plato activo en overlay
+    - Cards clásicas debajo del hero
+  * 6. Sushi Niwa (card, teal oscuro #0d9488, japonesa) — NUEVO premium dark
+    - Estilo omakase premium con precios premium
+    - Mismo template pero con identidad visual elegante
+- Todas las cartas ahora:
+  * WhatsApp → wa.me/51933667414 (SELLER_WHATSAPP = captación de leads)
+  * Mensaje prerellenado con emojis funcionales en mobile/web/desktop:
+    - *{name}* 🍽️
+    - _{slogan}_
+    - 🛒 *MI PEDIDO* + lista de platos
+    - 💰 *TOTAL: {total}*
+    - 👋 Hola, vi esta demo en menudigital.pro y quisiera confirmar este pedido 🙏
+    - ━━━━━━━━━━━━━ (separador)
+    - 📱 *Deseo mi carta digital también* 🍽️✨
+    - ¿Me pueden ayudar con info? 🚀
+  * Lead banner arriba del cart: "Esto es una demo real. Al enviar tu pedido, también solicitas info para tu propia carta digital."
+  * Footer con CTA: "📱 Quiero mi carta digital →" → /register
+  * Modal title ahora "Tu Pedido 🛒" con emoji
+  * Summary total ahora "Total 💰" con emoji
+  * Flash "AGREGADO ✓" con checkmark
+
+- Reescrito /home/z/my-project/src/components/landing/demo-menu-carousel.tsx:
+  * 6 demos en lugar de 3 (con estilo en metadata)
+  * REMOVIDA animación flotante `y: [0, -8, 0]` (causaba parpadeo + distracción)
+  * REMOVIDO badge "DEMO EN VIVO" con pulse rojo (causaba parpadeo)
+  * Phone frame ahora estático (sin motion.div con animación)
+  * Cambiado `<Link>` por `<a>` para los .html estáticos (FIX 404 RSC)
+    - Antes: Next.js interceptaba el click como client-side nav → añadia ?_rsc=xxx → 404
+    - Ahora: anchor nativo → request HTTP directo al .html → 200 OK
+  * Sandbox: `allow-scripts allow-same-origin allow-popups allow-forms allow-popups-to-escape-sandbox`
+    - PRIMERO intentamos sin allow-same-origin para evitar warning escape
+    - PERO causaba que el iframe no disparara onLoad (opaque origin)
+    - El skeleton "Cargando carta..." se quedaba visible para siempre
+    - SOLUCIÓN: devolver allow-same-origin (el warning es informativo, no security issue para contenido propio)
+  * FIX SKELETON STUCK: useEffect con dos timers
+    - t1 (600ms): marca como loaded cualquier iframe cuyo .complete === true
+    - t2 (3000ms): fallback definitivo, fuerza hide del skeleton para todos
+    - Esto arregla el bug donde el primer iframe (eager) cargaba ANTES de que React attach el onLoad handler
+  * Información debajo del phone ahora incluye estilo ("Card clásico", "PedidosYa / Rapi", "Híbrido + hero", "Premium dark")
+  * Dots ahora son 6 (antes 3)
+  * Floating cards (desktop) sin animación flotante (solo aparecen con fade-in)
+
+Verificación con Playwright + VLM:
+- TypeScript: 0 errores en src/
+- Los 6 .html estáticos sirven 200 OK (29-31 KB cada uno)
+- Click en "Abrir carta completa" → request HTTP directo, no RSC navigation, no 404
+- React state iframeLoaded: {0:true, 1:true, 2:true, 3:true, 4:true, 5:true}
+- Todos los 6 iframes cargan con contentDocument.readyState === 'complete'
+- Click en plato dentro del iframe → addToCart() funciona
+- Click en cart bar → modal abre
+- Click en WhatsApp button → window.open capturada con URL correcta:
+  https://wa.me/51933667414?text=*Pollo%20BRASA!*%20🍽️...
+  Mensaje decodificado contiene todos los emojis + "Deseo mi carta digital también 🍽️✨"
+- VLM (mobile 390x844): confirmó
+  * Carta La Parrilla visible dentro del phone frame (logo, nombre, platos)
+  * 6 dots visibles, primero dorado activo
+  * Botón "Abrir carta completa" visible debajo del phone
+  * Sin parpadeo ni anomalías
+- VLM Pollo BRASA (PedidosYa style): confirmó
+  * Lista vertical con imágenes grandes
+  * Badge "MÁS VENDIDO" naranja
+  * Calidad ultra-premium
+- VLM Burger Lab (Hybrid style): confirmó
+  * Hero showcase con carrusel de imágenes
+  * Cards horizontales debajo
+  * Color púrpura/magenta predominante
+  * Ultra-premium alta fidelidad
+- VLM Sushi Niwa (Premium dark, desktop 1440x900): confirmó
+  * Layout 2 columnas (texto izq, phone der)
+  * Estilo premium dark teal
+  * Phone mockup realista
+
+Stage Summary:
+- ✅ 6 cartas demo con 3 estilos distintos (card, list/PedidosYa, hybrid)
+- ✅ WhatsApp → +51933667414 con mensaje prerellenado + emojis + "Deseo mi carta digital también 🍽️✨"
+- ✅ Animación flotante eliminada (no más parpadeo)
+- ✅ 404 RSC errors eliminados (<Link> → <a>)
+- ✅ Skeleton loading bug arreglado (useEffect con fallback timer)
+- ✅ 6 iframes cargan correctamente, contentDocument accessible
+- ✅ Verificado con VLM en mobile (390x844) y desktop (1440x900)
+- ✅ TypeScript: 0 errores en src/
+- Pendiente: git push a main → deploy automático Vercel

@@ -1,5 +1,5 @@
 /**
- * Genera 3 cartas demo estáticas en /public/demo-menus/
+ * Genera 6 cartas demo estáticas en /public/demo-menus/
  * Usadas por el carrusel de demo en el Hero del landing.
  *
  * Cada carta es un HTML standalone completo con:
@@ -8,10 +8,16 @@
  * - Secciones de platos con imagen, nombre, descripción, precio
  * - Carrito flotante con contador y total
  * - Modal de pedido con qty controls
- * - Botón "Enviar pedido por WhatsApp"
+ * - Botón "Enviar pedido por WhatsApp" → +51933667414 (VENDEDOR)
+ *   con mensaje prerellenado del pedido + nota final
+ *   "Deseo mi carta digital también 🍽️📱"
  *
- * Misma estructura y CSS que /public/menu-ejemplo.html pero con
- * datos y colores distintos para mostrar variedad real.
+ * 3 estilos de carta:
+ *  - "card": horizontal card con thumbnail (clásico)
+ *  - "list": vertical list con imagen grande (estilo PedidosYa/Rapi)
+ *  - "hybrid": card + hero showcase con imágenes (personalización digital)
+ *
+ * WhatsApp target: 51933667414 (Menú Digital Pro — lead capture)
  */
 const fs = require('fs');
 const path = require('path');
@@ -19,18 +25,23 @@ const path = require('path');
 const OUT_DIR = path.join(process.cwd(), 'public', 'demo-menus');
 if (!fs.existsSync(OUT_DIR)) fs.mkdirSync(OUT_DIR, { recursive: true });
 
-// ─── 3 restaurantes demo con identidades visuales distintas ───
+const SELLER_WHATSAPP = '51933667414'; // Menú Digital Pro — captación de leads
+
+// ─── 6 restaurantes demo con estilos distintos ───
 const RESTAURANTS = [
+  // ───────────────────────────────────────────────────────────
+  // 1. La Parrilla del Chef — estilo "card" clásico (peruana, dorado)
+  // ───────────────────────────────────────────────────────────
   {
     file: 'la-parrilla.html',
     name: 'La Parrilla del Chef',
     slogan: 'Cocina de autor desde 1998',
     description: 'Auténtica cocina peruana con ingredientes frescos del mercado. Especialistas en parrillas, mariscos y fusión Nikkei.',
-    whatsapp: '51987654321',
     logo: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=300&h=300&fit=crop',
     color: '#d4af37',
     colorRgb: '212, 175, 55',
     currency: 'S/',
+    style: 'card',
     categories: [
       {
         name: 'Entradas',
@@ -59,16 +70,20 @@ const RESTAURANTS = [
       },
     ],
   },
+
+  // ───────────────────────────────────────────────────────────
+  // 2. Pizzería Bella Italia — estilo "card" (italiana, rojo)
+  // ───────────────────────────────────────────────────────────
   {
     file: 'pizzeria-bella.html',
     name: 'Pizzería Bella Italia',
     slogan: 'Auténtica pizza napolitana',
     description: 'Horno a leña traído desde Nápoles. Masa de fermentación natural 48h, mozzarella fior di latte y tomates San Marzano DOP.',
-    whatsapp: '51987650011',
     logo: 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=300&h=300&fit=crop',
     color: '#e63946',
     colorRgb: '230, 57, 70',
     currency: 'S/',
+    style: 'card',
     categories: [
       {
         name: 'Pizzas',
@@ -105,16 +120,20 @@ const RESTAURANTS = [
       },
     ],
   },
+
+  // ───────────────────────────────────────────────────────────
+  // 3. Café Aurora — estilo "card" (café, marrón)
+  // ───────────────────────────────────────────────────────────
   {
     file: 'cafe-aurora.html',
     name: 'Café Aurora',
     slogan: 'Especialidad de grano y repostería artesanal',
     description: 'Café de especialidad tostado en casa. Granos de origen único, método de extracción manual y repostería recién horneada cada mañana.',
-    whatsapp: '51987650022',
     logo: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=300&h=300&fit=crop',
     color: '#a47148',
     colorRgb: '164, 113, 72',
     currency: 'S/',
+    style: 'card',
     categories: [
       {
         name: 'Café de Especialidad',
@@ -152,20 +171,206 @@ const RESTAURANTS = [
       },
     ],
   },
+
+  // ───────────────────────────────────────────────────────────
+  // 4. Pollo BRASA! — estilo "list" PedidosYa/Rapi (naranja vibrante)
+  // ───────────────────────────────────────────────────────────
+  {
+    file: 'pollo-brasa.html',
+    name: 'Pollo BRASA!',
+    slogan: 'El mejor pollo a la brasa del Perú',
+    description: 'Pollo a la brasa con receta secreta de 12 horas en marinación. Leña de eucalipto, papas triple cocción y salsas caseras.',
+    logo: 'https://images.unsplash.com/photo-1562967914-608f82629710?w=300&h=300&fit=crop',
+    color: '#ff6b35',
+    colorRgb: '255, 107, 53',
+    currency: 'S/',
+    style: 'list',
+    categories: [
+      {
+        name: 'Más Pedidos 🔥',
+        dishes: [
+          { name: 'Pollo Entero + Papas + Ensalada', description: '1 pollo entero a la brasa, porción generosa de papas doradas, ensalada de tomate y cebolla, salsas ají y mostaza honey.', price: 52, image: 'https://images.unsplash.com/photo-1598103442097-8b74394b95c6?w=600&h=400&fit=crop' },
+          { name: '½ Pollo + Papas + Ensalada', description: 'Media porción de pollo a la brasa, papas triple cocción, ensalada fresca y salsas caseras. Combo individual.', price: 32, image: 'https://images.unsplash.com/photo-1626082927389-6cd097cdc6ec?w=600&h=400&fit=crop' },
+          { name: '¼ Pollo + Papas', description: 'Cuarto de pollo, papas doradas y salsa ají. Ideal para lunch rápido. Salsa de la casa incluida.', price: 22, image: 'https://images.unsplash.com/photo-1604908554007-3f4b3c8b1b0e?w=600&h=400&fit=crop' },
+        ],
+      },
+      {
+        name: 'Combos Familiares 👨‍👩‍👧‍👦',
+        dishes: [
+          { name: 'Combo Familiar 4 Personas', description: 'Pollo entero, 2 porciones grandes de papas, ensalada familiar, 4 bebidas y salsas. Ahorro total 20%.', price: 89, image: 'https://images.unsplash.com/photo-1582539691259-d65e85d3f7c8?w=600&h=400&fit=crop' },
+          { name: 'Combo Pareja', description: '½ pollo, papas medianas, ensalada, 2 bebidas y postre para compartir. Perfecto para dos.', price: 56, image: 'https://images.unsplash.com/photo-1567620832903-9fc6debc209f?w=600&h=400&fit=crop' },
+          { name: 'Combo Kids 🧒', description: '¼ pollo sin hueso, papas pequeñas, nuggets de pollo, jugo de fruta y regalito sorpresa.', price: 24, image: 'https://images.unsplash.com/photo-1606755962773-d324e0a13086?w=600&h=400&fit=crop' },
+        ],
+      },
+      {
+        name: 'Acompañamientos 🍟',
+        dishes: [
+          { name: 'Papas Triple Cocción', description: 'Papas peladas, blanqueadas, fritas y horneadas. Crujientes por fuera, suaves por dentro. Porción grande.', price: 12, image: 'https://images.unsplash.com/photo-1573080496219-bb080dd4f877?w=600&h=400&fit=crop' },
+          { name: 'Ensalada de la Casa', description: 'Lechuga, tomate, cebolla, zanahoria, palta y aderezo de la casa. Porción individual.', price: 9, image: 'https://images.unsplash.com/photo-1540420773420-3366772f4999?w=600&h=400&fit=crop' },
+          { name: 'Arroz Chaufa', description: 'Arroz chaufa con huevo, cebollita china y tocino. Porción individual. Combo perfecto con el pollo.', price: 14, image: 'https://images.unsplash.com/photo-1603133872878-684f208fb84b?w=600&h=400&fit=crop' },
+          { name: 'Salchipapa Especial', description: 'Salchicha parrillera, papas doradas, huevo frito, salsa ají y ketchup. Para los más golosos.', price: 16, image: 'https://images.unsplash.com/photo-1639024471283-03518883578d?w=600&h=400&fit=crop' },
+        ],
+      },
+      {
+        name: 'Bebidas 🥤',
+        dishes: [
+          { name: 'Inca Kola 1.5L', description: 'Bebida nacional peruana. Botella familiar 1.5 litros para compartir.', price: 11, image: 'https://images.unsplash.com/photo-1623183784733-9d3d2c0e8b8e?w=600&h=400&fit=crop' },
+          { name: 'Chicha Morada 1L', description: 'Chicha morada casera de maíz morado con piña, canela y clavo. Jarra 1 litro bien helada.', price: 12, image: 'https://z-cdn.chatglm.cn/image-search-mcp/images-ppt/99fb5ee7dfeb.jpg' },
+          { name: 'Limonada Frappé', description: 'Limón, hierbabuena y hielo frappé. Refrescante. Vaso 500ml.', price: 9, image: 'https://images.unsplash.com/photo-1437418747212-8d9709afab22?w=600&h=400&fit=crop' },
+        ],
+      },
+    ],
+  },
+
+  // ───────────────────────────────────────────────────────────
+  // 5. Burger Lab — estilo "hybrid" (burgers, púrpura magenta)
+  // ───────────────────────────────────────────────────────────
+  {
+    file: 'burger-lab.html',
+    name: 'Burger Lab',
+    slogan: 'Hamburguesas gourmet de autor',
+    description: 'Carne prime angus 200g, pan brioche artesanal horneado en casa, quesos fundidos y salsas de autor. Combo doble con papas rsticas.',
+    logo: 'https://images.unsplash.com/photo-1571091718767-18b5b1457add?w=300&h=300&fit=crop',
+    color: '#ec4899',
+    colorRgb: '236, 72, 153',
+    currency: 'S/',
+    style: 'hybrid',
+    categories: [
+      {
+        name: 'Burgers 🍔',
+        dishes: [
+          { name: 'Classic Smash', description: 'Doble smash de angus 160g, queso cheddar, cebolla caramelizada, pickles, salsa house. Pan brioche.', price: 28, image: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=400&h=400&fit=crop' },
+          { name: 'Bacon BBQ Supreme', description: 'Carne 200g, bacon ahumado, queso ahumado, aros de cebolla, BBQ casera, pan brioche tostado.', price: 34, image: 'https://images.unsplash.com/photo-1550317138-10000687a72b?w=400&h=400&fit=crop' },
+          { name: 'Truffle Madness', description: 'Carne 200g, queso gruyere, hongos salteados, mayo de trufa negra, rúcula, pan brioche.', price: 42, image: 'https://images.unsplash.com/photo-1551782450-a2132b4ba21d?w=400&h=400&fit=crop' },
+          { name: 'Spicy Inferno', description: 'Carne 200g, jalapeños, queso pepper jack, salsa picante de la casa, cebolla crispy. Solo para valientes.', price: 32, image: 'https://images.unsplash.com/photo-1572802419224-296b0aeee0d9?w=400&h=400&fit=crop' },
+        ],
+      },
+      {
+        name: 'Premium Stack 💎',
+        dishes: [
+          { name: 'Double Wagyu Stack', description: 'Doble carne wagyu 180g c/u, queso brie, cebolla confitada, salsa de vino tinto, pan brioche premium.', price: 78, image: 'https://images.unsplash.com/photo-1586190848861-99aa4a171e90?w=400&h=400&fit=crop' },
+          { name: 'Lobster Burger', description: 'Carne 200g, cola de langosta, mantequilla de hierbas, lechuga, pan brioche. Edición limitada.', price: 92, image: 'https://images.unsplash.com/photo-1607013251379-e6eecfffe234?w=400&h=400&fit=crop' },
+        ],
+      },
+      {
+        name: 'Sides 🍟',
+        dishes: [
+          { name: 'Papas Rústicas', description: 'Papas con piel, romero, ajo, parmesano y aceite de oliva. Porción generosa para compartir.', price: 14, image: 'https://images.unsplash.com/photo-1573080496219-bb080dd4f877?w=400&h=400&fit=crop' },
+          { name: 'Aros de Cebolla', description: 'Aros de cebolla empanizados con panko, servidos con salsa ranch de la casa. 8 unidades.', price: 12, image: 'https://images.unsplash.com/photo-1639024471283-03518883578d?w=400&h=400&fit=crop' },
+          { name: 'Cheese Fries', description: 'Papas fritas bañadas en queso cheddar fundido, bacon crujiente y cebollín fresco.', price: 16, image: 'https://images.unsplash.com/photo-1573080496219-bb080dd4f877?w=400&h=400&fit=crop' },
+        ],
+      },
+      {
+        name: 'Shakes & Bebidas 🥤',
+        dishes: [
+          { name: 'Oreo Shake', description: 'Helado de vainilla, leche, galletas Oreo molidas, crema chantilly. Vaso 500ml.', price: 18, image: 'https://images.unsplash.com/photo-1572490122747-3968b75cc699?w=400&h=400&fit=crop' },
+          { name: 'Salted Caramel Shake', description: 'Helado de vainilla, dulce de leche, caramelo salado, crema chantilly. Vaso 500ml.', price: 19, image: 'https://images.unsplash.com/photo-1542435503-956c469947f6?w=400&h=400&fit=crop' },
+          { name: 'Limonada de Mango', description: 'Mango, limón, hierbabuena y hielo. Vaso 500ml bien frío.', price: 11, image: 'https://images.unsplash.com/photo-1437418747212-8d9709afab22?w=400&h=400&fit=crop' },
+        ],
+      },
+    ],
+  },
+
+  // ───────────────────────────────────────────────────────────
+  // 6. Sushi Niwa — estilo "card" premium dark (japonesa, teal oscuro)
+  // ───────────────────────────────────────────────────────────
+  {
+    file: 'sushi-niwa.html',
+    name: 'Sushi Niwa',
+    slogan: 'Omakase · Edomae · Autor',
+    description: 'Cocina japonesa de autor con pescado importado de Tsukiji. Omakase diario, nigiri tradicional Edomae y rollos de fusión nikkei.',
+    logo: 'https://images.unsplash.com/photo-1579871494447-9811cf80d66c?w=300&h=300&fit=crop',
+    color: '#0d9488',
+    colorRgb: '13, 148, 136',
+    currency: 'S/',
+    style: 'card',
+    categories: [
+      {
+        name: 'Omakase 🎯',
+        dishes: [
+          { name: 'Omakase Chef 8 piezas', description: 'Selección del chef: 4 nigiri, 2 sashimi, 2 maki especiales. Pescado del día. Incluye miso.', price: 88, image: 'https://images.unsplash.com/photo-1579584425555-c3ce17fd4351?w=400&h=400&fit=crop' },
+          { name: 'Omakase Premium 12 piezas', description: 'Selección premium con toro, hamachi, uni, caviar y oro. Experiencia completa del chef.', price: 145, image: 'https://images.unsplash.com/photo-1611143669185-af224c5e3252?w=400&h=400&fit=crop' },
+          { name: 'Sashimi Moriawase', description: 'Selección de sashimi del día: atún, salmón, hamachi, pulpo y blanco. 9 piezas.', price: 68, image: 'https://images.unsplash.com/photo-1607301405390-d831c242f59b?w=400&h=400&fit=crop' },
+        ],
+      },
+      {
+        name: 'Nigiri 🍣',
+        dishes: [
+          { name: 'Nigiri de Atún Bluefin', description: 'Nigiri de atún bluefin cortado a mano, arroz con vinagre de arroz añejo. 2 piezas.', price: 24, image: 'https://images.unsplash.com/photo-1607301405390-d831c242f59b?w=400&h=400&fit=crop' },
+          { name: 'Nigiri de Toro', description: 'Nigiri de ventresca de atún. Cortada fina, fundente en boca. Pieza premium. 2 piezas.', price: 32, image: 'https://images.unsplash.com/photo-1579871494447-9811cf80d66c?w=400&h=400&fit=crop' },
+          { name: 'Nigiri de Salmón Flambeado', description: 'Nigiri de salmón noruego flambeado con soplete, salsa ponzu y cebollín. 2 piezas.', price: 18, image: 'https://images.unsplash.com/photo-1611143669185-af224c5e3252?w=400&h=400&fit=crop' },
+          { name: 'Nigiri de Uni', description: 'Nigiri de erizo de mar fresco, envuelto en nori. Solo para paladares exigentes. 2 piezas.', price: 38, image: 'https://images.unsplash.com/photo-1583623025817-d180a2221e0a?w=400&h=400&fit=crop' },
+        ],
+      },
+      {
+        name: 'Rollos Especiales 🌀',
+        dishes: [
+          { name: 'Roll Nikkei Acevichado', description: 'Rollo con salmón, atún, ceviche de pulpo, palta, crema de acevichado y ají limo. 8 piezas.', price: 42, image: 'https://images.unsplash.com/photo-1617196034796-73dfa7b1fd56?w=400&h=400&fit=crop' },
+          { name: 'Roll Tempura de Langostino', description: 'Rollo relleno de langostino tempura, queso crema, palta, cubierto con sésamo tostado. 8 piezas.', price: 38, image: 'https://images.unsplash.com/photo-1553621042-f6e147245754?w=400&h=400&fit=crop' },
+          { name: 'Roll Dragón', description: 'Rollo de anguila, pepino, cubierto con palta, anguila glaseada y salsa unagi. 8 piezas.', price: 44, image: 'https://images.unsplash.com/photo-1611143669185-af224c5e3252?w=400&h=400&fit=crop' },
+        ],
+      },
+      {
+        name: 'Bebidas Japonésas 🍵',
+        dishes: [
+          { name: 'Sake Junmai Daiginjo', description: 'Sake premium japonés. Copa 120ml. Maridaje ideal con nigiri y sashimi.', price: 36, image: 'https://images.unsplash.com/photo-1566448559972-3c5dbd3b0f2e?w=400&h=400&fit=crop' },
+          { name: 'Té Verde Matcha', description: 'Matcha ceremonial japonés, batido tradicional con chasen. Taza 200ml caliente.', price: 14, image: 'https://images.unsplash.com/photo-1515823064-d6e0c04616a7?w=400&h=400&fit=crop' },
+          { name: 'Yuzu Sour', description: 'Coctel de yuzu japonés, pisco, miel y soda. Refrescante. Sin alcohol disponible.', price: 22, image: 'https://images.unsplash.com/photo-1551024709-8f23befc6f87?w=400&h=400&fit=crop' },
+        ],
+      },
+    ],
+  },
 ];
 
-// ─── Plantilla de HTML (extraída de menu-ejemplo.html, parametrizada) ───
+// ─── Plantilla de HTML ───
 function buildHTML(r) {
   const restaurantJSON = JSON.stringify({
     name: r.name,
     slogan: r.slogan,
     description: r.description,
-    whatsapp: r.whatsapp,
     logo: r.logo,
     color: r.color,
     currency: r.currency,
     categories: r.categories,
   });
+
+  // ─── Estilos específicos por variante ───
+  const styleCard = ''; // base
+  const styleList = `
+/* === ESTILO PEDIDOS YA / RAPI === */
+.dish{flex-direction:column;gap:0;padding:0;overflow:hidden;}
+.dish-img{width:100%;height:180px;border-radius:0;border:none;border-bottom:3px solid var(--accent);}
+.dish-info{padding:14px 16px;}
+.dish-bottom{padding:0 16px 16px;}
+.add-btn{position:absolute;top:12px;right:12px;width:42px;height:42px;border-radius:50%;box-shadow:0 4px 14px rgba(0,0,0,0.35);}
+.dish-name{font-size:17px;}
+.dish-desc{font-size:13.5px;-webkit-line-clamp:3;}
+.badge-tag{position:absolute;top:12px;left:12px;background:var(--accent);color:#fff;padding:5px 12px;border-radius:14px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;z-index:5;box-shadow:0 4px 12px rgba(var(--accent-rgb),0.4);}
+.deliver-info{display:flex;align-items:center;gap:6px;color:var(--text-muted);font-size:12px;margin-bottom:6px;padding:0 16px;}
+.deliver-info::before{content:"🛵";font-size:14px;}
+`;
+
+  const styleHybrid = `
+/* === ESTILO HÍBRIDO (con hero showcase) === */
+.hero-showcase{position:relative;height:200px;overflow:hidden;border-radius:24px;margin:8px 20px 18px;}
+.hero-showcase-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity 0.8s ease;}
+.hero-showcase-img.active{opacity:1;}
+.hero-showcase-overlay{position:absolute;inset:0;background:linear-gradient(180deg,transparent 30%,rgba(7,7,11,0.85) 100%);pointer-events:none;}
+.hero-showcase-cta{position:absolute;bottom:14px;left:16px;right:16px;display:flex;justify-content:space-between;align-items:flex-end;color:#fff;z-index:2;}
+.hero-showcase-title{font-size:18px;font-weight:700;text-shadow:0 2px 8px rgba(0,0,0,0.6);}
+.hero-showcase-price{font-size:22px;font-weight:800;color:var(--accent);text-shadow:0 2px 8px rgba(0,0,0,0.6);}
+.hero-showcase-dots{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);display:flex;gap:5px;z-index:3;}
+.hero-showcase-dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.4);transition:all 0.3s;}
+.hero-showcase-dot.active{width:18px;background:#fff;border-radius:3px;}
+.dish{padding:14px 16px;}
+.dish-img{width:96px;height:96px;border-radius:14px;}
+`;
+
+  let extraCSS = '';
+  if (r.style === 'list') extraCSS = styleList;
+  else if (r.style === 'hybrid') extraCSS = styleHybrid;
+
+  const styleAttr = r.style === 'list' ? 'list-style' : (r.style === 'hybrid' ? 'hybrid-style' : 'card-style');
 
   return `<!DOCTYPE html>
 <html lang="es">
@@ -174,13 +379,15 @@ function buildHTML(r) {
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="${r.color}">
 <meta name="referrer" content="no-referrer">
-<title>${r.name}</title>
-<style>:root{--accent:${r.color};--accent-rgb:${r.colorRgb};--gold:${r.color};--bg-0:#07070b;--bg-1:#0f0f1a;--glass:rgba(255,255,255,0.035);--glass-strong:rgba(255,255,255,0.07);--border:rgba(255,255,255,0.08);--border-strong:rgba(255,255,255,0.14);--text:#f4f4fa;--text-muted:#8a8a9a;--text-soft:#b8b8c8;}*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}html{scroll-behavior:smooth;}body{font-family:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:var(--bg-0);color:var(--text);min-height:100vh;padding-bottom:140px;position:relative;overflow-x:hidden;}body::before,body::after{content:"";position:fixed;width:500px;height:500px;border-radius:50%;filter:blur(140px);opacity:0.18;z-index:0;pointer-events:none;}body::before{background:var(--accent);top:-200px;right:-150px;}body::after{background:var(--gold);bottom:-200px;left:-150px;}#app{position:relative;z-index:1;}.header{padding:38px 24px 30px;text-align:center;position:relative;background:linear-gradient(180deg,rgba(255,255,255,0.03) 0%,transparent 100%);border-bottom:1px solid var(--border);}.header::after{content:"";position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:140px;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);}.logo-wrap{position:relative;display:inline-block;margin-bottom:16px;width:96px;height:96px;}.logo-wrap::before{content:"";position:absolute;inset:-6px;border-radius:50%;background:conic-gradient(from 0deg,var(--accent),var(--gold),var(--accent));filter:blur(10px);opacity:0.5;z-index:0;animation:rotate 8s linear infinite;}@keyframes rotate{to{transform:rotate(360deg);}}.logo{width:96px;height:96px;border-radius:50%;object-fit:cover;border:3px solid rgba(255,255,255,0.12);box-shadow:0 8px 32px rgba(0,0,0,0.5);background:var(--glass);position:absolute;inset:0;z-index:2;}.logo-placeholder{width:96px;height:96px;border-radius:50%;background:linear-gradient(135deg,var(--accent),rgba(var(--accent-rgb),0.6));display:flex;align-items:center;justify-content:center;font-size:38px;font-weight:800;color:#fff;position:absolute;inset:0;z-index:1;border:3px solid rgba(255,255,255,0.12);box-shadow:0 8px 32px rgba(0,0,0,0.5);}.restaurant-name{font-size:28px;font-weight:800;margin-bottom:6px;letter-spacing:-0.5px;background:linear-gradient(180deg,#fff,#c8c8d4);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;}.slogan{font-size:11px;color:var(--gold);letter-spacing:4px;text-transform:uppercase;font-weight:600;margin-bottom:8px;}.restaurant-desc{color:var(--text-soft);font-size:14px;margin-bottom:18px;max-width:440px;margin-left:auto;margin-right:auto;line-height:1.5;}.open-badge{display:inline-flex;align-items:center;gap:7px;background:rgba(6,214,160,0.12);color:#06d6a0;padding:6px 14px;border-radius:20px;font-size:11.5px;font-weight:600;border:1px solid rgba(6,214,160,0.25);letter-spacing:0.5px;text-transform:uppercase;}.open-badge::before{content:"";width:6px;height:6px;border-radius:50%;background:#06d6a0;box-shadow:0 0 8px #06d6a0;animation:pulse 2s infinite;}@keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:0.4;transform:scale(1.3);}}.nav{position:sticky;top:0;background:rgba(7,7,11,0.78);backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);border-bottom:1px solid var(--border);z-index:100;padding:14px 0;overflow-x:auto;scrollbar-width:none;}.nav::-webkit-scrollbar{display:none;}.nav-inner{display:flex;gap:8px;padding:0 20px;min-width:max-content;}.nav-item{white-space:nowrap;padding:8px 18px;background:var(--glass);border:1px solid var(--border);border-radius:24px;color:var(--text-soft);font-size:13.5px;font-weight:500;cursor:pointer;transition:all 0.25s cubic-bezier(0.4,0,0.2,1);}.nav-item:hover{background:var(--glass-strong);color:var(--text);transform:translateY(-1px);}.nav-item.active{background:linear-gradient(135deg,var(--accent),rgba(var(--accent-rgb),0.85));color:#fff;border-color:transparent;box-shadow:0 4px 16px rgba(var(--accent-rgb),0.4);}.section{padding:24px 20px 8px;max-width:620px;margin:0 auto;width:100%;}.section-title{font-size:21px;font-weight:700;margin-bottom:18px;display:flex;align-items:center;gap:12px;letter-spacing:-0.3px;}.section-title::before{content:"";width:4px;height:22px;background:linear-gradient(180deg,var(--accent),var(--gold));border-radius:2px;}.dish{display:flex;gap:14px;background:var(--glass);border:1px solid var(--border);border-radius:16px;padding:14px;margin-bottom:12px;transition:all 0.3s cubic-bezier(0.4,0,0.2,1);opacity:0;transform:translateY(20px);position:relative;overflow:hidden;}.dish.revealed{opacity:1;transform:translateY(0);}.dish::before{content:"";position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.12),transparent);opacity:0;transition:opacity 0.3s;}.dish:hover{border-color:rgba(var(--accent-rgb),0.3);background:rgba(var(--accent-rgb),0.04);transform:translateY(-3px);box-shadow:0 10px 28px rgba(0,0,0,0.35);}.dish:hover::before{opacity:1;}.dish:active{transform:translateY(0) scale(0.99);}.dish-img{width:84px;height:84px;border-radius:12px;object-fit:cover;flex-shrink:0;background:linear-gradient(135deg,var(--glass),var(--glass-strong));border:1px solid var(--border);}.dish-info{flex:1;min-width:0;display:flex;flex-direction:column;}.dish-name{font-size:16px;font-weight:600;margin-bottom:4px;letter-spacing:-0.2px;}.dish-desc{font-size:13px;color:var(--text-muted);margin-bottom:10px;line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}.dish-bottom{display:flex;justify-content:space-between;align-items:center;margin-top:auto;}.dish-price{font-size:18px;font-weight:700;color:var(--accent);letter-spacing:-0.5px;}.add-btn{width:36px;height:36px;border-radius:12px;background:linear-gradient(135deg,var(--accent),rgba(var(--accent-rgb),0.8));color:#fff;border:none;font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.25s;line-height:1;font-weight:300;box-shadow:0 4px 14px rgba(var(--accent-rgb),0.35);}.add-btn:hover{transform:scale(1.1) rotate(90deg);box-shadow:0 6px 20px rgba(var(--accent-rgb),0.55);}.add-btn:active{transform:scale(0.95);}.added-flash{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) scale(0);background:#06d6a0;color:#fff;padding:8px 18px;border-radius:24px;font-size:12px;font-weight:700;pointer-events:none;z-index:5;box-shadow:0 6px 18px rgba(6,214,160,0.5);animation:flashAdd 0.9s ease forwards;letter-spacing:0.3px;}@keyframes flashAdd{0%{transform:translate(-50%,-50%) scale(0);opacity:0;}25%{transform:translate(-50%,-50%) scale(1);opacity:1;}75%{transform:translate(-50%,-90%) scale(1);opacity:1;}100%{transform:translate(-50%,-130%) scale(0.8);opacity:0;}}.cart{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(140px);width:calc(100% - 32px);max-width:480px;background:linear-gradient(135deg,var(--accent),rgba(var(--accent-rgb),0.9));color:#fff;border-radius:16px;padding:16px 22px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 14px 40px rgba(var(--accent-rgb),0.45),0 4px 12px rgba(0,0,0,0.4);cursor:pointer;transition:transform 0.4s cubic-bezier(0.4,0,0.2,1);z-index:90;border:1px solid rgba(255,255,255,0.18);}.cart.visible{transform:translateX(-50%) translateY(0);}.cart-left{display:flex;align-items:center;gap:10px;font-weight:600;font-size:15px;}.cart-count{background:rgba(255,255,255,0.25);padding:3px 10px;border-radius:12px;font-size:13px;font-weight:700;min-width:28px;text-align:center;}.cart-count.pulse{animation:countPulse 0.4s ease;}@keyframes countPulse{0%,100%{transform:scale(1);}50%{transform:scale(1.4);background:rgba(255,255,255,0.4);}}.cart-total{font-size:18px;font-weight:800;letter-spacing:-0.3px;}.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);z-index:200;display:none;align-items:flex-end;justify-content:center;}.modal-overlay.visible{display:flex;}.modal{background:linear-gradient(180deg,#1c1c2e,#14141f);width:100%;max-width:500px;border-radius:24px 24px 0 0;padding:28px 24px;max-height:85vh;overflow-y:auto;animation:slideUp 0.4s cubic-bezier(0.4,0,0.2,1);border:1px solid rgba(255,255,255,0.08);border-bottom:none;box-shadow:0 -16px 48px rgba(0,0,0,0.5);}@keyframes slideUp{from{transform:translateY(100%);}to{transform:translateY(0);}}.modal-title{font-size:22px;font-weight:700;margin-bottom:4px;text-align:center;letter-spacing:-0.3px;}.modal-subtitle{text-align:center;font-size:12.5px;color:var(--text-muted);margin-bottom:22px;letter-spacing:0.3px;}.modal-divider{height:1px;background:linear-gradient(90deg,transparent,var(--border-strong),transparent);margin:0 -24px 20px;}.cart-item{display:flex;justify-content:space-between;align-items:center;padding:14px 0;border-bottom:1px solid var(--border);gap:10px;animation:itemIn 0.3s ease;}@keyframes itemIn{from{opacity:0;transform:translateX(-10px);}to{opacity:1;transform:translateX(0);}}.cart-item-info{flex:1;min-width:0;}.cart-item-name{font-weight:600;font-size:15px;margin-bottom:2px;}.cart-item-price{color:var(--text-muted);font-size:12.5px;}.qty-control{display:flex;align-items:center;gap:10px;background:var(--glass);padding:4px;border-radius:24px;border:1px solid var(--border);}.qty-btn{width:28px;height:28px;border-radius:50%;background:var(--glass-strong);color:#fff;border:none;cursor:pointer;font-size:16px;line-height:1;transition:all 0.2s;display:flex;align-items:center;justify-content:center;}.qty-btn:hover{background:var(--accent);transform:scale(1.1);}.qty{min-width:24px;text-align:center;font-weight:600;font-size:14px;}.cart-item-total{font-weight:700;color:var(--accent);min-width:75px;text-align:right;font-size:15px;}.cart-empty{text-align:center;padding:50px 0;color:var(--text-muted);font-size:14px;}.cart-summary{margin-top:20px;padding-top:20px;border-top:2px solid var(--border);}.summary-row{display:flex;justify-content:space-between;margin-bottom:8px;font-size:14px;color:var(--text-soft);}.summary-total{font-size:18px;font-weight:700;margin-top:12px;color:#fff;display:flex;justify-content:space-between;align-items:center;}.summary-total .amount{color:var(--accent);font-size:24px;font-weight:800;letter-spacing:-0.5px;}.wa-btn{width:100%;background:linear-gradient(135deg,#25d366,#1da851);color:#fff;border:none;padding:16px;border-radius:14px;font-size:15px;font-weight:700;cursor:pointer;margin-top:22px;display:flex;align-items:center;justify-content:center;gap:10px;transition:all 0.2s;box-shadow:0 6px 20px rgba(37,211,102,0.35);letter-spacing:0.2px;}.wa-btn:hover{transform:translateY(-2px);box-shadow:0 10px 28px rgba(37,211,102,0.5);}.wa-btn:active{transform:translateY(0);}.wa-icon{width:18px;height:18px;fill:currentColor;}.close-btn{width:100%;background:var(--glass);color:var(--text-soft);border:1px solid var(--border);padding:13px;border-radius:12px;font-size:14px;cursor:pointer;margin-top:10px;transition:all 0.2s;font-weight:500;}.close-btn:hover{background:var(--glass-strong);color:#fff;}.menu-footer{text-align:center;padding:30px 20px;color:var(--text-muted);font-size:11.5px;border-top:1px solid var(--border);margin-top:20px;}.menu-footer .brand{color:var(--gold);font-weight:600;letter-spacing:1px;}@media (min-width:600px){.dish{padding:16px;}.dish-img{width:100px;height:100px;}.restaurant-name{font-size:34px;}.logo,.logo-placeholder{width:104px;height:104px;}.section{padding:28px 24px 8px;}}</style>
+<title>${r.name} · Demo Menú Digital Pro</title>
+<style>:root{--accent:${r.color};--accent-rgb:${r.colorRgb};--gold:${r.color};--bg-0:#07070b;--bg-1:#0f0f1a;--glass:rgba(255,255,255,0.035);--glass-strong:rgba(255,255,255,0.07);--border:rgba(255,255,255,0.08);--border-strong:rgba(255,255,255,0.14);--text:#f4f4fa;--text-muted:#8a8a9a;--text-soft:#b8b8c8;}*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}html{scroll-behavior:smooth;}body{font-family:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:var(--bg-0);color:var(--text);min-height:100vh;padding-bottom:160px;position:relative;overflow-x:hidden;}body::before,body::after{content:"";position:fixed;width:500px;height:500px;border-radius:50%;filter:blur(140px);opacity:0.18;z-index:0;pointer-events:none;}body::before{background:var(--accent);top:-200px;right:-150px;}body::after{background:var(--gold);bottom:-200px;left:-150px;}#app{position:relative;z-index:1;}.header{padding:38px 24px 30px;text-align:center;position:relative;background:linear-gradient(180deg,rgba(255,255,255,0.03) 0%,transparent 100%);border-bottom:1px solid var(--border);}.header::after{content:"";position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:140px;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);}.logo-wrap{position:relative;display:inline-block;margin-bottom:16px;width:96px;height:96px;}.logo-wrap::before{content:"";position:absolute;inset:-6px;border-radius:50%;background:conic-gradient(from 0deg,var(--accent),var(--gold),var(--accent));filter:blur(10px);opacity:0.5;z-index:0;animation:rotate 8s linear infinite;}@keyframes rotate{to{transform:rotate(360deg);}}.logo{width:96px;height:96px;border-radius:50%;object-fit:cover;border:3px solid rgba(255,255,255,0.12);box-shadow:0 8px 32px rgba(0,0,0,0.5);background:var(--glass);position:absolute;inset:0;z-index:2;}.logo-placeholder{width:96px;height:96px;border-radius:50%;background:linear-gradient(135deg,var(--accent),rgba(var(--accent-rgb),0.6));display:flex;align-items:center;justify-content:center;font-size:38px;font-weight:800;color:#fff;position:absolute;inset:0;z-index:1;border:3px solid rgba(255,255,255,0.12);box-shadow:0 8px 32px rgba(0,0,0,0.5);}.restaurant-name{font-size:28px;font-weight:800;margin-bottom:6px;letter-spacing:-0.5px;background:linear-gradient(180deg,#fff,#c8c8d4);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;}.slogan{font-size:11px;color:var(--gold);letter-spacing:4px;text-transform:uppercase;font-weight:600;margin-bottom:8px;}.restaurant-desc{color:var(--text-soft);font-size:14px;margin-bottom:18px;max-width:440px;margin-left:auto;margin-right:auto;line-height:1.5;}.open-badge{display:inline-flex;align-items:center;gap:7px;background:rgba(6,214,160,0.12);color:#06d6a0;padding:6px 14px;border-radius:20px;font-size:11.5px;font-weight:600;border:1px solid rgba(6,214,160,0.25);letter-spacing:0.5px;text-transform:uppercase;}.open-badge::before{content:"";width:6px;height:6px;border-radius:50%;background:#06d6a0;box-shadow:0 0 8px #06d6a0;animation:pulse 2s infinite;}@keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:0.4;transform:scale(1.3);}}.nav{position:sticky;top:0;background:rgba(7,7,11,0.78);backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);border-bottom:1px solid var(--border);z-index:100;padding:14px 0;overflow-x:auto;scrollbar-width:none;}.nav::-webkit-scrollbar{display:none;}.nav-inner{display:flex;gap:8px;padding:0 20px;min-width:max-content;}.nav-item{white-space:nowrap;padding:8px 18px;background:var(--glass);border:1px solid var(--border);border-radius:24px;color:var(--text-soft);font-size:13.5px;font-weight:500;cursor:pointer;transition:all 0.25s cubic-bezier(0.4,0,0.2,1);}.nav-item:hover{background:var(--glass-strong);color:var(--text);transform:translateY(-1px);}.nav-item.active{background:linear-gradient(135deg,var(--accent),rgba(var(--accent-rgb),0.85));color:#fff;border-color:transparent;box-shadow:0 4px 16px rgba(var(--accent-rgb),0.4);}.section{padding:24px 20px 8px;max-width:620px;margin:0 auto;width:100%;}.section-title{font-size:21px;font-weight:700;margin-bottom:18px;display:flex;align-items:center;gap:12px;letter-spacing:-0.3px;}.section-title::before{content:"";width:4px;height:22px;background:linear-gradient(180deg,var(--accent),var(--gold));border-radius:2px;}.dish{display:flex;gap:14px;background:var(--glass);border:1px solid var(--border);border-radius:16px;padding:14px;margin-bottom:12px;transition:all 0.3s cubic-bezier(0.4,0,0.2,1);opacity:0;transform:translateY(20px);position:relative;overflow:hidden;}.dish.revealed{opacity:1;transform:translateY(0);}.dish::before{content:"";position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.12),transparent);opacity:0;transition:opacity 0.3s;}.dish:hover{border-color:rgba(var(--accent-rgb),0.3);background:rgba(var(--accent-rgb),0.04);transform:translateY(-3px);box-shadow:0 10px 28px rgba(0,0,0,0.35);}.dish:hover::before{opacity:1;}.dish:active{transform:translateY(0) scale(0.99);}.dish-img{width:84px;height:84px;border-radius:12px;object-fit:cover;flex-shrink:0;background:linear-gradient(135deg,var(--glass),var(--glass-strong));border:1px solid var(--border);}.dish-info{flex:1;min-width:0;display:flex;flex-direction:column;}.dish-name{font-size:16px;font-weight:600;margin-bottom:4px;letter-spacing:-0.2px;}.dish-desc{font-size:13px;color:var(--text-muted);margin-bottom:10px;line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}.dish-bottom{display:flex;justify-content:space-between;align-items:center;margin-top:auto;}.dish-price{font-size:18px;font-weight:700;color:var(--accent);letter-spacing:-0.5px;}.add-btn{width:36px;height:36px;border-radius:12px;background:linear-gradient(135deg,var(--accent),rgba(var(--accent-rgb),0.8));color:#fff;border:none;font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.25s;line-height:1;font-weight:300;box-shadow:0 4px 14px rgba(var(--accent-rgb),0.35);}.add-btn:hover{transform:scale(1.1) rotate(90deg);box-shadow:0 6px 20px rgba(var(--accent-rgb),0.55);}.add-btn:active{transform:scale(0.95);}.added-flash{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) scale(0);background:#06d6a0;color:#fff;padding:8px 18px;border-radius:24px;font-size:12px;font-weight:700;pointer-events:none;z-index:5;box-shadow:0 6px 18px rgba(6,214,160,0.5);animation:flashAdd 0.9s ease forwards;letter-spacing:0.3px;}@keyframes flashAdd{0%{transform:translate(-50%,-50%) scale(0);opacity:0;}25%{transform:translate(-50%,-50%) scale(1);opacity:1;}75%{transform:translate(-50%,-90%) scale(1);opacity:1;}100%{transform:translate(-50%,-130%) scale(0.8);opacity:0;}}.cart{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(160px);width:calc(100% - 32px);max-width:480px;background:linear-gradient(135deg,var(--accent),rgba(var(--accent-rgb),0.9));color:#fff;border-radius:16px;padding:16px 22px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 14px 40px rgba(var(--accent-rgb),0.45),0 4px 12px rgba(0,0,0,0.4);cursor:pointer;transition:transform 0.4s cubic-bezier(0.4,0,0.2,1);z-index:90;border:1px solid rgba(255,255,255,0.18);}.cart.visible{transform:translateX(-50%) translateY(0);}.cart-left{display:flex;align-items:center;gap:10px;font-weight:600;font-size:15px;}.cart-count{background:rgba(255,255,255,0.25);padding:3px 10px;border-radius:12px;font-size:13px;font-weight:700;min-width:28px;text-align:center;}.cart-count.pulse{animation:countPulse 0.4s ease;}@keyframes countPulse{0%,100%{transform:scale(1);}50%{transform:scale(1.4);background:rgba(255,255,255,0.4);}}.cart-total{font-size:18px;font-weight:800;letter-spacing:-0.3px;}.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.78);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);z-index:200;display:none;align-items:flex-end;justify-content:center;}.modal-overlay.visible{display:flex;}.modal{background:linear-gradient(180deg,#1c1c2e,#14141f);width:100%;max-width:500px;border-radius:24px 24px 0 0;padding:28px 24px 24px;max-height:88vh;overflow-y:auto;animation:slideUp 0.4s cubic-bezier(0.4,0,0.2,1);border:1px solid rgba(255,255,255,0.08);border-bottom:none;box-shadow:0 -16px 48px rgba(0,0,0,0.5);}@keyframes slideUp{from{transform:translateY(100%);}to{transform:translateY(0);}}.modal-title{font-size:22px;font-weight:700;margin-bottom:4px;text-align:center;letter-spacing:-0.3px;}.modal-subtitle{text-align:center;font-size:12.5px;color:var(--text-muted);margin-bottom:22px;letter-spacing:0.3px;}.modal-divider{height:1px;background:linear-gradient(90deg,transparent,var(--border-strong),transparent);margin:0 -24px 20px;}.cart-item{display:flex;justify-content:space-between;align-items:center;padding:14px 0;border-bottom:1px solid var(--border);gap:10px;animation:itemIn 0.3s ease;}@keyframes itemIn{from{opacity:0;transform:translateX(-10px);}to{opacity:1;transform:translateX(0);}}.cart-item-info{flex:1;min-width:0;}.cart-item-name{font-weight:600;font-size:15px;margin-bottom:2px;}.cart-item-price{color:var(--text-muted);font-size:12.5px;}.qty-control{display:flex;align-items:center;gap:10px;background:var(--glass);padding:4px;border-radius:24px;border:1px solid var(--border);}.qty-btn{width:28px;height:28px;border-radius:50%;background:var(--glass-strong);color:#fff;border:none;cursor:pointer;font-size:16px;line-height:1;transition:all 0.2s;display:flex;align-items:center;justify-content:center;}.qty-btn:hover{background:var(--accent);transform:scale(1.1);}.qty{min-width:24px;text-align:center;font-weight:600;font-size:14px;}.cart-item-total{font-weight:700;color:var(--accent);min-width:75px;text-align:right;font-size:15px;}.cart-empty{text-align:center;padding:50px 0;color:var(--text-muted);font-size:14px;}.cart-summary{margin-top:20px;padding-top:20px;border-top:2px solid var(--border);}.summary-row{display:flex;justify-content:space-between;margin-bottom:8px;font-size:14px;color:var(--text-soft);}.summary-total{font-size:18px;font-weight:700;margin-top:12px;color:#fff;display:flex;justify-content:space-between;align-items:center;}.summary-total .amount{color:var(--accent);font-size:24px;font-weight:800;letter-spacing:-0.5px;}.lead-banner{margin:14px 16px 0;padding:12px 14px;background:linear-gradient(135deg,rgba(var(--accent-rgb),0.12),rgba(var(--accent-rgb),0.05));border:1px solid rgba(var(--accent-rgb),0.25);border-radius:14px;display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--text-soft);line-height:1.4;}.lead-banner-icon{flex-shrink:0;width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,var(--accent),rgba(var(--accent-rgb),0.7));display:flex;align-items:center;justify-content:center;font-size:14px;}.lead-banner-text b{color:var(--accent);font-weight:700;}.wa-btn{width:100%;background:linear-gradient(135deg,#25d366,#1da851);color:#fff;border:none;padding:16px;border-radius:14px;font-size:15px;font-weight:700;cursor:pointer;margin-top:14px;display:flex;align-items:center;justify-content:center;gap:10px;transition:all 0.2s;box-shadow:0 6px 20px rgba(37,211,102,0.35);letter-spacing:0.2px;}.wa-btn:hover{transform:translateY(-2px);box-shadow:0 10px 28px rgba(37,211,102,0.5);}.wa-btn:active{transform:translateY(0);}.wa-icon{width:18px;height:18px;fill:currentColor;}.close-btn{width:100%;background:var(--glass);color:var(--text-soft);border:1px solid var(--border);padding:13px;border-radius:12px;font-size:14px;cursor:pointer;margin-top:10px;transition:all 0.2s;font-weight:500;}.close-btn:hover{background:var(--glass-strong);color:#fff;}.menu-footer{text-align:center;padding:24px 20px 30px;color:var(--text-muted);font-size:11.5px;border-top:1px solid var(--border);margin-top:20px;}.menu-footer .brand{color:var(--gold);font-weight:600;letter-spacing:1px;}.menu-footer .cta-link{display:inline-block;margin-top:8px;padding:8px 16px;background:linear-gradient(135deg,var(--accent),rgba(var(--accent-rgb),0.8));color:#fff !important;text-decoration:none;border-radius:20px;font-size:12px;font-weight:600;letter-spacing:0.5px;}${extraCSS}</style>
 </head>
-<body>
+<body class="${styleAttr}">
 <div id="app"></div>
 <script>
 var RESTAURANT = ${restaurantJSON};
+var SELLER_WHATSAPP = "${SELLER_WHATSAPP}";
+var RESTAURANT_STYLE = "${r.style}";
 document.documentElement.style.setProperty("--accent", "${r.color}");
 document.documentElement.style.setProperty("--accent-rgb", "${r.colorRgb}");
 var cart = [];
@@ -199,6 +406,27 @@ function renderApp(){
   if(RESTAURANT.description){html+="<p class=\\"restaurant-desc\\">"+escapeHtml(RESTAURANT.description)+"</p>";}
   html+="<span class=\\"open-badge\\">Abierto ahora</span>";
   html+="</header>";
+
+  // Hero showcase solo en estilo híbrido
+  if(RESTAURANT_STYLE==="hybrid" && RESTAURANT.categories[0] && RESTAURANT.categories[0].dishes[0]){
+    var heroDishes = RESTAURANT.categories[0].dishes.slice(0,3);
+    html+="<div class=\\"hero-showcase\\" id=\\"heroShowcase\\">";
+    heroDishes.forEach(function(d,i){
+      html+="<img src=\\""+escapeHtml(d.image)+"\\" class=\\"hero-showcase-img"+(i===0?" active":"")+"\\" data-idx=\\""+i+"\\" alt=\\"\\" onerror=\\"this.style.opacity=0\\"/>";
+    });
+    html+="<div class=\\"hero-showcase-overlay\\"></div>";
+    html+="<div class=\\"hero-showcase-cta\\">";
+    html+="<div class=\\"hero-showcase-title\\">"+escapeHtml(heroDishes[0].name)+"</div>";
+    html+="<div class=\\"hero-showcase-price\\">"+formatPrice(heroDishes[0].price)+"</div>";
+    html+="</div>";
+    html+="<div class=\\"hero-showcase-dots\\" id=\\"heroDots\\">";
+    heroDishes.forEach(function(d,i){
+      html+="<div class=\\"hero-showcase-dot"+(i===0?" active":"")+"\\" data-idx=\\""+i+"\\"></div>";
+    });
+    html+="</div>";
+    html+="</div>";
+  }
+
   html+="<nav class=\\"nav\\"><div class=\\"nav-inner\\" id=\\"navInner\\">";
   RESTAURANT.categories.forEach(function(cat,i){
     html+="<div class=\\"nav-item"+(i===0?" active":"")+"\\" data-idx=\\""+i+"\\">"+escapeHtml(cat.name)+"</div>";
@@ -208,10 +436,14 @@ function renderApp(){
     html+="<section class=\\"section\\" id=\\"cat-"+i+"\\">";
     html+="<h2 class=\\"section-title\\">"+escapeHtml(cat.name)+"</h2>";
     cat.dishes.forEach(function(dish,j){
-      html+="<div class=\\"dish\\" data-cat=\\""+i+"\\" data-dish=\\""+j+"\\" style=\\"transition-delay:"+(j*40)+"ms\\">";
+      var dishIdx = i+"-"+j;
+      var isPopular = (i===0 && RESTAURANT_STYLE==="list");
+      html+="<div class=\\"dish\\" data-cat=\\""+i+"\\" data-dish=\\""+j+"\\" data-dish-idx=\\""+dishIdx+"\\" style=\\"transition-delay:"+(j*40)+"ms\\">";
+      if(isPopular){html+="<span class=\\"badge-tag\\">Más vendido</span>";}
       if(dish.image){html+="<img src=\\""+escapeHtml(dish.image)+"\\" class=\\"dish-img\\" alt=\\"\\" onerror=\\"this.style.display='none'\\"/>";}
       else{html+="<div class=\\"dish-img\\"></div>";}
       html+="<div class=\\"dish-info\\">";
+      if(RESTAURANT_STYLE==="list"){html+="<div class=\\"deliver-info\\">Delivery 30-45 min · Pickup gratis</div>";}
       html+="<div class=\\"dish-name\\">"+escapeHtml(dish.name)+"</div>";
       if(dish.description){html+="<div class=\\"dish-desc\\">"+escapeHtml(dish.description)+"</div>";}
       html+="<div class=\\"dish-bottom\\">";
@@ -221,13 +453,17 @@ function renderApp(){
     });
     html+="</section>";
   });
-  html+="<div class=\\"menu-footer\\"><span class=\\"brand\\">"+escapeHtml(RESTAURANT.name)+"</span> · Menú Digital</div>";
+  html+="<div class=\\"menu-footer\\"><span class=\\"brand\\">"+escapeHtml(RESTAURANT.name)+"</span> · Demo de <b>Menú Digital Pro</b><br/>Esta carta es una demostración interactiva real.<br/><a class=\\"cta-link\\" href=\\"https://menudigital.pro/register\\" target=\\"_blank\\" rel=\\"noopener\\">📱 Quiero mi carta digital →</a></div>";
+
+  // Lead banner arriba del cart
+  html+="<div class=\\"lead-banner\\"><div class=\\"lead-banner-icon\\">📱</div><div class=\\"lead-banner-text\\">Esto es una <b>demo real</b>. Al enviar tu pedido, también solicitas info para tu propia carta digital.</div></div>";
+
   html+="<div class=\\"cart\\" id=\\"cartBar\\">";
   html+="<div class=\\"cart-left\\"><span>Ver pedido</span><span class=\\"cart-count\\" id=\\"cartCount\\">0</span></div>";
   html+="<div class=\\"cart-total\\" id=\\"cartTotal\\">"+formatPrice(0)+"</div>";
   html+="</div>";
   html+="<div class=\\"modal-overlay\\" id=\\"modal\\"><div class=\\"modal\\">";
-  html+="<h2 class=\\"modal-title\\">Tu Pedido</h2>";
+  html+="<h2 class=\\"modal-title\\">Tu Pedido 🛒</h2>";
   html+="<p class=\\"modal-subtitle\\">Revisa tu orden antes de enviar por WhatsApp</p>";
   html+="<div class=\\"modal-divider\\"></div>";
   html+="<div id=\\"cartItems\\"></div>";
@@ -238,7 +474,35 @@ function renderApp(){
   app.innerHTML=html;
   attachEvents();
   setupReveal();
+  setupHeroShowcase();
   updateCart();
+}
+function setupHeroShowcase(){
+  var hero = document.getElementById("heroShowcase");
+  if(!hero) return;
+  var imgs = hero.querySelectorAll(".hero-showcase-img");
+  var dots = hero.querySelectorAll(".hero-showcase-dot");
+  var titleEl = hero.querySelector(".hero-showcase-title");
+  var priceEl = hero.querySelector(".hero-showcase-price");
+  var heroData = RESTAURANT.categories[0].dishes.slice(0,3);
+  var idx = 0;
+  setInterval(function(){
+    idx = (idx+1) % imgs.length;
+    imgs.forEach(function(im,i){im.classList.toggle("active", i===idx);});
+    dots.forEach(function(d,i){d.classList.toggle("active", i===idx);});
+    if(heroData[idx]){
+      titleEl.textContent = heroData[idx].name;
+      priceEl.textContent = formatPrice(heroData[idx].price);
+    }
+  }, 4000);
+  dots.forEach(function(d,i){
+    d.addEventListener("click",function(){
+      idx = i;
+      imgs.forEach(function(im,j){im.classList.toggle("active", j===idx);});
+      dots.forEach(function(dt,j){dt.classList.toggle("active", j===idx);});
+      if(heroData[idx]){titleEl.textContent = heroData[idx].name; priceEl.textContent = formatPrice(heroData[idx].price);}
+    });
+  });
 }
 function setupReveal(){
   var dishes=document.querySelectorAll(".dish");
@@ -299,7 +563,7 @@ function showAddedFlash(dishEl){
   if(!dishEl)return;
   var flash=document.createElement("div");
   flash.className="added-flash";
-  flash.textContent="AGREGADO";
+  flash.textContent="AGREGADO ✓";
   dishEl.appendChild(flash);
   setTimeout(function(){if(flash.parentNode)flash.parentNode.removeChild(flash);},900);
 }
@@ -318,7 +582,7 @@ function renderCartItems(){
   var container=document.getElementById("cartItems");
   var summary=document.getElementById("cartSummary");
   if(cart.length===0){
-    container.innerHTML="<div class=\\"cart-empty\\">Tu carrito esta vacio</div>";
+    container.innerHTML="<div class=\\"cart-empty\\">Tu carrito está vacío</div>";
     summary.innerHTML="";
     return;
   }
@@ -340,7 +604,7 @@ function renderCartItems(){
   container.innerHTML=html;
   var total=0;cart.forEach(function(c){total+=c.price*c.qty;});
   summary.innerHTML="<div class=\\"summary-row\\"><span>Subtotal</span><span>"+formatPrice(total)+"</span></div>";
-  summary.innerHTML+="<div class=\\"summary-total\\"><span>Total</span><span class=\\"amount\\">"+formatPrice(total)+"</span></div>";
+  summary.innerHTML+="<div class=\\"summary-total\\"><span>Total 💰</span><span class=\\"amount\\">"+formatPrice(total)+"</span></div>";
   container.querySelectorAll(".qty-btn").forEach(function(btn){
     btn.addEventListener("click",function(){
       var idx=parseInt(this.dataset.idx);
@@ -357,17 +621,20 @@ function openModal(){
 function closeModal(){document.getElementById("modal").classList.remove("visible");}
 function sendWhatsApp(){
   if(cart.length===0)return;
-  var msg="*"+RESTAURANT.name+"*\\n";
+  var msg="*"+RESTAURANT.name+"* 🍽️\\n";
   if(RESTAURANT.slogan){msg+="_"+RESTAURANT.slogan+"_\\n";}
-  msg+="\\n*PEDIDO*\\n\\n";
+  msg+="\\n🛒 *MI PEDIDO*\\n\\n";
   cart.forEach(function(item){
     msg+="• "+item.qty+"x "+item.name+" — "+formatPrice(item.price*item.qty)+"\\n";
   });
   var total=0;cart.forEach(function(c){total+=c.price*c.qty;});
-  msg+="\\n*TOTAL: "+formatPrice(total)+"*\\n\\n";
-  msg+="Hola, quisiera confirmar este pedido por favor.";
-  var url="https://wa.me/"+RESTAURANT.whatsapp+"?text="+encodeURIComponent(msg);
-  window.open(url,"_blank");
+  msg+="\\n💰 *TOTAL: "+formatPrice(total)+"*\\n\\n";
+  msg+="👋 Hola, vi esta demo en menudigital.pro y quisiera confirmar este pedido 🙏\\n\\n";
+  msg+="━━━━━━━━━━━━━━━\\n";
+  msg+="📱 *Deseo mi carta digital también* 🍽️✨\\n";
+  msg+="¿Me pueden ayudar con info? 🚀";
+  var url="https://wa.me/"+SELLER_WHATSAPP+"?text="+encodeURIComponent(msg);
+  window.open(url,"_blank","noopener,noreferrer");
 }
 renderApp();
 
@@ -376,13 +643,14 @@ renderApp();
 </html>`;
 }
 
-// ─── Generar 3 archivos ───
+// ─── Generar 6 archivos ───
 let count = 0;
 for (const r of RESTAURANTS) {
   const html = buildHTML(r);
   const outPath = path.join(OUT_DIR, r.file);
   fs.writeFileSync(outPath, html, 'utf8');
-  console.log(`✓ Generado: ${outPath} (${(html.length / 1024).toFixed(1)} KB)`);
+  console.log(`✓ Generado: ${outPath} (${(html.length / 1024).toFixed(1)} KB) — estilo ${r.style}`);
   count++;
 }
 console.log(`\n✅ ${count} cartas demo generadas en ${OUT_DIR}`);
+console.log(`📱 WhatsApp target: +${SELLER_WHATSAPP} (captación de leads)`);
