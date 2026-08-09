@@ -136,31 +136,9 @@ export function Hero() {
           className="relative"
         >
           <DemoMenuCarousel />
-
-          {/* Rating badge — movido al LADO DERECHO del teléfono (vertically centered)
-              Antes estaba en -top-3 right-6, donde chocaba con el notch y el badge
-              "Abierto ahora" del iframe. Ahora flota a la derecha, fuera del frame. */}
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 1.2 }}
-            className="absolute top-1/2 -right-4 lg:-right-6 -translate-y-1/2 bg-[#1a1a2e] border border-white/10 rounded-2xl px-3 py-2.5 shadow-2xl hidden lg:flex flex-col items-center gap-1.5 backdrop-blur z-30"
-          >
-            <div className="flex -space-x-1">
-              {[1, 2, 3].map((i) => (
-                <div
-                  key={i}
-                  className="w-5 h-5 rounded-full bg-gradient-to-br from-[#d4af37] to-[#f4d35e] border border-[#1a1a2e] text-[8px] flex items-center justify-center font-bold text-[#1a1a2e]"
-                >
-                  {["L", "M", "P"][i - 1]}
-                </div>
-              ))}
-            </div>
-            <span className="text-[11px] text-white/80 font-semibold leading-tight text-center">
-              <span className="text-[#d4af37] font-bold">4.9</span>
-            </span>
-            <span className="text-[9px] text-white/50 leading-tight text-center">320 reseñas</span>
-          </motion.div>
+          {/* Rating badge eliminado: chocaba con el borde derecho del phone frame
+              y con la floating card "Pedido WhatsApp / Funciona real" en bottom-1/3.
+              La proof social "4.9★ Rating promedio" ya está en el stats bar de la izquierda. */}
         </motion.div>
       </div>
     </section>
