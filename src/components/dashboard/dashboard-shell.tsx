@@ -206,10 +206,17 @@ export function DashboardShell({ user, plan, isSuperAdmin = false, children }: P
           <Link
             href="/dashboard"
             prefetch={false}
-            className="font-bold hover:text-[#d4af37] transition"
+            className="font-bold hover:text-[#d4af37] transition flex-1"
           >
             MenuPro
           </Link>
+          {/* WhatsApp support inline button — visible en top nav para Premium/Full (directo)
+              y Free/Pro (modal upsell a Premium). Mismo estilo compacto que el header móvil. */}
+          <SupportWhatsAppButton
+            variant="inline-icon"
+            planId={plan.id as 'free' | 'pro' | 'premium' | 'full'}
+            userEmail={user.email}
+          />
         </div>
 
         <nav className="space-y-1 flex-1">
@@ -337,7 +344,13 @@ export function DashboardShell({ user, plan, isSuperAdmin = false, children }: P
                 showLabel={false}
                 planId={plan.id}
               />
-              {/* Soporte inline — mismo tamaño h-11 w-11 que los demás botones del header */}
+              {/* WhatsApp soporte inline en el top nav — Premium/Full directo, Free/Pro upsell */}
+              <SupportWhatsAppButton
+                variant="inline-icon"
+                planId={plan.id as 'free' | 'pro' | 'premium' | 'full'}
+                userEmail={user.email}
+              />
+              {/* Soporte inline (email + FAQ) — mismo tamaño h-11 w-11 que los demás botones del header */}
               <SupportWidget variant="icon" />
               <Button
                 variant="ghost"
@@ -421,15 +434,10 @@ export function DashboardShell({ user, plan, isSuperAdmin = false, children }: P
           </div>
         </nav>
 
-        {/* ───────── Botón flotante WhatsApp (soporte por plan) ───────── */}
+        {/* ───────── Botón WhatsApp movido al top nav (mobile header + desktop sidebar) ───────── */}
         {/* PREMIUM/FULL → WhatsApp directo con mensaje contextual según ruta */}
         {/* FREE/PRO → modal upsell para upgrade a Premium */}
-        {/* Posición: bottom-6 right-6, NO choca con bottom-nav (que está en bottom-0) */}
-        <SupportWhatsAppButton
-          variant="dashboard"
-          planId={plan.id as 'free' | 'pro' | 'premium' | 'full'}
-          userEmail={user.email}
-        />
+        {/* Ya NO hay FAB flotante en el dashboard — el botón ahora vive en el top nav bar. */}
       </div>
 
     </div>

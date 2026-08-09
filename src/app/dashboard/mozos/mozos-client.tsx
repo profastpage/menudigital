@@ -20,6 +20,8 @@ import {
   KeyRound,
   Shuffle,
   Lock,
+  ExternalLink,
+  Info,
 } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -202,6 +204,15 @@ export function MozosClient({ user, plan, isSuperAdmin }: Props) {
     toast.success('URL del panel del mozo copiada');
   }
 
+  function openMozoPanel(w: Waiter) {
+    if (!w.qr_token) {
+      toast.error('Este mozo no tiene token QR. Genera uno nuevo.');
+      return;
+    }
+    const url = `${window.location.origin}/mozo/${w.qr_token}`;
+    window.open(url, '_blank', 'noopener,noreferrer');
+  }
+
   // ─── Password management ─────────────────────────────────
   async function handleResetPassword(w: Waiter) {
     if (!confirm(`¿Generar una nueva contraseña aleatoria para ${w.full_name}? El mozo deberá usar la nueva contraseña la próxima vez que abra su panel.`)) return;
@@ -287,6 +298,44 @@ export function MozosClient({ user, plan, isSuperAdmin }: Props) {
 
   return (
     <DashboardShell user={user} plan={plan} isSuperAdmin={isSuperAdmin}>
+      {/* ───────── Banner explicativo: acceso externo sin login ───────── */}
+      <div className="mb-6 rounded-2xl border border-[#9d4edd]/25 bg-gradient-to-br from-[#9d4edd]/10 to-transparent p-4 sm:p-5">
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 rounded-full bg-[#9d4edd]/20 flex items-center justify-center flex-shrink-0">
+            <Info className="w-5 h-5 text-[#c77dff]" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h3 className="font-bold text-sm sm:text-base mb-1 text-white">
+              Los mozos acceden por enlace externo — no necesitan tu cuenta
+            </h3>
+            <p className="text-xs sm:text-[13px] text-white/60 leading-relaxed mb-3">
+              Cada mozo tiene su propio <strong className="text-white/80">enlace único</strong> y <strong className="text-white/80">QR</strong>.
+              Compártelos por WhatsApp o imprime el QR. El mozo abre el panel desde su celular
+              <strong className="text-white/80"> sin iniciar sesión con tu cuenta</strong> — es un acceso externo e independiente.
+              Opcionalmente puedes proteger su panel con una <strong className="text-white/80">contraseña</strong> (creada aquí, desde tu panel de cliente Premium/Full).
+            </p>
+            <div className="flex flex-wrap gap-2 text-[11px]">
+              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-white/5 border border-white/10 text-white/70">
+                <ExternalLink className="w-3 h-3" />
+                Acceso externo
+              </span>
+              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-white/5 border border-white/10 text-white/70">
+                <QrCode className="w-3 h-3" />
+                QR o URL única por mozo
+              </span>
+              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-white/5 border border-white/10 text-white/70">
+                <KeyRound className="w-3 h-3" />
+                Contraseña opcional
+              </span>
+              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-white/5 border border-white/10 text-white/70">
+                <Lock className="w-3 h-3" />
+                Sin login del dueño
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* ───────── Header + actions ───────── */}
       <div className="mb-6 flex items-center justify-between flex-wrap gap-4">
         <div>
@@ -515,6 +564,15 @@ export function MozosClient({ user, plan, isSuperAdmin }: Props) {
               {/* Acciones */}
               <div className="flex items-center gap-1 pt-2 border-t border-white/5">
                 <button
+                  onClick={() => openMozoPanel(w)}
+                  className="flex-1 flex items-center justify-center gap-1 py-2.5 rounded-lg bg-[#9d4edd]/15 hover:bg-[#9d4edd]/25 text-xs text-[#c77dff] hover:text-white transition min-h-[44px] font-semibold"
+                  aria-label={`Abrir panel externo de ${w.full_name}`}
+                  title="Abrir panel del mozo en nueva pestaña (acceso externo, sin login)"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  Abrir
+                </button>
+                <button
                   onClick={() => setShowQrFor(w)}
                   className="flex-1 flex items-center justify-center gap-1 py-2.5 rounded-lg bg-white/5 hover:bg-white/10 text-xs text-white/80 transition min-h-[44px]"
                   aria-label="Ver QR del mozo"
@@ -554,6 +612,15 @@ export function MozosClient({ user, plan, isSuperAdmin }: Props) {
                   )}
                 </button>
               </div>
+
+              {/* Pista de URL externa (solo si tiene QR token) */}
+              {w.qr_token && (
+                <div className="mt-2 pt-2 border-t border-white/5 flex items-center gap-1.5 text-[10px] text-white/40">
+                  <ExternalLink className="w-3 h-3 flex-shrink-0" />
+                  <code className="truncate font-mono">/mozo/{w.qr_token.slice(0, 12)}…</code>
+                  <span className="ml-auto whitespace-nowrap">Externo · sin login</span>
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -725,6 +792,13 @@ export function MozosClient({ user, plan, isSuperAdmin }: Props) {
               </div>
             )}
 
+            {/* Banner recordatorio dentro del modal QR */}
+            <div className="bg-[#9d4edd]/10 border border-[#9d4edd]/25 rounded-lg p-2.5 mb-3 text-[10px] text-white/70 leading-relaxed">
+              <strong className="text-[#c77dff]">Importante:</strong> Este enlace es externo.
+              El mozo lo abre desde su celular <strong>sin iniciar sesión con tu cuenta</strong>.
+              Compártelo por WhatsApp o imprime el QR.
+            </div>
+
             <div className="flex gap-2">
               <Button
                 variant="outline"
@@ -742,6 +816,17 @@ export function MozosClient({ user, plan, isSuperAdmin }: Props) {
                 Cerrar
               </Button>
             </div>
+
+            {/* Botón secundario: Abrir panel externo */}
+            {showQrFor.qr_token && (
+              <button
+                onClick={() => openMozoPanel(showQrFor)}
+                className="w-full mt-2 flex items-center justify-center gap-1.5 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-xs text-[#c77dff] transition"
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+                Abrir panel del mozo en nueva pestaña
+              </button>
+            )}
 
             <p className="text-[10px] text-white/40 text-center mt-3">
               El mozo abre este QR desde su celular para tomar comandas sin login.

@@ -7,17 +7,20 @@ import { X, Sparkles, Clock, CheckCircle2 } from 'lucide-react';
 import { WhatsAppIcon } from '@/components/support/whatsapp-icon';
 
 /**
- * Botón flotante sticky de WhatsApp para soporte al cliente.
+ * Botón de WhatsApp para soporte al cliente.
  *
- * 3 variantes:
- *  - variant="landing": siempre visible en la landing. Mensaje genérico de ventas.
+ * 4 variantes:
+ *  - variant="landing": FAB flotante en la landing. Mensaje genérico de ventas.
  *    Sin verificación de plan (visitantes sin cuenta también lo ven).
- *  - variant="dashboard": visible solo en dashboard. Verifica plan del usuario.
+ *  - variant="dashboard": FAB flotante en dashboard. Verifica plan del usuario.
  *    PREMIUM/FULL → abre WhatsApp directo con mensaje contextual según ruta.
  *    FREE/PRO → abre modal upsell "Upgrade a Premium para soporte WhatsApp".
- *  - variant="always-on": como landing pero con mensaje custom (para páginas legales, etc.)
+ *  - variant="always-on": FAB flotante como landing pero con mensaje custom.
+ *  - variant="inline-icon": BOTÓN COMPACTO (h-11 w-11) para embeber en headers/barras.
+ *    Misma lógica que dashboard (plan-aware) pero SIN floating, SIN FAB.
+ *    Pensado para integrarse en el top nav bar (mobile header + desktop sidebar).
  *
- * Posición: fixed bottom-6 right-6 z-40 (no choca con bottom-nav mobile).
+ * Posición FAB: fixed bottom-6 right-6 z-40 (no choca con bottom-nav mobile).
  * NO se renderiza en rutas públicas de restaurante (/r/*, /qr/*, /mozo/*) para no
  * confundir a los clientes del restaurante (ellos no deben contactar a MenuPro).
  *
@@ -28,8 +31,8 @@ export const SUPPORT_WHATSAPP_NUMBER = '51933667414'; // +51 933 667 414
 export const SUPPORT_WHATSAPP_DISPLAY = '+51 933 667 414';
 
 interface Props {
-  variant: 'landing' | 'dashboard' | 'always-on';
-  /** Plan del usuario (solo relevante para variant="dashboard") */
+  variant: 'landing' | 'dashboard' | 'always-on' | 'inline-icon';
+  /** Plan del usuario (solo relevante para variant="dashboard" y "inline-icon") */
   planId?: 'free' | 'pro' | 'premium' | 'full';
   /** Email del usuario (para incluir en mensaje pre-rellenado) */
   userEmail?: string;
@@ -54,6 +57,7 @@ export function SupportWhatsAppButton({
   // Detectar mobile para ajustar posición.
   // Solo variant="dashboard" necesita elevar el botón (choca con bottom-nav del dashboard).
   // variant="landing" y "always-on" NO tienen bottom-nav, así que van pegados a la esquina inferior.
+  // variant="inline-icon" no es flotante, no necesita nada de esto.
   const elevateForBottomNav = variant === 'dashboard';
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 1024);
@@ -62,8 +66,8 @@ export function SupportWhatsAppButton({
     return () => window.removeEventListener('resize', check);
   }, []);
 
-  // No renderizar en rutas públicas de restaurante
-  if (typeof window !== 'undefined') {
+  // No renderizar en rutas públicas de restaurante (excepto inline-icon que se controla desde el caller)
+  if (typeof window !== 'undefined' && variant !== 'inline-icon') {
     if (
       pathname?.startsWith('/r/') ||
       pathname?.startsWith('/qr/') ||
@@ -100,7 +104,7 @@ export function SupportWhatsAppButton({
       return 'Hola, vengo de la web de MenuPro. Quisiera información sobre planes y precios.';
     }
 
-    // Dashboard: mensaje contextual según ruta
+    // Dashboard / inline-icon: mensaje contextual según ruta
     const planName = planId.toUpperCase();
     const email = userEmail ? ` (cuenta: ${userEmail})` : '';
 
@@ -135,11 +139,11 @@ export function SupportWhatsAppButton({
     return `Hola, soy cliente ${planName}${email}. Necesito ayuda con MenuPro.`;
   }, [variant, customMessage, planId, userEmail, pathname]);
 
-  // ¿Tiene acceso a WhatsApp directo? (solo PREMIUM/FULL en variant dashboard)
+  // ¿Tiene acceso a WhatsApp directo? (solo PREMIUM/FULL en variant dashboard/inline-icon)
   const hasWhatsappAccess = variant === 'landing' || variant === 'always-on' || planId === 'premium' || planId === 'full';
 
   const handleClick = () => {
-    if (variant === 'dashboard' && !hasWhatsappAccess) {
+    if ((variant === 'dashboard' || variant === 'inline-icon') && !hasWhatsappAccess) {
       // FREE/PRO → mostrar upsell
       setShowUpsell(true);
       return;
@@ -164,9 +168,95 @@ export function SupportWhatsAppButton({
 
   return (
     <>
-      {/* ─── Botón flotante sticky ─── */}
-      {/* En dashboard mobile: subimos el botón para que no choque con el bottom-nav (h-64px) */}
-      {/* En landing / always-on: pegado a la esquina inferior derecha real (bottom 16px) */}
+      {/* ─── INLINE-ICON variant (compact h-11 w-11 button for headers/sidebar) ─── */}
+      {variant === 'inline-icon' && (
+        <div className={`relative ${className}`}>
+          {/* Tooltip / Popup de info */}
+          {open && (
+            <div className="absolute top-full right-0 mt-2 w-[300px] max-w-[calc(100vw-2rem)] bg-[#1a1a2e] border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-50">
+              {/* Header */}
+              <div className="bg-[#25D366] p-4 text-white">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
+                      <WhatsAppIcon className="w-5 h-5" fillColor="white" />
+                    </div>
+                    <div>
+                      <div className="font-bold text-sm">Soporte MenuPro</div>
+                      <div className="flex items-center gap-1.5 text-[11px]">
+                        <span className={`inline-block w-2 h-2 rounded-full ${isOnline ? 'bg-green-300 animate-pulse' : 'bg-gray-300'}`} />
+                        {isOnline ? 'En línea ahora' : 'Fuera de horario'}
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setOpen(false)}
+                    className="w-7 h-7 rounded-lg hover:bg-white/20 flex items-center justify-center transition"
+                    aria-label="Cerrar"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Body */}
+              <div className="p-3 space-y-3">
+                <div className="text-xs text-white/80">
+                  {hasWhatsappAccess ? (
+                    <p>Como cliente <span className="font-bold uppercase text-[#d4af37]">{planId}</span> tienes soporte WhatsApp prioritario.</p>
+                  ) : (
+                    <p>Soporte WhatsApp disponible desde el plan <span className="font-bold text-[#d4af37]">Premium</span>.</p>
+                  )}
+                </div>
+
+                <div className="text-[10px] text-white/50 flex items-start gap-1.5">
+                  <Clock className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <div>Lun a Sáb: 9am - 9pm (hora Perú)</div>
+                    <div className="mt-0.5">Respuesta: {isOnline ? '~5 min' : 'próx. día hábil'}</div>
+                  </div>
+                </div>
+
+                <button
+                  onClick={handleClick}
+                  className="w-full bg-[#25D366] hover:bg-[#1fae57] text-white font-bold py-2.5 rounded-xl flex items-center justify-center gap-2 transition active:scale-[0.98] min-h-[44px] text-sm"
+                >
+                  <WhatsAppIcon className="w-4 h-4" fillColor="white" />
+                  {hasWhatsappAccess ? 'Abrir WhatsApp' : 'Ver planes Premium'}
+                </button>
+
+                <a
+                  href="mailto:soporte@menudigital.pro"
+                  className="w-full bg-white/5 hover:bg-white/10 text-white/70 font-semibold py-2 rounded-xl flex items-center justify-center gap-2 transition text-xs"
+                >
+                  o envíanos un email
+                </a>
+              </div>
+            </div>
+          )}
+
+          {/* Botón compacto h-11 w-11 (mismo tamaño que InstallAppButton y SupportWidget) */}
+          <button
+            onClick={() => setOpen(v => !v)}
+            aria-label={open ? 'Cerrar soporte WhatsApp' : 'Contactar soporte por WhatsApp'}
+            title={hasWhatsappAccess ? 'Soporte WhatsApp prioritario' : 'Upgrade a Premium para WhatsApp'}
+            className="relative w-11 h-11 rounded-lg bg-[#25D366]/15 hover:bg-[#25D366]/25 border border-[#25D366]/30 flex items-center justify-center transition active:scale-95"
+          >
+            {/* Pequeño indicador online (sin pulse para no distraer en el header) */}
+            {isOnline && !open && (
+              <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-green-400 border border-[#0a0a14]" />
+            )}
+            {open ? (
+              <X className="w-4 h-4 text-white" />
+            ) : (
+              <WhatsAppIcon className="w-5 h-5" fillColor="#25D366" />
+            )}
+          </button>
+        </div>
+      )}
+
+      {/* ─── Botón flotante sticky (solo variantes landing / dashboard / always-on) ─── */}
+      {variant !== 'inline-icon' && (
       <div
         className={`fixed right-4 sm:right-6 z-40 transition-all ${className}`}
         style={{
@@ -262,8 +352,9 @@ export function SupportWhatsAppButton({
           )}
         </button>
       </div>
+      )}
 
-      {/* ─── Modal Upsell (FREE/PRO en dashboard) ─── */}
+      {/* ─── Modal Upsell (FREE/PRO en dashboard / inline-icon) ─── */}
       {showUpsell && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
           <div
