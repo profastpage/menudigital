@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import {  ClipboardList, Send, Check, X, Plus, Minus, Search,
   RefreshCw, AlertCircle, Utensils, ChefHat, Clock, User,
   WifiOff, CloudUpload, Loader2,
-  Lock, Eye, EyeOff, ArrowRight,
+  Lock, Eye, EyeOff, ArrowRight, ChevronUp,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useOfflineQueue } from '@/hooks/use-offline-queue';
@@ -103,6 +103,7 @@ export function MozoPanel({ token, waiterName }: Props) {
   const [partySize, setPartySize] = useState('');
   const [orderNotes, setOrderNotes] = useState('');
   const [sending, setSending] = useState(false);
+  const [cartExpanded, setCartExpanded] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -231,6 +232,7 @@ export function MozoPanel({ token, waiterName }: Props) {
         );
         // Reset
         setCart([]);
+        setCartExpanded(false);
         setSelectedMesa(null);
         setCustomerName('');
         setPartySize('');
@@ -275,6 +277,7 @@ export function MozoPanel({ token, waiterName }: Props) {
       toast.success(`Comanda ${d.order_number} enviada a cocina`);
       // Reset
       setCart([]);
+      setCartExpanded(false);
       setSelectedMesa(null);
       setCustomerName('');
       setPartySize('');
@@ -300,6 +303,7 @@ export function MozoPanel({ token, waiterName }: Props) {
           });
           toast.success('📤 Sin red — comanda guardada para envío automático');
           setCart([]);
+          setCartExpanded(false);
           setSelectedMesa(null);
           setView('comandas');
         } catch {
@@ -873,24 +877,87 @@ export function MozoPanel({ token, waiterName }: Props) {
         </div>
       )}
 
-      {/* ───── Carrito flotante ───── */}
+      {/* ───── Carrito unificado (bottom sheet expandible) ───── */}
       {cart.length > 0 && view === 'menu' && (
-        <div className="fixed bottom-0 left-0 right-0 z-40 bg-[#0a0a14] border-t border-white/10 p-3 safe-bottom shadow-2xl">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs text-white/50">{cart.length} plato(s) · Total</span>
-            <span className="text-lg font-bold text-[#d4af37]">S/ {cartTotal.toFixed(2)}</span>
-          </div>
-          <div className="flex items-center gap-2">
+        <div className="fixed bottom-0 left-0 right-0 z-40 safe-bottom shadow-2xl">
+          {/* Expandable lista de items (se abre desde el summary del bottom bar) */}
+          {cartExpanded && (
+            <div className="bg-[#0a0a14] border-t border-white/10 max-h-[45vh] overflow-y-auto px-3 py-2 scrollbar-none">
+              {cart.map((item, idx) => (
+                <div
+                  key={idx}
+                  className="flex items-center gap-2 text-xs py-2 border-b border-white/5 last:border-0"
+                >
+                  <button
+                    onClick={() => updateQty(idx, -1)}
+                    className="w-9 h-9 rounded-lg bg-white/10 active:bg-white/20 flex items-center justify-center flex-shrink-0 transition"
+                    aria-label="Quitar uno"
+                  >
+                    <Minus className="w-3 h-3" />
+                  </button>
+                  <span className="text-white font-bold w-7 text-center">{item.quantity}</span>
+                  <button
+                    onClick={() => updateQty(idx, 1)}
+                    className="w-9 h-9 rounded-lg bg-white/10 active:bg-white/20 flex items-center justify-center flex-shrink-0 transition"
+                    aria-label="Agregar uno"
+                  >
+                    <Plus className="w-3 h-3" />
+                  </button>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-white truncate font-medium">{item.dish.name}</div>
+                    <div className="text-white/40 text-[10px]">
+                      S/ {item.dish.price.toFixed(2)} c/u · Subt. S/ {(item.dish.price * item.quantity).toFixed(2)}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => removeItem(idx)}
+                    className="w-9 h-9 rounded-lg bg-red-500/20 active:bg-red-500/30 text-red-300 flex items-center justify-center flex-shrink-0 transition"
+                    aria-label="Quitar del carrito"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              ))}
+
+              {/* Botón vaciar al final de la lista expandida */}
+              <button
+                onClick={() => { setCart([]); setCartExpanded(false); }}
+                className="w-full mt-2 px-3 py-2 rounded-lg bg-red-500/10 active:bg-red-500/20 text-red-300 text-xs font-medium transition"
+              >
+                Vaciar carrito
+              </button>
+            </div>
+          )}
+
+          {/* Bottom bar — SIEMPRE visible cuando hay items en el carrito */}
+          <div className="bg-[#0a0a14] border-t border-white/10 p-3">
+            {/* Fila 1: toggle expandir + total */}
             <button
-              onClick={() => setCart([])}
-              className="px-3 py-3 rounded-xl bg-white/5 text-white/60 text-xs min-h-[48px]"
+              onClick={() => setCartExpanded(v => !v)}
+              className="w-full flex items-center justify-between mb-2 active:opacity-80 transition"
             >
-              Vaciar
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="flex items-center justify-center w-7 h-7 rounded-full bg-[#9d4edd]/20 text-[#c77dff] text-xs font-bold flex-shrink-0">
+                  {cart.length}
+                </span>
+                <span className="text-xs text-white/70 truncate">
+                  {cart.length === 1 ? '1 plato' : `${cart.length} platos`}
+                  {!selectedMesa && ' · Selecciona mesa'}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <span className="text-lg font-bold text-[#d4af37]">S/ {cartTotal.toFixed(2)}</span>
+                <ChevronUp
+                  className={`w-4 h-4 text-white/50 transition-transform ${cartExpanded ? '' : 'rotate-180'}`}
+                />
+              </div>
             </button>
+
+            {/* Fila 2: botón enviar (full width) */}
             <button
               onClick={sendComanda}
               disabled={!selectedMesa || sending}
-              className="flex-1 px-4 py-3 rounded-xl bg-gradient-to-r from-[#9d4edd] to-[#d4af37] text-white font-semibold text-sm disabled:opacity-40 flex items-center justify-center gap-2 min-h-[48px]"
+              className="w-full px-4 py-3 rounded-xl bg-gradient-to-r from-[#9d4edd] to-[#d4af37] text-white font-semibold text-sm disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 min-h-[48px] active:scale-[0.99] transition"
             >
               {sending ? (
                 <><RefreshCw className="w-4 h-4 animate-spin" /> Enviando...</>
@@ -899,49 +966,6 @@ export function MozoPanel({ token, waiterName }: Props) {
               )}
             </button>
           </div>
-        </div>
-      )}
-
-      {/* ───── Modal detalle carrito ───── */}
-      {cart.length > 0 && view === 'menu' && (
-        <div className="fixed bottom-[150px] left-0 right-0 z-30 px-3">
-          <details className="bg-[#0a0a14] border border-white/15 rounded-xl shadow-2xl">
-            <summary className="px-3 py-3 text-xs text-white/70 cursor-pointer min-h-[44px] flex items-center">
-              Ver carrito ({cart.length})
-            </summary>
-            <div className="p-2 space-y-2 max-h-[40vh] overflow-y-auto">
-              {cart.map((item, idx) => (
-                <div key={idx} className="flex items-center gap-2 text-xs">
-                  <button
-                    onClick={() => updateQty(idx, -1)}
-                    className="w-9 h-9 rounded bg-white/10 flex items-center justify-center flex-shrink-0"
-                    aria-label="Quitar uno"
-                  >
-                    <Minus className="w-3 h-3" />
-                  </button>
-                  <span className="text-white font-bold w-7 text-center">{item.quantity}</span>
-                  <button
-                    onClick={() => updateQty(idx, 1)}
-                    className="w-9 h-9 rounded bg-white/10 flex items-center justify-center flex-shrink-0"
-                    aria-label="Agregar uno"
-                  >
-                    <Plus className="w-3 h-3" />
-                  </button>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-white truncate">{item.dish.name}</div>
-                    <div className="text-white/40">S/ {(item.dish.price * item.quantity).toFixed(2)}</div>
-                  </div>
-                  <button
-                    onClick={() => removeItem(idx)}
-                    className="w-9 h-9 rounded bg-red-500/20 text-red-300 flex items-center justify-center flex-shrink-0"
-                    aria-label="Quitar del carrito"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          </details>
         </div>
       )}
 

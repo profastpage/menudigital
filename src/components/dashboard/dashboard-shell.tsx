@@ -365,6 +365,64 @@ export function DashboardShell({ user, plan, isSuperAdmin = false, children }: P
           </div>
         </header>
 
+        {/* Desktop sticky top header (lg+) — siempre visible al hacer scroll */}
+        <header className="hidden lg:flex sticky top-0 z-30 bg-[#07070b]/80 backdrop-blur-md border-b border-white/10 safe-top">
+          <div className="px-8 py-3 flex items-center justify-between w-full max-w-6xl mx-auto">
+            {/* Left: section title (derived from pathname) */}
+            <div className="flex items-center gap-3 min-w-0">
+              <span className="text-sm text-white/40 hidden xl:inline">MenúPro / Dashboard /</span>
+              <h2 className="text-base font-semibold text-white truncate">
+                {NAV_ITEMS.find(i => isActive(i.href))?.label || 'Dashboard'}
+              </h2>
+            </div>
+            {/* Right: quick actions */}
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <span
+                className="px-2 py-0.5 rounded-full text-[11px] font-semibold"
+                style={
+                  plan.id !== 'free'
+                    ? {
+                        background: `${plan.color}20`,
+                        color: plan.color,
+                        border: `1px solid ${plan.color}40`,
+                      }
+                    : {
+                        background: 'rgba(255,255,255,0.05)',
+                        color: 'rgba(255,255,255,0.6)',
+                      }
+                }
+              >
+                {plan.name}
+              </span>
+              <InstallAppButton
+                variant="dashboard"
+                size="sm"
+                style="ghost"
+                showLabel={false}
+                planId={plan.id}
+              />
+              <SupportWhatsAppButton
+                variant="inline-icon"
+                planId={plan.id as 'free' | 'pro' | 'premium' | 'full'}
+                userEmail={user.email}
+              />
+              <SupportWidget variant="icon" />
+              <div className="hidden xl:flex items-center gap-2 pl-2 ml-1 border-l border-white/10">
+                <span className="text-xs text-white/50 truncate max-w-[180px]">{user.email}</span>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleLogout}
+                  className="text-white/60 hover:text-white h-9 w-9"
+                  aria-label="Cerrar sesión"
+                >
+                  <LogOut className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        </header>
+
         <main className="flex-1 px-4 sm:px-6 lg:px-8 py-6 sm:py-8 w-full max-w-6xl mx-auto">
           {children}
         </main>

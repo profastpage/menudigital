@@ -18,6 +18,10 @@ export async function PATCH(
   if (body.phone !== undefined) update.phone = body.phone;
   if (body.pin !== undefined) update.pin = body.pin;
   if (body.is_active !== undefined) update.is_active = body.is_active;
+  // Role update (mozo <-> cocinero)
+  if (body.role !== undefined && (body.role === 'mozo' || body.role === 'cocinero')) {
+    update.role = body.role;
+  }
   // Password management:
   //  - body.password = string → set new password
   //  - body.password = null/'' → clear password (panel vuelve a ser público)

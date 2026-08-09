@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { DashboardShell } from '@/components/dashboard/dashboard-shell';
 import { PremiumGate } from '@/components/dashboard/premium-gate';
+import { KitchenStaffManager } from './kitchen-staff-manager';
 import type { Plan, PlanId } from '@/lib/plans';
 
 interface OrderItem {
@@ -127,20 +128,29 @@ export function CocinaClient({ user, plan, isSuperAdmin }: Props) {
   }
 
   // Función para calcular tiempo transcurrido
+  // Capa valores absurdos (>7 días) mostrando "Antiguo" para que el cocinero
+  // vea claramente que esa comanda es data stale y debería cancelarse/limpiarse.
   function timeAgo(dateStr: string): string {
     const diff = Date.now() - new Date(dateStr).getTime();
+    if (diff < 0) return 'ahora'; // reloj del server desincronizado
     const mins = Math.floor(diff / 60000);
     if (mins < 1) return 'ahora';
     if (mins < 60) return `${mins}m`;
     const hrs = Math.floor(mins / 60);
     const remMins = mins % 60;
-    return `${hrs}h ${remMins}m`;
+    if (hrs < 24) return `${hrs}h ${remMins}m`;
+    const days = Math.floor(hrs / 24);
+    if (days === 1) return 'Ayer';
+    if (days < 7) return `${days}d`;
+    return 'Antiguo';
   }
 
   // Función para colorear por urgencia
-  function getUrgency(sentAt: string | null, createdAt: string): 'normal' | 'warning' | 'critical' {
+  function getUrgency(sentAt: string | null, createdAt: string): 'normal' | 'warning' | 'critical' | 'stale' {
     const ref = sentAt || createdAt;
     const mins = (Date.now() - new Date(ref).getTime()) / 60000;
+    // Stale: más de 24h — data antigua probablemente de tests
+    if (mins > 1440) return 'stale';
     if (mins > 20) return 'critical';
     if (mins > 10) return 'warning';
     return 'normal';
@@ -153,6 +163,9 @@ export function CocinaClient({ user, plan, isSuperAdmin }: Props) {
 
   return (
     <DashboardShell user={user} plan={plan} isSuperAdmin={isSuperAdmin}>
+      {/* ─── Gestión de personal de cocina (colapsable) ─── */}
+      <KitchenStaffManager />
+
       <div className="mb-6 flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold mb-1 flex items-center gap-2">
@@ -239,7 +252,7 @@ function Column({
 }: {
   title: string; count: number; color: string;
   orders: Order[];
-  getUrgency: (sentAt: string | null, createdAt: string) => 'normal' | 'warning' | 'critical';
+  getUrgency: (sentAt: string | null, createdAt: string) => 'normal' | 'warning' | 'critical' | 'stale';
   timeAgo: (dateStr: string) => string;
   onAdvance: (id: string) => void;
   onItemUpdate: (orderId: string, itemId: string, status: OrderItem['status']) => void;
@@ -263,13 +276,17 @@ function Column({
       <div className="space-y-3">
         {orders.map(order => {
           const urgency = getUrgency(order.sent_at, order.created_at);
-          const urgencyColor = urgency === 'critical' ? '#e63946' : urgency === 'warning' ? '#d4af37' : color;
+          const urgencyColor =
+            urgency === 'critical' ? '#e63946'
+            : urgency === 'warning' ? '#d4af37'
+            : urgency === 'stale' ? '#6b7280'  // gris para órdenes antiguas (data stale)
+            : color;
           const activeItems = order.items.filter(i => i.status !== 'cancelado' && i.status !== 'entregado');
 
           return (
             <div
               key={order.id}
-              className="rounded-2xl border-2 p-4 bg-[#0f0f1a]"
+              className={`rounded-2xl border-2 p-4 bg-[#0f0f1a] ${urgency === 'stale' ? 'opacity-60' : ''}`}
               style={{ borderColor: `${urgencyColor}60` }}
             >
               {/* Header */}
@@ -290,6 +307,9 @@ function Column({
                   </div>
                   {urgency === 'critical' && (
                     <div className="text-[10px] text-red-400 font-bold mt-1">¡URGENTE!</div>
+                  )}
+                  {urgency === 'stale' && (
+                    <div className="text-[10px] text-white/40 font-semibold mt-1">⏳ Antigua</div>
                   )}
                 </div>
               </div>
