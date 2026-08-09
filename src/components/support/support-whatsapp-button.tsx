@@ -51,7 +51,10 @@ export function SupportWhatsAppButton({
   const [isOnline, setIsOnline] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
 
-  // Detectar mobile para ajustar posición (no chocar con bottom-nav del dashboard)
+  // Detectar mobile para ajustar posición.
+  // Solo variant="dashboard" necesita elevar el botón (choca con bottom-nav del dashboard).
+  // variant="landing" y "always-on" NO tienen bottom-nav, así que van pegados a la esquina inferior.
+  const elevateForBottomNav = variant === 'dashboard';
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 1024);
     check();
@@ -163,12 +166,13 @@ export function SupportWhatsAppButton({
     <>
       {/* ─── Botón flotante sticky ─── */}
       {/* En dashboard mobile: subimos el botón para que no choque con el bottom-nav (h-64px) */}
+      {/* En landing / always-on: pegado a la esquina inferior derecha real (bottom 16px) */}
       <div
         className={`fixed right-4 sm:right-6 z-40 transition-all ${className}`}
         style={{
-          bottom: isMobile
+          bottom: elevateForBottomNav && isMobile
             ? 'calc(72px + env(safe-area-inset-bottom, 0px))'
-            : '24px',
+            : 'max(16px, env(safe-area-inset-bottom, 0px))',
         }}
       >
         {/* Tooltip / Popup de info (se abre al hover en desktop, click en mobile) */}

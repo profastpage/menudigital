@@ -1,0 +1,388 @@
+/**
+ * Genera 3 cartas demo estáticas en /public/demo-menus/
+ * Usadas por el carrusel de demo en el Hero del landing.
+ *
+ * Cada carta es un HTML standalone completo con:
+ * - Header con logo, nombre, slogan, descripción, badge "Abierto"
+ * - Nav sticky de categorías con auto-detección al scroll
+ * - Secciones de platos con imagen, nombre, descripción, precio
+ * - Carrito flotante con contador y total
+ * - Modal de pedido con qty controls
+ * - Botón "Enviar pedido por WhatsApp"
+ *
+ * Misma estructura y CSS que /public/menu-ejemplo.html pero con
+ * datos y colores distintos para mostrar variedad real.
+ */
+const fs = require('fs');
+const path = require('path');
+
+const OUT_DIR = path.join(process.cwd(), 'public', 'demo-menus');
+if (!fs.existsSync(OUT_DIR)) fs.mkdirSync(OUT_DIR, { recursive: true });
+
+// ─── 3 restaurantes demo con identidades visuales distintas ───
+const RESTAURANTS = [
+  {
+    file: 'la-parrilla.html',
+    name: 'La Parrilla del Chef',
+    slogan: 'Cocina de autor desde 1998',
+    description: 'Auténtica cocina peruana con ingredientes frescos del mercado. Especialistas en parrillas, mariscos y fusión Nikkei.',
+    whatsapp: '51987654321',
+    logo: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=300&h=300&fit=crop',
+    color: '#d4af37',
+    colorRgb: '212, 175, 55',
+    currency: 'S/',
+    categories: [
+      {
+        name: 'Entradas',
+        dishes: [
+          { name: 'Ceviche Clásico', description: 'Pescado fresco marinado en limón, cebolla, cilantro y ají limo. Acompañado de camote y choclo.', price: 28, image: 'https://images.unsplash.com/photo-1551183053-bf91a1d81141?w=400&h=400&fit=crop' },
+          { name: 'Causa Limeña', description: 'Papa amarilla al ají amarillo, rellena de pollo y palta. Estilo tradicional limeño.', price: 22, image: 'https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?w=400&h=400&fit=crop' },
+          { name: 'Anticuchos de Corazón', description: 'Brochetas de corazón de res marinadas en ají panca. 4 unidades con papita dorada.', price: 25, image: 'https://images.unsplash.com/photo-1529543544282-ea669407fca3?w=400&h=400&fit=crop' },
+        ],
+      },
+      {
+        name: 'Platos de Fondo',
+        dishes: [
+          { name: 'Lomo Saltado Premium', description: 'Salteado de lomo de res wagyu con cebolla, tomate y papas fritas. Servido con arroz blanco jazmín.', price: 45, image: 'https://images.unsplash.com/photo-1565299585323-38d6b0865b47?w=400&h=400&fit=crop' },
+          { name: 'Ají de Gallina', description: 'Crema de pollo deshilachado en ají amarillo con nueces y parmesano. Acompañado de arroz y huevo.', price: 32, image: 'https://images.unsplash.com/photo-1606491956689-2ea866880c84?w=400&h=400&fit=crop' },
+          { name: 'Chaufa de Mariscos', description: 'Arroz chaufa con camarones, calamares, pescado y huevo. Estilo peruano-chino.', price: 38, image: 'https://images.unsplash.com/photo-1603133872878-684f208fb84b?w=400&h=400&fit=crop' },
+          { name: 'Parrillada del Chef', description: 'Selección de carnes a la parrilla: lomo, costilla, pollo y chorizo. Para 2 personas.', price: 95, image: 'https://images.unsplash.com/photo-1544025162-d76694265947?w=400&h=400&fit=crop' },
+        ],
+      },
+      {
+        name: 'Bebidas',
+        dishes: [
+          { name: 'Chicha Morada', description: 'Bebida tradicional de maíz morado con piña, canela y clavo. Casera.', price: 8, image: 'https://z-cdn.chatglm.cn/image-search-mcp/images-ppt/99fb5ee7dfeb.jpg' },
+          { name: 'Maracuyá Sour', description: 'Coctel de maracuyá con pisco quequeperuano. Versión sin alcohol disponible.', price: 18, image: 'https://images.unsplash.com/photo-1551024709-8f23befc6f87?w=400&h=400&fit=crop' },
+          { name: 'Pisco Sour Clásico', description: 'El coctel peruano por excelencia. Pisco quequeperuano, limón, clara de huevo y amargo de angostura.', price: 22, image: 'https://images.unsplash.com/photo-1551024601-bec78aea704b?w=400&h=400&fit=crop' },
+        ],
+      },
+    ],
+  },
+  {
+    file: 'pizzeria-bella.html',
+    name: 'Pizzería Bella Italia',
+    slogan: 'Auténtica pizza napolitana',
+    description: 'Horno a leña traído desde Nápoles. Masa de fermentación natural 48h, mozzarella fior di latte y tomates San Marzano DOP.',
+    whatsapp: '51987650011',
+    logo: 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=300&h=300&fit=crop',
+    color: '#e63946',
+    colorRgb: '230, 57, 70',
+    currency: 'S/',
+    categories: [
+      {
+        name: 'Pizzas',
+        dishes: [
+          { name: 'Margherita DOP', description: 'Tomate San Marzano, mozzarella fior di latte, albahaca fresca, aceite de oliva extra virgen.', price: 38, image: 'https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=400&h=400&fit=crop' },
+          { name: 'Diavola', description: 'Salame picante, mozzarella, tomate, ají molido. Para los amantes del picante.', price: 45, image: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=400&h=400&fit=crop' },
+          { name: 'Quattro Formaggi', description: 'Mozzarella, gorgonzola, parmesano, fontina. Sin tomate. Para paladares exigentes.', price: 52, image: 'https://images.unsplash.com/photo-1571997478779-2adcbbe9ab2f?w=400&h=400&fit=crop' },
+          { name: 'Prosciutto e Funghi', description: 'Jamón crudo, champiñones frescos, mozzarella, tomate. La combinación clásica.', price: 48, image: 'https://images.unsplash.com/photo-1565299507177-b0ac66763828?w=400&h=400&fit=crop' },
+        ],
+      },
+      {
+        name: 'Pastas',
+        dishes: [
+          { name: 'Spaghetti Carbonara', description: 'Guanciale, yema de huevo, pecorino romano, pimienta negra. Sin crema, como en Roma.', price: 36, image: 'https://images.unsplash.com/photo-1612874742237-6526221588e3?w=400&h=400&fit=crop' },
+          { name: 'Lasagna alla Bolognese', description: 'Capas de pasta fresca, ragú de res cocido 6h, bechamel, parmesano. Porción generosa.', price: 42, image: 'https://z-cdn.chatglm.cn/image-search-mcp/images-ppt/41c560f081de.jpg' },
+          { name: 'Fettuccine al Tartufo', description: 'Fettuccine fresco con crema de trufa negra, hongos porcini y parmesano. Edición limitada.', price: 58, image: 'https://images.unsplash.com/photo-1551183053-bf91a1d81141?w=400&h=400&fit=crop' },
+        ],
+      },
+      {
+        name: 'Antipasti',
+        dishes: [
+          { name: 'Bruschetta Classica', description: 'Pan tostado con tomate fresco, ajo, albahaca, aceite de oliva. 4 unidades.', price: 18, image: 'https://z-cdn.chatglm.cn/image-search-mcp/images-ppt/c440f1d54377.jpg' },
+          { name: 'Caprese', description: 'Mozzarella fresca, tomate, albahaca, aceite de oliva extra virgen, sal marina.', price: 26, image: 'https://images.unsplash.com/photo-1592417817038-d13fd7342605?w=400&h=400&fit=crop' },
+          { name: 'Tablas de Charcutería', description: 'Selección de quesos y fiambres italianos con pan focaccia. Para 2 personas.', price: 65, image: 'https://images.unsplash.com/photo-1452195100486-9cc805987862?w=400&h=400&fit=crop' },
+        ],
+      },
+      {
+        name: 'Vinos y Bebidas',
+        dishes: [
+          { name: 'Chianti Classico DOCG', description: 'Vino tinto toscano. Copa 250ml. Maridaje ideal para pastas y carnes.', price: 28, image: 'https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=400&h=400&fit=crop' },
+          { name: 'Limonata Italiana', description: 'Limonada gasificada italiana. Botella 275ml. Sin alcohol.', price: 12, image: 'https://images.unsplash.com/photo-1437418747212-8d9709afab22?w=400&h=400&fit=crop' },
+          { name: 'Espresso Doble', description: 'Café espresso italiano con granos 100% arábica tostado en casa.', price: 9, image: 'https://images.unsplash.com/photo-1510707577719-ae7c14805e3a?w=400&h=400&fit=crop' },
+        ],
+      },
+    ],
+  },
+  {
+    file: 'cafe-aurora.html',
+    name: 'Café Aurora',
+    slogan: 'Especialidad de grano y repostería artesanal',
+    description: 'Café de especialidad tostado en casa. Granos de origen único, método de extracción manual y repostería recién horneada cada mañana.',
+    whatsapp: '51987650022',
+    logo: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=300&h=300&fit=crop',
+    color: '#a47148',
+    colorRgb: '164, 113, 72',
+    currency: 'S/',
+    categories: [
+      {
+        name: 'Café de Especialidad',
+        dishes: [
+          { name: 'Flat White', description: 'Doble espresso con microespuma de leche cremosa. 6oz. Origen Perú Chanchamayo.', price: 14, image: 'https://images.unsplash.com/photo-1561882468-9110e03e0f78?w=400&h=400&fit=crop' },
+          { name: 'V60 Pourover', description: 'Extracción manual en V60. Notas a frutos rojos, caramelo y floral. 250ml.', price: 18, image: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=400&h=400&fit=crop' },
+          { name: 'Cold Brew 16h', description: 'Extracción en frío 16 horas. Suave, baja acidez, dulzor natural. Servido con hielo.', price: 16, image: 'https://images.unsplash.com/photo-1461023058943-07fcbe16d735?w=400&h=400&fit=crop' },
+          { name: 'Latte Caramelo', description: 'Espresso, leche vaporizada, caramelo casero y cacao en polvo. 12oz.', price: 15, image: 'https://images.unsplash.com/photo-1517256064527-09c73fc73e38?w=400&h=400&fit=crop' },
+        ],
+      },
+      {
+        name: 'Repostería',
+        dishes: [
+          { name: 'Croissant de Mantequilla', description: 'Masa hojaldrada 36 capas, fermentación lenta 24h. Recién horneado cada mañana.', price: 9, image: 'https://z-cdn.chatglm.cn/image-search-mcp/images-ppt/cf58f2443dab.jpeg' },
+          { name: 'Cheesecake de Frutos Rojos', description: 'Cheesecake estilo NY con coulis de frutos rojos de la temporada. Sin gluten.', price: 18, image: 'https://images.unsplash.com/photo-1565958011703-44f9829ba187?w=400&h=400&fit=crop' },
+          { name: 'Brownie con Nuez', description: 'Brownie denso de chocolate belga 70% con nueces tostadas. Servido tibio.', price: 14, image: 'https://images.unsplash.com/photo-1606312619070-d48b4c652a52?w=400&h=400&fit=crop' },
+          { name: 'Pan de Chocolate', description: 'Masa brioche con chips de chocolate belga. Ideal para desayuno.', price: 11, image: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=400&h=400&fit=crop' },
+        ],
+      },
+      {
+        name: 'Salado',
+        dishes: [
+          { name: 'Sándwich Caprese', description: 'Pan ciabatta tostado, mozzarella, tomate, albahaca, pesto casero y aceite de oliva.', price: 22, image: 'https://images.unsplash.com/photo-1528735602780-2552fd46c7af?w=400&h=400&fit=crop' },
+          { name: 'Bowl Mediterráneo', description: 'Quinoa, hummus, tomate cherry, pepino, aceitunas, feta y aceite de oliva. Vegano opcional.', price: 26, image: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&h=400&fit=crop' },
+          { name: 'Tostada de Palta', description: 'Pan de masa madre tostado, palta, huevo poché, ají molido y microgreens.', price: 19, image: 'https://z-cdn.chatglm.cn/image-search-mcp/images-ppt/7a6913d7c1ca.jpg' },
+        ],
+      },
+      {
+        name: 'Bebidas Frías',
+        dishes: [
+          { name: 'Limonada de Hierbabuena', description: 'Limón, hierbabuena fresca, jengibre, miel de abeja. Sin azúcar refinada.', price: 10, image: 'https://images.unsplash.com/photo-1437418747212-8d9709afab22?w=400&h=400&fit=crop' },
+          { name: 'Té Helado de Frutos Rojos', description: 'Té negro frío con frutos rojos frescos, menta y un toque de limón.', price: 11, image: 'https://images.unsplash.com/photo-1556679343-c7306c1976bc?w=400&h=400&fit=crop' },
+          { name: 'Kombucha Casera', description: 'Bebida fermentada de té verde con mango y jengibre. Cultivos vivos. Vaso 350ml.', price: 13, image: 'https://images.unsplash.com/photo-1597318181409-cf64d0b5d8a2?w=400&h=400&fit=crop' },
+        ],
+      },
+    ],
+  },
+];
+
+// ─── Plantilla de HTML (extraída de menu-ejemplo.html, parametrizada) ───
+function buildHTML(r) {
+  const restaurantJSON = JSON.stringify({
+    name: r.name,
+    slogan: r.slogan,
+    description: r.description,
+    whatsapp: r.whatsapp,
+    logo: r.logo,
+    color: r.color,
+    currency: r.currency,
+    categories: r.categories,
+  });
+
+  return `<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="${r.color}">
+<meta name="referrer" content="no-referrer">
+<title>${r.name}</title>
+<style>:root{--accent:${r.color};--accent-rgb:${r.colorRgb};--gold:${r.color};--bg-0:#07070b;--bg-1:#0f0f1a;--glass:rgba(255,255,255,0.035);--glass-strong:rgba(255,255,255,0.07);--border:rgba(255,255,255,0.08);--border-strong:rgba(255,255,255,0.14);--text:#f4f4fa;--text-muted:#8a8a9a;--text-soft:#b8b8c8;}*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}html{scroll-behavior:smooth;}body{font-family:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:var(--bg-0);color:var(--text);min-height:100vh;padding-bottom:140px;position:relative;overflow-x:hidden;}body::before,body::after{content:"";position:fixed;width:500px;height:500px;border-radius:50%;filter:blur(140px);opacity:0.18;z-index:0;pointer-events:none;}body::before{background:var(--accent);top:-200px;right:-150px;}body::after{background:var(--gold);bottom:-200px;left:-150px;}#app{position:relative;z-index:1;}.header{padding:38px 24px 30px;text-align:center;position:relative;background:linear-gradient(180deg,rgba(255,255,255,0.03) 0%,transparent 100%);border-bottom:1px solid var(--border);}.header::after{content:"";position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:140px;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);}.logo-wrap{position:relative;display:inline-block;margin-bottom:16px;width:96px;height:96px;}.logo-wrap::before{content:"";position:absolute;inset:-6px;border-radius:50%;background:conic-gradient(from 0deg,var(--accent),var(--gold),var(--accent));filter:blur(10px);opacity:0.5;z-index:0;animation:rotate 8s linear infinite;}@keyframes rotate{to{transform:rotate(360deg);}}.logo{width:96px;height:96px;border-radius:50%;object-fit:cover;border:3px solid rgba(255,255,255,0.12);box-shadow:0 8px 32px rgba(0,0,0,0.5);background:var(--glass);position:absolute;inset:0;z-index:2;}.logo-placeholder{width:96px;height:96px;border-radius:50%;background:linear-gradient(135deg,var(--accent),rgba(var(--accent-rgb),0.6));display:flex;align-items:center;justify-content:center;font-size:38px;font-weight:800;color:#fff;position:absolute;inset:0;z-index:1;border:3px solid rgba(255,255,255,0.12);box-shadow:0 8px 32px rgba(0,0,0,0.5);}.restaurant-name{font-size:28px;font-weight:800;margin-bottom:6px;letter-spacing:-0.5px;background:linear-gradient(180deg,#fff,#c8c8d4);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;}.slogan{font-size:11px;color:var(--gold);letter-spacing:4px;text-transform:uppercase;font-weight:600;margin-bottom:8px;}.restaurant-desc{color:var(--text-soft);font-size:14px;margin-bottom:18px;max-width:440px;margin-left:auto;margin-right:auto;line-height:1.5;}.open-badge{display:inline-flex;align-items:center;gap:7px;background:rgba(6,214,160,0.12);color:#06d6a0;padding:6px 14px;border-radius:20px;font-size:11.5px;font-weight:600;border:1px solid rgba(6,214,160,0.25);letter-spacing:0.5px;text-transform:uppercase;}.open-badge::before{content:"";width:6px;height:6px;border-radius:50%;background:#06d6a0;box-shadow:0 0 8px #06d6a0;animation:pulse 2s infinite;}@keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:0.4;transform:scale(1.3);}}.nav{position:sticky;top:0;background:rgba(7,7,11,0.78);backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);border-bottom:1px solid var(--border);z-index:100;padding:14px 0;overflow-x:auto;scrollbar-width:none;}.nav::-webkit-scrollbar{display:none;}.nav-inner{display:flex;gap:8px;padding:0 20px;min-width:max-content;}.nav-item{white-space:nowrap;padding:8px 18px;background:var(--glass);border:1px solid var(--border);border-radius:24px;color:var(--text-soft);font-size:13.5px;font-weight:500;cursor:pointer;transition:all 0.25s cubic-bezier(0.4,0,0.2,1);}.nav-item:hover{background:var(--glass-strong);color:var(--text);transform:translateY(-1px);}.nav-item.active{background:linear-gradient(135deg,var(--accent),rgba(var(--accent-rgb),0.85));color:#fff;border-color:transparent;box-shadow:0 4px 16px rgba(var(--accent-rgb),0.4);}.section{padding:24px 20px 8px;max-width:620px;margin:0 auto;width:100%;}.section-title{font-size:21px;font-weight:700;margin-bottom:18px;display:flex;align-items:center;gap:12px;letter-spacing:-0.3px;}.section-title::before{content:"";width:4px;height:22px;background:linear-gradient(180deg,var(--accent),var(--gold));border-radius:2px;}.dish{display:flex;gap:14px;background:var(--glass);border:1px solid var(--border);border-radius:16px;padding:14px;margin-bottom:12px;transition:all 0.3s cubic-bezier(0.4,0,0.2,1);opacity:0;transform:translateY(20px);position:relative;overflow:hidden;}.dish.revealed{opacity:1;transform:translateY(0);}.dish::before{content:"";position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.12),transparent);opacity:0;transition:opacity 0.3s;}.dish:hover{border-color:rgba(var(--accent-rgb),0.3);background:rgba(var(--accent-rgb),0.04);transform:translateY(-3px);box-shadow:0 10px 28px rgba(0,0,0,0.35);}.dish:hover::before{opacity:1;}.dish:active{transform:translateY(0) scale(0.99);}.dish-img{width:84px;height:84px;border-radius:12px;object-fit:cover;flex-shrink:0;background:linear-gradient(135deg,var(--glass),var(--glass-strong));border:1px solid var(--border);}.dish-info{flex:1;min-width:0;display:flex;flex-direction:column;}.dish-name{font-size:16px;font-weight:600;margin-bottom:4px;letter-spacing:-0.2px;}.dish-desc{font-size:13px;color:var(--text-muted);margin-bottom:10px;line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}.dish-bottom{display:flex;justify-content:space-between;align-items:center;margin-top:auto;}.dish-price{font-size:18px;font-weight:700;color:var(--accent);letter-spacing:-0.5px;}.add-btn{width:36px;height:36px;border-radius:12px;background:linear-gradient(135deg,var(--accent),rgba(var(--accent-rgb),0.8));color:#fff;border:none;font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.25s;line-height:1;font-weight:300;box-shadow:0 4px 14px rgba(var(--accent-rgb),0.35);}.add-btn:hover{transform:scale(1.1) rotate(90deg);box-shadow:0 6px 20px rgba(var(--accent-rgb),0.55);}.add-btn:active{transform:scale(0.95);}.added-flash{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) scale(0);background:#06d6a0;color:#fff;padding:8px 18px;border-radius:24px;font-size:12px;font-weight:700;pointer-events:none;z-index:5;box-shadow:0 6px 18px rgba(6,214,160,0.5);animation:flashAdd 0.9s ease forwards;letter-spacing:0.3px;}@keyframes flashAdd{0%{transform:translate(-50%,-50%) scale(0);opacity:0;}25%{transform:translate(-50%,-50%) scale(1);opacity:1;}75%{transform:translate(-50%,-90%) scale(1);opacity:1;}100%{transform:translate(-50%,-130%) scale(0.8);opacity:0;}}.cart{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(140px);width:calc(100% - 32px);max-width:480px;background:linear-gradient(135deg,var(--accent),rgba(var(--accent-rgb),0.9));color:#fff;border-radius:16px;padding:16px 22px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 14px 40px rgba(var(--accent-rgb),0.45),0 4px 12px rgba(0,0,0,0.4);cursor:pointer;transition:transform 0.4s cubic-bezier(0.4,0,0.2,1);z-index:90;border:1px solid rgba(255,255,255,0.18);}.cart.visible{transform:translateX(-50%) translateY(0);}.cart-left{display:flex;align-items:center;gap:10px;font-weight:600;font-size:15px;}.cart-count{background:rgba(255,255,255,0.25);padding:3px 10px;border-radius:12px;font-size:13px;font-weight:700;min-width:28px;text-align:center;}.cart-count.pulse{animation:countPulse 0.4s ease;}@keyframes countPulse{0%,100%{transform:scale(1);}50%{transform:scale(1.4);background:rgba(255,255,255,0.4);}}.cart-total{font-size:18px;font-weight:800;letter-spacing:-0.3px;}.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);z-index:200;display:none;align-items:flex-end;justify-content:center;}.modal-overlay.visible{display:flex;}.modal{background:linear-gradient(180deg,#1c1c2e,#14141f);width:100%;max-width:500px;border-radius:24px 24px 0 0;padding:28px 24px;max-height:85vh;overflow-y:auto;animation:slideUp 0.4s cubic-bezier(0.4,0,0.2,1);border:1px solid rgba(255,255,255,0.08);border-bottom:none;box-shadow:0 -16px 48px rgba(0,0,0,0.5);}@keyframes slideUp{from{transform:translateY(100%);}to{transform:translateY(0);}}.modal-title{font-size:22px;font-weight:700;margin-bottom:4px;text-align:center;letter-spacing:-0.3px;}.modal-subtitle{text-align:center;font-size:12.5px;color:var(--text-muted);margin-bottom:22px;letter-spacing:0.3px;}.modal-divider{height:1px;background:linear-gradient(90deg,transparent,var(--border-strong),transparent);margin:0 -24px 20px;}.cart-item{display:flex;justify-content:space-between;align-items:center;padding:14px 0;border-bottom:1px solid var(--border);gap:10px;animation:itemIn 0.3s ease;}@keyframes itemIn{from{opacity:0;transform:translateX(-10px);}to{opacity:1;transform:translateX(0);}}.cart-item-info{flex:1;min-width:0;}.cart-item-name{font-weight:600;font-size:15px;margin-bottom:2px;}.cart-item-price{color:var(--text-muted);font-size:12.5px;}.qty-control{display:flex;align-items:center;gap:10px;background:var(--glass);padding:4px;border-radius:24px;border:1px solid var(--border);}.qty-btn{width:28px;height:28px;border-radius:50%;background:var(--glass-strong);color:#fff;border:none;cursor:pointer;font-size:16px;line-height:1;transition:all 0.2s;display:flex;align-items:center;justify-content:center;}.qty-btn:hover{background:var(--accent);transform:scale(1.1);}.qty{min-width:24px;text-align:center;font-weight:600;font-size:14px;}.cart-item-total{font-weight:700;color:var(--accent);min-width:75px;text-align:right;font-size:15px;}.cart-empty{text-align:center;padding:50px 0;color:var(--text-muted);font-size:14px;}.cart-summary{margin-top:20px;padding-top:20px;border-top:2px solid var(--border);}.summary-row{display:flex;justify-content:space-between;margin-bottom:8px;font-size:14px;color:var(--text-soft);}.summary-total{font-size:18px;font-weight:700;margin-top:12px;color:#fff;display:flex;justify-content:space-between;align-items:center;}.summary-total .amount{color:var(--accent);font-size:24px;font-weight:800;letter-spacing:-0.5px;}.wa-btn{width:100%;background:linear-gradient(135deg,#25d366,#1da851);color:#fff;border:none;padding:16px;border-radius:14px;font-size:15px;font-weight:700;cursor:pointer;margin-top:22px;display:flex;align-items:center;justify-content:center;gap:10px;transition:all 0.2s;box-shadow:0 6px 20px rgba(37,211,102,0.35);letter-spacing:0.2px;}.wa-btn:hover{transform:translateY(-2px);box-shadow:0 10px 28px rgba(37,211,102,0.5);}.wa-btn:active{transform:translateY(0);}.wa-icon{width:18px;height:18px;fill:currentColor;}.close-btn{width:100%;background:var(--glass);color:var(--text-soft);border:1px solid var(--border);padding:13px;border-radius:12px;font-size:14px;cursor:pointer;margin-top:10px;transition:all 0.2s;font-weight:500;}.close-btn:hover{background:var(--glass-strong);color:#fff;}.menu-footer{text-align:center;padding:30px 20px;color:var(--text-muted);font-size:11.5px;border-top:1px solid var(--border);margin-top:20px;}.menu-footer .brand{color:var(--gold);font-weight:600;letter-spacing:1px;}@media (min-width:600px){.dish{padding:16px;}.dish-img{width:100px;height:100px;}.restaurant-name{font-size:34px;}.logo,.logo-placeholder{width:104px;height:104px;}.section{padding:28px 24px 8px;}}</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+var RESTAURANT = ${restaurantJSON};
+document.documentElement.style.setProperty("--accent", "${r.color}");
+document.documentElement.style.setProperty("--accent-rgb", "${r.colorRgb}");
+var cart = [];
+function escapeHtml(s){if(s==null)return "";return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");}
+function formatPrice(n){return (RESTAURANT.currency||"S/")+" "+Number(n).toFixed(2);}
+function renderApp(){
+  var app=document.getElementById("app");
+  var html="";
+  html+="<header class=\\"header\\">";
+  html+="<div class=\\"logo-wrap\\">";
+  html+="<div class=\\"logo-placeholder\\">"+escapeHtml(RESTAURANT.name.charAt(0).toUpperCase())+"</div>";
+  if(RESTAURANT.logo){html+="<img src=\\""+escapeHtml(RESTAURANT.logo)+"\\" class=\\"logo\\" alt=\\"logo\\" onerror=\\"this.remove()\\"/>";}
+  html+="</div>";
+  html+="<h1 class=\\"restaurant-name\\">"+escapeHtml(RESTAURANT.name)+"</h1>";
+  if(RESTAURANT.slogan){html+="<div class=\\"slogan\\">"+escapeHtml(RESTAURANT.slogan)+"</div>";}
+  if(RESTAURANT.description){html+="<p class=\\"restaurant-desc\\">"+escapeHtml(RESTAURANT.description)+"</p>";}
+  html+="<span class=\\"open-badge\\">Abierto ahora</span>";
+  html+="</header>";
+  html+="<nav class=\\"nav\\"><div class=\\"nav-inner\\" id=\\"navInner\\">";
+  RESTAURANT.categories.forEach(function(cat,i){
+    html+="<div class=\\"nav-item"+(i===0?" active":"")+"\\" data-idx=\\""+i+"\\">"+escapeHtml(cat.name)+"</div>";
+  });
+  html+="</div></nav>";
+  RESTAURANT.categories.forEach(function(cat,i){
+    html+="<section class=\\"section\\" id=\\"cat-"+i+"\\">";
+    html+="<h2 class=\\"section-title\\">"+escapeHtml(cat.name)+"</h2>";
+    cat.dishes.forEach(function(dish,j){
+      html+="<div class=\\"dish\\" data-cat=\\""+i+"\\" data-dish=\\""+j+"\\" style=\\"transition-delay:"+(j*40)+"ms\\">";
+      if(dish.image){html+="<img src=\\""+escapeHtml(dish.image)+"\\" class=\\"dish-img\\" alt=\\"\\" onerror=\\"this.style.display='none'\\"/>";}
+      else{html+="<div class=\\"dish-img\\"></div>";}
+      html+="<div class=\\"dish-info\\">";
+      html+="<div class=\\"dish-name\\">"+escapeHtml(dish.name)+"</div>";
+      if(dish.description){html+="<div class=\\"dish-desc\\">"+escapeHtml(dish.description)+"</div>";}
+      html+="<div class=\\"dish-bottom\\">";
+      html+="<div class=\\"dish-price\\">"+formatPrice(dish.price)+"</div>";
+      html+="<button class=\\"add-btn\\" data-cat=\\""+i+"\\" data-dish=\\""+j+"\\" title=\\"Agregar\\">+</button>";
+      html+="</div></div></div>";
+    });
+    html+="</section>";
+  });
+  html+="<div class=\\"menu-footer\\"><span class=\\"brand\\">"+escapeHtml(RESTAURANT.name)+"</span> · Menú Digital</div>";
+  html+="<div class=\\"cart\\" id=\\"cartBar\\">";
+  html+="<div class=\\"cart-left\\"><span>Ver pedido</span><span class=\\"cart-count\\" id=\\"cartCount\\">0</span></div>";
+  html+="<div class=\\"cart-total\\" id=\\"cartTotal\\">"+formatPrice(0)+"</div>";
+  html+="</div>";
+  html+="<div class=\\"modal-overlay\\" id=\\"modal\\"><div class=\\"modal\\">";
+  html+="<h2 class=\\"modal-title\\">Tu Pedido</h2>";
+  html+="<p class=\\"modal-subtitle\\">Revisa tu orden antes de enviar por WhatsApp</p>";
+  html+="<div class=\\"modal-divider\\"></div>";
+  html+="<div id=\\"cartItems\\"></div>";
+  html+="<div class=\\"cart-summary\\" id=\\"cartSummary\\"></div>";
+  html+="<button class=\\"wa-btn\\" id=\\"waBtn\\"><svg class=\\"wa-icon\\" viewBox=\\"0 0 24 24\\"><path d=\\"M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.149-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51l-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z\\"/></svg>Enviar Pedido por WhatsApp</button>";
+  html+="<button class=\\"close-btn\\" id=\\"closeBtn\\">Seguir agregando</button>";
+  html+="</div></div>";
+  app.innerHTML=html;
+  attachEvents();
+  setupReveal();
+  updateCart();
+}
+function setupReveal(){
+  var dishes=document.querySelectorAll(".dish");
+  if(!("IntersectionObserver" in window)){dishes.forEach(function(d){d.classList.add("revealed");});return;}
+  var io=new IntersectionObserver(function(entries){
+    entries.forEach(function(e){if(e.isIntersecting){e.target.classList.add("revealed");io.unobserve(e.target);}});
+  },{threshold:0.05,rootMargin:"0px 0px -30px 0px"});
+  dishes.forEach(function(d){io.observe(d);});
+}
+function attachEvents(){
+  document.querySelectorAll(".add-btn").forEach(function(btn){
+    btn.addEventListener("click",function(e){
+      e.stopPropagation();
+      var catIdx=parseInt(this.dataset.cat);
+      var dishIdx=parseInt(this.dataset.dish);
+      addToCart(catIdx,dishIdx,this);
+    });
+  });
+  document.querySelectorAll(".dish").forEach(function(d){
+    d.addEventListener("click",function(){
+      var catIdx=parseInt(this.dataset.cat);
+      var dishIdx=parseInt(this.dataset.dish);
+      addToCart(catIdx,dishIdx);
+    });
+  });
+  document.querySelectorAll(".nav-item").forEach(function(item){
+    item.addEventListener("click",function(){
+      document.querySelectorAll(".nav-item").forEach(function(n){n.classList.remove("active");});
+      this.classList.add("active");
+      var idx=parseInt(this.dataset.idx);
+      var el=document.getElementById("cat-"+idx);
+      if(el){var top=el.getBoundingClientRect().top+window.pageYOffset-70;window.scrollTo({top:top,behavior:"smooth"});}
+    });
+  });
+  document.getElementById("cartBar").addEventListener("click",openModal);
+  document.getElementById("closeBtn").addEventListener("click",closeModal);
+  document.getElementById("waBtn").addEventListener("click",sendWhatsApp);
+  document.getElementById("modal").addEventListener("click",function(e){if(e.target===this)closeModal();});
+  window.addEventListener("scroll",updateActiveNav,{passive:true});
+}
+function updateActiveNav(){
+  var scrollPos=window.pageYOffset+100;
+  var sections=document.querySelectorAll(".section");
+  var activeIdx=0;
+  for(var i=0;i<sections.length;i++){if(sections[i].offsetTop<=scrollPos)activeIdx=i;}
+  document.querySelectorAll(".nav-item").forEach(function(n,i){n.classList.toggle("active",i===activeIdx);});
+}
+function addToCart(catIdx,dishIdx,btn){
+  var dish=RESTAURANT.categories[catIdx].dishes[dishIdx];
+  var existing=null;
+  for(var i=0;i<cart.length;i++){if(cart[i].catIdx===catIdx&&cart[i].dishIdx===dishIdx){existing=cart[i];break;}}
+  if(existing){existing.qty++;}
+  else{cart.push({catIdx:catIdx,dishIdx:dishIdx,name:dish.name,price:dish.price,qty:1});}
+  if(btn){showAddedFlash(btn.closest(".dish"));}
+  updateCart(true);
+}
+function showAddedFlash(dishEl){
+  if(!dishEl)return;
+  var flash=document.createElement("div");
+  flash.className="added-flash";
+  flash.textContent="AGREGADO";
+  dishEl.appendChild(flash);
+  setTimeout(function(){if(flash.parentNode)flash.parentNode.removeChild(flash);},900);
+}
+function updateCart(pulse){
+  var count=0,total=0;
+  cart.forEach(function(c){count+=c.qty;total+=c.price*c.qty;});
+  var countEl=document.getElementById("cartCount");
+  countEl.textContent=count;
+  document.getElementById("cartTotal").textContent=formatPrice(total);
+  var cartBar=document.getElementById("cartBar");
+  if(count>0){cartBar.classList.add("visible");}else{cartBar.classList.remove("visible");}
+  if(pulse){countEl.classList.remove("pulse");void countEl.offsetWidth;countEl.classList.add("pulse");}
+  renderCartItems();
+}
+function renderCartItems(){
+  var container=document.getElementById("cartItems");
+  var summary=document.getElementById("cartSummary");
+  if(cart.length===0){
+    container.innerHTML="<div class=\\"cart-empty\\">Tu carrito esta vacio</div>";
+    summary.innerHTML="";
+    return;
+  }
+  var html="";
+  cart.forEach(function(item,i){
+    html+="<div class=\\"cart-item\\">";
+    html+="<div class=\\"cart-item-info\\">";
+    html+="<div class=\\"cart-item-name\\">"+escapeHtml(item.name)+"</div>";
+    html+="<div class=\\"cart-item-price\\">"+formatPrice(item.price)+" c/u</div>";
+    html+="</div>";
+    html+="<div class=\\"qty-control\\">";
+    html+="<button class=\\"qty-btn\\" data-action=\\"dec\\" data-idx=\\""+i+"\\">−</button>";
+    html+="<span class=\\"qty\\">"+item.qty+"</span>";
+    html+="<button class=\\"qty-btn\\" data-action=\\"inc\\" data-idx=\\""+i+"\\">+</button>";
+    html+="</div>";
+    html+="<div class=\\"cart-item-total\\">"+formatPrice(item.price*item.qty)+"</div>";
+    html+="</div>";
+  });
+  container.innerHTML=html;
+  var total=0;cart.forEach(function(c){total+=c.price*c.qty;});
+  summary.innerHTML="<div class=\\"summary-row\\"><span>Subtotal</span><span>"+formatPrice(total)+"</span></div>";
+  summary.innerHTML+="<div class=\\"summary-total\\"><span>Total</span><span class=\\"amount\\">"+formatPrice(total)+"</span></div>";
+  container.querySelectorAll(".qty-btn").forEach(function(btn){
+    btn.addEventListener("click",function(){
+      var idx=parseInt(this.dataset.idx);
+      if(this.dataset.action==="inc"){cart[idx].qty++;}
+      else{cart[idx].qty--;if(cart[idx].qty<=0)cart.splice(idx,1);}
+      updateCart();
+    });
+  });
+}
+function openModal(){
+  if(cart.length===0)return;
+  document.getElementById("modal").classList.add("visible");
+}
+function closeModal(){document.getElementById("modal").classList.remove("visible");}
+function sendWhatsApp(){
+  if(cart.length===0)return;
+  var msg="*"+RESTAURANT.name+"*\\n";
+  if(RESTAURANT.slogan){msg+="_"+RESTAURANT.slogan+"_\\n";}
+  msg+="\\n*PEDIDO*\\n\\n";
+  cart.forEach(function(item){
+    msg+="• "+item.qty+"x "+item.name+" — "+formatPrice(item.price*item.qty)+"\\n";
+  });
+  var total=0;cart.forEach(function(c){total+=c.price*c.qty;});
+  msg+="\\n*TOTAL: "+formatPrice(total)+"*\\n\\n";
+  msg+="Hola, quisiera confirmar este pedido por favor.";
+  var url="https://wa.me/"+RESTAURANT.whatsapp+"?text="+encodeURIComponent(msg);
+  window.open(url,"_blank");
+}
+renderApp();
+
+</script>
+</body>
+</html>`;
+}
+
+// ─── Generar 3 archivos ───
+let count = 0;
+for (const r of RESTAURANTS) {
+  const html = buildHTML(r);
+  const outPath = path.join(OUT_DIR, r.file);
+  fs.writeFileSync(outPath, html, 'utf8');
+  console.log(`✓ Generado: ${outPath} (${(html.length / 1024).toFixed(1)} KB)`);
+  count++;
+}
+console.log(`\n✅ ${count} cartas demo generadas en ${OUT_DIR}`);

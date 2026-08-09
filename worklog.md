@@ -2099,3 +2099,30 @@ Stage Summary:
 - ✅ Verificado con Playwright + VLM en mobile 390x844 y desktop 1280x800
 - ✅ TypeScript: 0 errores en src/
 - ✅ Pusheado a main → deploy automático a Vercel
+
+---
+Task ID: hero-carousel-real-demo + whatsapp-fix
+Agent: main (Super Z)
+Task: Reemplazar PhoneMockup estático del Hero por carrusel de cartas demo REALES embebidas + bajar botón WhatsApp a esquina inferior real + arreglar 5 imágenes 404 de Unsplash.
+
+Work Log:
+- Leído /home/z/my-project/src/components/landing/hero.tsx (PhoneMockup estático con datos hardcodeados)
+- Leído /home/z/my-project/src/components/support/support-whatsapp-button.tsx (posición bottom usaba calc(72px+safe-area) para mobile sin distinguir variant)
+- Creado /home/z/my-project/scripts/generate-demo-menus.js: generador que produce 3 HTML standalone completos (logo, nav sticky con auto-detect, dishes con foto y precio, carrito flotante, modal de pedido, botón WhatsApp real). 3 restaurantes: La Parrilla (peruana, dorado #d4af37), Pizzería Bella Italia (rojo #e63946), Café Aurora (café #a47148).
+- Generados: /public/demo-menus/la-parrilla.html, pizzeria-bella.html, cafe-aurora.html (24-25 KB cada uno)
+- Creado /home/z/my-project/src/components/landing/demo-menu-carousel.tsx: carrusel con phone frame realista (notch, status bar), 3 iframes apilados (solo el activo visible, todos montados para preservar scroll y carrito), auto-rotación cada 7s con pausa en hover/touch, dots/tabs para navegación manual, botón "Abrir carta completa" abre en nueva pestaña, glow color del restaurante activo, floating cards decorativas en desktop, skeleton loader mientras carga.
+- Modificado /home/z/my-project/src/components/landing/hero.tsx: reemplazado PhoneMockup estático por <DemoMenuCarousel/>. Eliminado imports no usados (Star, Zap, TrendingUp, ShoppingBag, Clock).
+- Modificado /home/z/my-project/src/components/support/support-whatsapp-button.tsx: agregado elevateForBottomNav = variant === 'dashboard'. En landing y always-on, bottom = max(16px, safe-area-inset-bottom) → pega a esquina inferior real. Solo dashboard mobile se eleva a 72px+safe-area para no chocar con bottom-nav del dashboard.
+- Identificadas 5 URLs Unsplash que retornaban 404 real: photo-1623083099089-c2a3e3dd5d71 (chicha morada), photo-1619895092538-128f4d1d35ce (lasagna), photo-1572695157366-5e5857da5787 (bruschetta), photo-1555507036-ab1f4048607a (croissant), photo-1525351484163-7529d4a58def (avocado toast). Reemplazadas con URLs válidas del servicio ZAI image-search (z-cdn.chatglm.cn).
+- Agregado <meta name="referrer" content="no-referrer"> a las 3 cartas demo para evitar ERR_BLOCKED_BY_ORB en Chromium.
+- Test Playwright mobile-first (iPhone 14 Pro, 393x660): 3 iframes cargan correctamente, botón WhatsApp visible en y=588 con viewport 660 → 16px del borde inferior real (FIXED). Auto-rotación funciona. Click en 2do dot cambia a pizzería. Sin errores de consola. Solo warnings benignos sobre iframe sandbox.
+- Test desktop 1440x900: layout en 2 columnas correcto, carrusel visible a la derecha, WhatsApp en esquina inferior derecha.
+- VLM (glm-5v-turbo) verificó captura full page mobile: "TODO PERFECTO. Carrusel con phone frame renderizado. Pizzería Bella Italia activa. Botón WhatsApp en esquina inferior derecha. Todas las secciones (Hero, features, FAQ, footer) visibles. Sin problemas críticos."
+
+Stage Summary:
+- Hero del home ahora muestra cartas demo REALES e interactivas (no mockup estático). El visitante puede navegar categorías, agregar platos al carrito, abrir el modal de pedido y enviar por WhatsApp dentro del phone frame.
+- Botón WhatsApp flotante corregido: en landing está a 16px del borde inferior real (esquina inferior derecha auténtica). En dashboard se mantiene elevado para no chocar con bottom-nav.
+- 5 imágenes 404 de Unsplash reemplazadas con URLs estables del CDN de ZAI.
+- 3 archivos estáticos generados en /public/demo-menus/ (~75 KB total). Script reusable para generar más cartas demo en el futuro.
+- Sin errores de consola. Sin warnings críticos. Mobile-first verificado.
+- Listo para git push a main + deploy Vercel.
