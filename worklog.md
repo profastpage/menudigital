@@ -2021,3 +2021,81 @@ Stage Summary:
 - TypeScript: 0 errores en src/
 - Pendiente: git push a origin/main → deploy automático Vercel
 
+
+---
+Task ID: cats-top-install-header-accent-scrollbar
+Agent: main (Super Z)
+Task: 5 correcciones UX/UI para la carta publicada (/r/[slug]):
+1. Categorías: mover de la parte inferior a la parte SUPERIOR (inmediatamente debajo del menú superior)
+2. Botón "Instalar App": mover del nav inferior al menú superior (a la izquierda del toggle claro/oscuro)
+3. PWA: ocultar botón Install cuando la app está instalada; reaparecer si se desinstala
+4. Top nav bar + scrollbar del mouse: ambos deben usar el color principal de la carta (verde en este caso, customizable)
+5. Revisar con Playwright + VLM (mobile first) y pushear a main + Vercel
+
+Work Log:
+- Editado `src/app/dashboard/[menuId]/menu-html-builder.ts`:
+  * HTML: renombrado `.bottom-cats-bar` → `.top-cats-bar` con IDs `topCatsBar`/`topCatsInner`
+  * HTML: removido el botón `.mbn-install-item` del mobile-bottom-nav (5 botones ahora: Inicio/Buscar/Favoritos/Pedido/Subir)
+  * HTML: agregado `.mini-header-install-btn` en mini-header-right ANTES del theme-toggle-btn
+  * CSS: body padding-top ajustado a 98px (54px mini-header + 44px top-cats-bar) en mobile y desktop
+  * CSS: body padding-bottom reducido a 54px mobile / 44px desktop (solo nav, sin cats-bar)
+  * CSS: `.nav` (legacy) ahora hidden en TODOS los viewports (display:none !important) — top-cats-bar reemplaza
+  * CSS: `.top-cats-bar` con `top:calc(54px + env(safe-area-inset-top, 0px))` (fixed top, debajo mini-header)
+  * CSS: hide rule cambia de `translateY(110%)` a `translateY(-110%)` (ahora está arriba, se oculta hacia arriba)
+  * CSS: `.mini-header` background ahora `linear-gradient(135deg, var(--accent), rgba(var(--accent-rgb),0.92))` con texto blanco
+  * CSS: `.mini-header-name` color #fff con text-shadow para legibilidad sobre accent
+  * CSS: `.mini-header-status` background rgba(255,255,255,0.22) con texto blanco
+  * CSS: `.mini-header-theme-toggle` background rgba(255,255,255,0.18) (antes glass-strong) — sobre accent se ve bien
+  * CSS: `.mini-header-install-btn` 36px circular, background rgba(255,255,255,0.18), color #fff
+  * CSS: `.mini-header-install-btn.installed { display:none !important; }` — oculta tras instalar
+  * CSS: `@media all and (display-mode: standalone) { .mini-header-install-btn { display:none !important; } }` — fallback
+  * CSS: removidas las reglas `.mbn-install-item` (legacy dead CSS)
+  * CSS: custom scrollbar Webkit: `::-webkit-scrollbar-thumb { background:var(--accent); border-radius:5px; border:2px solid var(--bg-1); }`
+  * CSS: custom scrollbar Firefox: `html { scrollbar-color: var(--accent) var(--bg-1); scrollbar-width: thin; }`
+  * CSS: `::-webkit-scrollbar-track { background:var(--bg-1); }` y hover en thumb con rgba accent 0.85
+  * JS: renombradas todas las referencias `bottomCatsInner` → `topCatsInner` en event handlers y IIFE
+  * JS: `setupMobileBottomNav()` ya no maneja 'install' (no es .mbn-item). Agregado click handler separado para `#mbnInstallBtn` que llama `triggerPWAInstall()`
+  * JS: `appinstalled` event listener ahora también remueve `.installed` de `beforeinstallprompt` (cuando reaparece)
+  * JS: nueva IIFE con `matchMedia('(display-mode: standalone)')` + `change` listener + `focus` listener
+    - Re-check on display-mode change → detecta install/desinstalación en tiempo real
+    - Re-check on window focus → catch uninstall via app switcher
+    - Agrega/remueve `.installed` class según estado standalone
+
+- Verificación con Playwright (agent-browser):
+  * Mobile 390x844 (vía `agent-browser set viewport 390 844`):
+    - ✓ mobileNavDisplay: flex (bottom nav visible)
+    - ✓ stickyTopBarDisplay: none (desktop-only, hidden on mobile)
+    - ✓ topCatsBar.top: 54px (justo debajo del mini-header)
+    - ✓ miniHeader.background: linear-gradient(135deg, rgb(16,185,129), rgba(16,185,129,0.92)...) — verde accent
+    - ✓ topCatsBar visible con chips "Café de Especialidad" (active verde) + "Postres Franceses"
+    - ✓ Bottom nav 5 botones: Inicio (active verde) / Buscar / Favoritos / Pedido / Subir
+    - ✓ Install button visible top-right (circular blanco con icono download)
+    - ✓ Theme toggle visible top-right (circular blanco con icono sun)
+    - ✓ Status badge "Abierto" visible top-right
+    - ✓ Click en install button → abre pwa-install-overlay con instrucciones específicas
+    - ✓ Click en dish → abre lightbox con back button en bottom-left
+  * Desktop 1280x800 (vía `agent-browser set viewport 1280 800`):
+    - ✓ Top green header con install + theme toggle + Abierto
+    - ✓ Top-cats-bar inmediatamente debajo del header
+    - ✓ Categorías activas se sincronizan al hacer scroll
+    - ✓ Bottom: sticky-top-bar con scroll-to-top button (desktop equivalent del mobile-bottom-nav)
+
+- VLM (glm-5v-turbo) verification:
+  * Mobile screenshot: confirmado header verde + install button top-right + categorías debajo + 5 botones en bottom nav + chip activo verde
+  * Desktop screenshot: confirmado mismo layout sin bottom nav, con sticky-top-bar
+  * Install overlay screenshot: confirmado modal con título "Instalar carta en tu celular" + instrucciones Chrome específicas
+  * Lightbox screenshot: confirmado back button circular con flecha izquierda en bottom-left
+
+- Commits pushed a origin/main:
+  * 3f58ee6: feat(published-menu): move cats bar to TOP + install btn in mini-header + accent scrollbar + PWA uninstall detection
+  * Auto-deploy a Vercel activado
+
+Stage Summary:
+- ✅ Categorías movidas a la parte SUPERIOR (debajo del mini-header, fixed top)
+- ✅ Botón "Instalar App" movido al mini-header (a la izquierda del toggle de tema)
+- ✅ PWA: botón Install se oculta al instalar y reaparece al desinstalar (matchMedia + change + focus listeners)
+- ✅ Top nav bar ahora usa el color principal de la carta (linear-gradient accent) con texto blanco
+- ✅ Scrollbar del mouse estilizada con el color principal de la carta (Webkit + Firefox)
+- ✅ Verificado con Playwright + VLM en mobile 390x844 y desktop 1280x800
+- ✅ TypeScript: 0 errores en src/
+- ✅ Pusheado a main → deploy automático a Vercel
