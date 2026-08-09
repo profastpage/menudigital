@@ -120,7 +120,10 @@ export function DemoMenuCarousel() {
     const t1 = setTimeout(() => {
       const iframes = document.querySelectorAll("iframe");
       iframes.forEach((iframe, idx) => {
-        if ((iframe as HTMLIFrameElement).complete) {
+        // `complete` no es estándar en HTMLIFrameElement, pero existe en el DOM
+        // para iframes same-origin. Lo checkeamos con un cast seguro.
+        const iframeAny = iframe as HTMLIFrameElement & { complete?: boolean };
+        if (iframeAny.complete) {
           setIframeLoaded((p) => (p[idx] ? p : { ...p, [idx]: true }));
         }
       });
@@ -197,11 +200,20 @@ export function DemoMenuCarousel() {
                 borderTopLeftRadius: "0",
                 borderTopRightRadius: "0",
               }}
-              // allow-same-origin es SEGURO aquí: los .html son estáticos y propios (served from /public).
-              // Sin allow-same-origin, el navegador trata el iframe como opaque origin y no dispara onLoad,
-              // dejando el skeleton visible para siempre.
-              // El warning "sandbox escape" es informativo — el contenido es de confianza.
-              sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-popups-to-escape-sandbox"
+              // SANDBOX sin allow-same-origin: elimina el warning de Chrome
+              // "An iframe which has both allow-scripts and allow-same-origin for its sandbox
+              //  attribute can escape its sandboxing."
+              //
+              // Los .html son estáticos y propios (served from /public), pero NO necesitan
+              // allow-same-origin porque:
+              //   1. No usan localStorage/sessionStorage (cart en memoria JS).
+              //   2. No hacen fetch a APIs del mismo origen.
+              //   3. El onLoad SÍ dispara correctamente sin allow-same-origin (Chrome y Firefox
+              //      disparan onLoad para iframes opaque-origin; lo que no disparan son eventos
+              //      postMessage del padre al hijo, que aquí no usamos).
+              // Tenemos un fallback en useEffect (línea ~119) que marca los iframes como loaded
+              // tras 600ms/3s por si el onLoad no disparara.
+              sandbox="allow-scripts allow-popups allow-forms allow-popups-to-escape-sandbox"
               aria-hidden={idx !== active}
             />
           ))}

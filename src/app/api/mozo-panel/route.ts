@@ -1,6 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createServiceClient } from '@/lib/supabase/service';
 import { createClient } from '@/lib/supabase/server';
 import { PLANS, type PlanId } from '@/lib/plans';
+
+/**
+ * API del panel público del MOZO.
+ *
+ * ⚠️  Usa `createServiceClient()` (service_role key) para BYPASSAR RLS.
+ * Esto es necesario porque el MOZO es un usuario EXTERNO que no tiene sesión
+ * iniciada con la cuenta del dueño. Sin service role, las policies
+ * `waiters_owner_all` / `tables_owner_all` / etc. bloquean todas las queries
+ * (owner_id = auth.uid() falla cuando auth.uid() es null).
+ *
+ * Seguridad:
+ *   - El token (qr_token) es hex 48 chars, unguessable.
+ *   - Validamos que el mozo existe y está activo.
+ *   - Si el mozo tiene contraseña, se valida antes de devolver cualquier dato.
+ *   - Validamos que el plan del dueño tenga comandas (Premium+).
+ *   - Todas las queries están scopeadas al owner_id del mozo (no se expone
+ *     data de otros restaurantes).
+ *   - El service role key NUNCA se envía al navegador.
+ */
+
+function getCleanToken(token: string | null): string | null {
+  if (!token || token.length < 16 || !/^[a-zA-Z0-9_-]+$/.test(token)) return null;
+  return token;
+}
 
 /**
  * GET /api/mozo-panel?token=xxx
@@ -14,13 +39,16 @@ import { PLANS, type PlanId } from '@/lib/plans';
  * El endpoint valida que el plan del dueño sea Premium+.
  */
 export async function GET(req: NextRequest) {
-  const supabase = await createClient();
   const url = new URL(req.url);
-  const token = url.searchParams.get('token');
+  const rawToken = url.searchParams.get('token');
+  const token = getCleanToken(rawToken);
 
-  if (!token || token.length < 16) {
+  if (!token) {
     return NextResponse.json({ error: 'Token inválido' }, { status: 400 });
   }
+
+  // Service role client — bypassa RLS para acceso público por token
+  const supabase = createServiceClient() ?? (await createClient());
 
   // Buscar mozo por token
   const { data: waiter, error: wErr } = await supabase
@@ -131,11 +159,12 @@ export async function GET(req: NextRequest) {
  * }
  */
 export async function POST(req: NextRequest) {
-  const supabase = await createClient();
+  const supabase = createServiceClient() ?? (await createClient());
   const body = await req.json();
   const { token, table_id, items, customer_name, party_size, notes } = body;
 
-  if (!token || !items || !Array.isArray(items) || items.length === 0) {
+  const cleanToken = getCleanToken(token);
+  if (!cleanToken || !items || !Array.isArray(items) || items.length === 0) {
     return NextResponse.json({ error: 'Datos incompletos' }, { status: 400 });
   }
 
@@ -143,7 +172,7 @@ export async function POST(req: NextRequest) {
   const { data: waiter, error: wErr } = await supabase
     .from('waiters')
     .select('id, owner_id, branch_id, full_name, is_active, pin, password')
-    .eq('qr_token', token)
+    .eq('qr_token', cleanToken)
     .single();
 
   if (wErr || !waiter) {
@@ -257,11 +286,12 @@ export async function POST(req: NextRequest) {
  * Body: { token, order_id, action: 'marcar_entregada' | 'cancelar' }
  */
 export async function PATCH(req: NextRequest) {
-  const supabase = await createClient();
+  const supabase = createServiceClient() ?? (await createClient());
   const body = await req.json();
   const { token, order_id, action } = body;
 
-  if (!token || !order_id || !action) {
+  const cleanToken = getCleanToken(token);
+  if (!cleanToken || !order_id || !action) {
     return NextResponse.json({ error: 'Datos incompletos' }, { status: 400 });
   }
 
@@ -269,7 +299,7 @@ export async function PATCH(req: NextRequest) {
   const { data: waiter } = await supabase
     .from('waiters')
     .select('id, owner_id, full_name, password')
-    .eq('qr_token', token)
+    .eq('qr_token', cleanToken)
     .single();
 
   if (!waiter) return NextResponse.json({ error: 'Token inválido' }, { status: 404 });
