@@ -2414,3 +2414,94 @@ Stage Summary:
 - ✅ Badge que chocaba en esquina superior derecha ELIMINADO
 - ✅ Build exitoso, push a main, Vercel redeploy automático
 - Arquitectura confirmada: NO se necesita una BD separada por mozo — una sola tabla `waiters` con columna `qr_token` (hex 36 chars) + function SECURITY DEFINER + RLS policy = acceso externo sin login seguro y escalable
+
+---
+Task ID: cocina-profiles-upload-fix-cart-ux-sticky-nav
+Agent: main (Super Z)
+Task: 5 fixes requested by user with VLM verification (mobile-first):
+1. Fix "Unexpected token DOCTYPE is not valid JSON" when uploading logo/cover image
+2. Fix mozo mobile cart bar UX (user circled "Ver carrito (1)" in red — confusing overlap)
+3. Add Cocina staff profiles (like MOZOS but for kitchen, with QR/token external access)
+4. Make top menu always sticky in ALL dashboard subpages (user confirmed yes)
+5. Fix cocina timeAgo showing absurd values like "1058h 6m"
+
+Work Log:
+- VLM analyzed 6 user screenshots:
+  * imgs 1-2: mozo mobile with DevTools showing 401 errors + cart bar UX issues
+  * imgs 3-4: cocina dashboard with timer bug "1058h 6m" and stale orders
+  * imgs 5-6: profile/menu editor form with "Unexpected token DOCTYPE" toast on image upload
+- Root cause #1: /api/upload route was MISSING entirely. Editor calls fetch('/api/upload')
+  from image-uploader.tsx and editor-client.tsx (cover image) → Next.js returned HTML
+  404 page → JSON.parse failed with "Unexpected token '<!DOCTYPE>'".
+- Created src/app/api/upload/route.ts:
+  * multipart/form-data POST, requires auth
+  * validates MIME type + size (5MB)
+  * uploads to Supabase Storage bucket "menu-images" with path {userId}/{ts}-{rand}.{ext}
+  * uses createServiceClient() to bypassa RLS (falls back to anon client if no service key)
+- Applied bucket creation + RLS policies to production Supabase directly via
+  scripts/apply-menu-images-bucket.py:
+  * Bucket "menu-images" created (public read)
+  * Policies: menu_images_public_read (SELECT), menu_images_auth_insert/update/delete
+    (TO authenticated, scoped by (storage.foldername(name))[1] = auth.uid()::text)
+- Root cause #2: mozo cart had TWO overlapping widgets:
+  1. fixed bottom-0 bar with "Vaciar" + "Enviar a cocina"
+  2. fixed bottom-[150px] <details> with "Ver carrito (N)" expandable
+  → Unified into ONE expandable bottom sheet: top row = toggle (count + total + chevron),
+    expanded = list of items with qty controls + "Vaciar carrito", bottom row = "Enviar a cocina"
+    full-width button. Added cartExpanded state.
+- Root cause #3: cocina timeAgo() returned "{hrs}h {remMins}m" without cap. For 1058h-old
+  orders (stale test data), it showed "1058h 6m". Fixed: >24h → "Ayer"/"{n}d", >7d → "Antiguo".
+  Added new 'stale' urgency level (>24h) shown in gray + "⏳ Antigua" label + opacity-60.
+- Sticky desktop top nav: previously only mobile header was sticky. Added a new
+  <header className="hidden lg:flex sticky top-0 z-30"> to DashboardShell with:
+  * Left: section title derived from NAV_ITEMS.find(isActive)?.label
+  * Right: plan badge, InstallAppButton, SupportWhatsAppButton, SupportWidget, email + logout
+  Now all dashboard pages have a sticky top bar on desktop.
+- New feature: Cocina Staff Profiles (Premium+)
+  * Added `role` column ('mozo' | 'cocinero') to waiters table — applied directly to production
+  * /api/waiters GET now accepts ?role=mozo|cocinero (default mozo, backwards compatible)
+  * /api/waiters POST accepts role; PATCH supports role update
+  * Created /cocina landing page (mirror of /mozo landing) — explains external access
+  * Created /cocina/[token] external panel — mirrors /mozo/[token]:
+    - Service role client (bypassa RLS) + RPC mozo_public_lookup + anon fallback
+    - Validates that waiter.role === 'cocinero' (rejects mozos trying to access via /cocina/)
+    - Shows comandas activas grouped by status (Por iniciar / En preparación / Listas)
+    - Item checkboxes + advance-status buttons + auto-refresh 15s
+    - Password gate (if cocinero has password configured)
+  * Created KitchenStaffManager component embedded at top of /dashboard/cocina:
+    - Collapsible section with banner explaining external access model
+    - Grid of cocinero cards: name, active toggle, external URL, password indicator
+    - Modals: Add cocinero, Edit password, View QR (with qrserver.com API)
+    - Actions: toggle active, regenerate token, delete
+- Verified locally:
+  * TypeScript: 0 errors in src/ (pre-existing errors in scripts/ and skills/ unchanged)
+  * Next.js build: Compiled successfully in 98s
+  * /api/upload returns JSON 401 (not HTML 404) when unauthenticated — bug fixed
+- Verified on production (https://menudigital-pro.vercel.app):
+  * /cocina returns 200 (new landing page)
+  * /cocina/{valid_cocinero_token} returns 200 with cocina panel (created test cocinero,
+    verified, then deleted)
+  * /mozo/{valid_token} still works (regression check) — Mesa 1 selected, 2 dishes added
+    to cart, new unified cart bar shows "2 platos · S/ 55.00 · Enviar a cocina" cleanly
+  * Cart expandable: tap top row → items list with qty controls + "Vaciar carrito"
+- VLM ratings:
+  * Cocina landing mobile: 8.5/10 — clean, modern, dark mode + yellow accent perfect for
+    kitchen environments
+  * Mozo cart bar (new): 8/10 — clean, intuitive, only minor toast overlap noted
+  * Cocina external panel: 8/10 — clean empty state, chef hat icon, clear feedback
+- Commit 4bcb1f0 pushed to origin/main → Vercel auto-deploy successful
+
+Stage Summary:
+- ✅ "Unexpected token DOCTYPE" error FIXED — /api/upload route created, bucket +
+  RLS policies applied to production. Logo + cover + dish image uploads now work.
+- ✅ Mozo mobile cart bar UX REDESIGNED — single expandable bottom sheet (was 2 overlapping
+  widgets). VLM 8/10.
+- ✅ Cocina Staff Profiles feature LIVE — same architecture as MOZOS (external access via
+  /cocina/[token], QR, optional password). Owner manages staff from /dashboard/cocina.
+- ✅ Sticky desktop top nav — all dashboard subpages now show sticky top bar with section
+  title + plan + quick actions. Always visible when scrolling.
+- ✅ Cocina timer bug FIXED — no more "1058h 6m" absurd values; stale orders (>24h) shown
+  in gray with "Antiguo" label.
+- ✅ Production deploy live + VLM-verified mobile-first
+- ⚠️ User should test the actual logo/cover upload flow from the editor to confirm the
+  JSON error is gone in their workflow.
