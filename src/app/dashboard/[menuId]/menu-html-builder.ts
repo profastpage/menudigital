@@ -599,6 +599,19 @@ function buildCSS(opts: ThemeOpts): string {
     c += '.dish-note-input{width:100%;background:var(--option-item-bg);border:1px solid var(--border);border-radius:12px;padding:12px 14px;font-size:13.5px;color:var(--text);font-family:inherit;resize:none;outline:none;transition:border-color 0.15s;line-height:1.5;}';
     c += '.dish-note-input:focus{border-color:var(--accent);}';
     c += '.dish-note-input::placeholder{color:var(--text-soft);opacity:0.55;}';
+    // ─── Quantity selector (1-99, +/- buttons + manual input) — shown in dish lightbox ───
+    c += '.dish-qty-wrap{margin:0 0 18px;display:flex;align-items:center;justify-content:space-between;gap:14px;background:var(--option-item-bg);border:1px solid var(--border);border-radius:14px;padding:12px 14px;}';
+    c += '.dish-qty-label{display:flex;align-items:center;gap:10px;font-size:14px;font-weight:700;color:var(--text);letter-spacing:-0.2px;}';
+    c += '.dish-qty-label svg{color:var(--accent);flex-shrink:0;}';
+    c += '.dish-qty-label small{display:block;font-size:11px;font-weight:500;color:var(--text-soft);margin-top:2px;letter-spacing:0;}';
+    c += '.dish-qty-stepper{display:flex;align-items:center;gap:6px;background:var(--glass-strong);border:1px solid var(--border-strong);border-radius:999px;padding:4px;flex-shrink:0;}';
+    c += '.dish-qty-btn{width:38px;height:38px;border-radius:50%;background:var(--accent);color:#fff;border:none;cursor:pointer;font-size:22px;line-height:1;font-weight:700;display:flex;align-items:center;justify-content:center;transition:all 0.15s;box-shadow:0 4px 12px rgba(var(--accent-rgb),0.4);-webkit-tap-highlight-color:transparent;user-select:none;}';
+    c += '.dish-qty-btn:hover{transform:scale(1.08);box-shadow:0 6px 16px rgba(var(--accent-rgb),0.55);}';
+    c += '.dish-qty-btn:active{transform:scale(0.94);}';
+    c += '.dish-qty-btn:disabled{opacity:0.35;cursor:not-allowed;transform:none;box-shadow:none;background:var(--text-soft);}';
+    c += '.dish-qty-input{width:48px;text-align:center;font-size:17px;font-weight:800;color:var(--text);background:transparent;border:none;outline:none;font-family:inherit;padding:0;-moz-appearance:textfield;}';
+    c += '.dish-qty-input::-webkit-outer-spin-button,.dish-qty-input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}';
+    c += '.dish-qty-input:focus{color:var(--accent);}';
     c += '.dish-option-group{margin:0 0 18px;padding:14px;background:var(--option-bg);border:1px solid var(--border);border-radius:14px;}';
     c += '.dish-option-group-title{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}';
     c += '.dish-option-group-name{font-size:14px;font-weight:700;color:var(--text);letter-spacing:-0.2px;}';
@@ -1574,7 +1587,7 @@ function buildJS(opts: JSOpts): string {
     s += '}\n';
     // Calcula el total dinámico del plato (base + extras seleccionados)
     s += 'function getDishCurrentTotal(dish){var total=dish.price||0;for(var gid in currentDishOptionsState){for(var iid in currentDishOptionsState[gid].items){var it=currentDishOptionsState[gid].items[iid];total+=(it.price||0)*it.qty;}}return total;}\n';
-    s += 'function updateDishTotal(){var priceEl=document.getElementById("dishLightboxPrice");if(!priceEl)return;var dish=window.__currentDish;var total=getDishCurrentTotal(dish);priceEl.textContent=formatPrice(total);}\n';
+    s += 'function updateDishTotal(){var priceEl=document.getElementById("dishLightboxPrice");if(!priceEl)return;var dish=window.__currentDish;var unitTotal=getDishCurrentTotal(dish);var qty=1;if(typeof window.__getDishQty==="function"){qty=window.__getDishQty();}var grand=unitTotal*qty;if(qty>1){priceEl.innerHTML=formatPrice(grand)+" <span style=\\"font-size:0.7em;opacity:0.6;font-weight:600\\">("+qty+" × "+formatPrice(unitTotal)+")</span>";}else{priceEl.textContent=formatPrice(unitTotal);}}\n';
     // Abre el lightbox
     s += 'function openDishLightbox(catIdx,dishIdx){\n';
     s += '  var dish=RESTAURANT.categories[catIdx].dishes[dishIdx];\n';
@@ -1602,6 +1615,27 @@ function buildJS(opts: JSOpts): string {
     s += '  var noteInput=document.createElement("textarea");noteInput.className="dish-note-input";noteInput.placeholder="Ej: Sin cebolla, cocido término medio, salsa aparte...";noteInput.rows=2;noteInput.maxLength=200;\n';
     s += '  noteWrap.appendChild(noteLabel);noteWrap.appendChild(noteInput);\n';
     s += '  content.appendChild(noteWrap);\n';
+    s += '  // ─── Quantity selector (1-99, +/- buttons + manual input) ───\n';
+    s += '  var qtyWrap=document.createElement("div");qtyWrap.className="dish-qty-wrap";\n';
+    s += '  var qtyLabel=document.createElement("div");qtyLabel.className="dish-qty-label";qtyLabel.innerHTML="<svg width=\\"18\\" height=\\"18\\" viewBox=\\"0 0 24 24\\" fill=\\"none\\" stroke=\\"currentColor\\" stroke-width=\\"2\\" stroke-linecap=\\"round\\" stroke-linejoin=\\"round\\"><path d=\\"M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z\\"/><line x1=\\"3\\" y1=\\"6\\" x2=\\"21\\" y2=\\"6\\"/><path d=\\"M16 10a4 4 0 0 1-8 0\\"/></svg><span>Cantidad<small>Mínimo 1 · Máximo 99</small></span>";\n';
+    s += '  var stepper=document.createElement("div");stepper.className="dish-qty-stepper";\n';
+    s += '  var decBtn=document.createElement("button");decBtn.className="dish-qty-btn";decBtn.type="button";decBtn.setAttribute("aria-label","Disminuir cantidad");decBtn.innerHTML="&minus;";decBtn.disabled=true;\n';
+    s += '  var qtyInput=document.createElement("input");qtyInput.className="dish-qty-input";qtyInput.type="number";qtyInput.inputMode="numeric";qtyInput.pattern="[0-9]*";qtyInput.min=1;qtyInput.max=99;qtyInput.value=1;qtyInput.setAttribute("aria-label","Cantidad");\n';
+    s += '  var incBtn=document.createElement("button");incBtn.className="dish-qty-btn";incBtn.type="button";incBtn.setAttribute("aria-label","Aumentar cantidad");incBtn.innerHTML="&plus;";\n';
+    s += '  function clampQty(v){v=parseInt(v,10);if(isNaN(v)||v<1)v=1;if(v>99)v=99;return v;}\n';
+    s += '  function syncQtyButtons(){var v=clampQty(qtyInput.value);decBtn.disabled=(v<=1);incBtn.disabled=(v>=99);updateDishTotal();}\n';
+    s += '  decBtn.addEventListener("click",function(){qtyInput.value=clampQty(parseInt(qtyInput.value,10)-1);syncQtyButtons();});\n';
+    s += '  incBtn.addEventListener("click",function(){qtyInput.value=clampQty(parseInt(qtyInput.value,10)+1);syncQtyButtons();});\n';
+    s += '  // On input: only enable/disable buttons based on the *current* parsed value, but DO NOT clamp the field value\n';
+    s += '  // (clamping on every keystroke breaks typing — e.g. clearing the field to type a new number would jump to 1).\n';
+    s += '  qtyInput.addEventListener("input",function(){var raw=qtyInput.value;if(raw===""){decBtn.disabled=true;incBtn.disabled=false;return;}var v=parseInt(raw,10);if(isNaN(v)){decBtn.disabled=true;incBtn.disabled=false;return;}decBtn.disabled=(v<=1);incBtn.disabled=(v>=99);updateDishTotal();});\n';
+    s += '  qtyInput.addEventListener("blur",function(){qtyInput.value=clampQty(qtyInput.value);syncQtyButtons();});\n';
+    s += '  qtyInput.addEventListener("keydown",function(e){if(e.key==="Enter"){e.preventDefault();qtyInput.blur();}});\n';
+    s += '  stepper.appendChild(decBtn);stepper.appendChild(qtyInput);stepper.appendChild(incBtn);\n';
+    s += '  qtyWrap.appendChild(qtyLabel);qtyWrap.appendChild(stepper);\n';
+    s += '  content.appendChild(qtyWrap);\n';
+    s += '  // Helper: get current selected qty (1-99) — always returns a clamped integer\n';
+    s += '  window.__getDishQty=function(){var v=clampQty(qtyInput.value);qtyInput.value=v;return v;};\n';
     s += '  inner.appendChild(content);\n';
     s += '  var cta=document.createElement("div");cta.className="dish-lightbox-cta";\n';
     // ─── Small "Volver" button (bottom-left corner) — returns to the exact scroll position in the menu ───\n';
@@ -1611,7 +1645,7 @@ function buildJS(opts: JSOpts): string {
     s += '  cta.appendChild(backBtn);\n';
     s += '  var addBtn=document.createElement("button");addBtn.className="dish-lightbox-add";\n';
     s += '  addBtn.innerHTML="<svg width=\\"20\\" height=\\"20\\" viewBox=\\"0 0 24 24\\" fill=\\"none\\" stroke=\\"currentColor\\" stroke-width=\\"2.5\\" stroke-linecap=\\"round\\" stroke-linejoin=\\"round\\"><path d=\\"M12 5v14M5 12h14\\"/></svg>Agregar al pedido";\n';
-    s += '  addBtn.addEventListener("click",function(){var opts=getSelectedOptionsSnapshot();var noteEl=document.querySelector(".dish-note-input");var noteVal=noteEl?noteEl.value.trim():"";addToCart(catIdx,dishIdx,null,opts,noteVal);addBtn.classList.add("added");addBtn.innerHTML="<svg width=\\\"20\\\" height=\\\"20\\\" viewBox=\\\"0 0 24 24\\\" fill=\\\"none\\\" stroke=\\\"currentColor\\\" stroke-width=\\\"3\\\" stroke-linecap=\\\"round\\\" stroke-linejoin=\\\"round\\\"><polyline points=\\\"20 6 9 17 4 12\\\"/></svg> Agregado";setTimeout(closeDishLightbox,900);});\n';
+    s += '  addBtn.addEventListener("click",function(){var opts=getSelectedOptionsSnapshot();var noteEl=document.querySelector(".dish-note-input");var noteVal=noteEl?noteEl.value.trim():"";var qty=1;if(typeof window.__getDishQty==="function"){qty=window.__getDishQty();}addToCart(catIdx,dishIdx,null,opts,noteVal,qty);var addedLabel=qty>1?("Agregado ("+qty+")"):" Agregado";addBtn.classList.add("added");addBtn.innerHTML="<svg width=\\\"20\\\" height=\\\"20\\\" viewBox=\\\"0 0 24 24\\\" fill=\\\"none\\\" stroke=\\\"currentColor\\\" stroke-width=\\\"3\\\" stroke-linecap=\\\"round\\\" stroke-linejoin=\\\"round\\\"><polyline points=\\\"20 6 9 17 4 12\\\"/></svg>"+addedLabel;setTimeout(closeDishLightbox,900);});\n';
     s += '  cta.appendChild(addBtn);\n';
     s += '  inner.appendChild(cta);\n';
     s += '  lightbox.appendChild(inner);\n';
@@ -1645,17 +1679,18 @@ function buildJS(opts: JSOpts): string {
   s += '  if(inner){var activeChip=inner.querySelector(".bcat-item[data-idx=\\""+activeIdx+"\\"]");if(activeChip){inner.scrollLeft=activeChip.offsetLeft-(inner.offsetWidth/2)+(activeChip.offsetWidth/2);}}\n';
   s += '}\n';
   // Add to cart
-  s += 'function addToCart(catIdx,dishIdx,btn,options,note){\n';
+  s += 'function addToCart(catIdx,dishIdx,btn,options,note,qty){\n';
   s += '  var dish=RESTAURANT.categories[catIdx].dishes[dishIdx];\n';
   s += '  options=options||[];\n';
   s += '  note=note||"";\n';
+  s += '  qty=parseInt(qty,10);if(isNaN(qty)||qty<1)qty=1;if(qty>99)qty=99;\n';
   s += '  var extrasTotal=0;options.forEach(function(o){extrasTotal+=(o.price||0)*o.qty;});\n';
   s += '  var unitPrice=dish.price+extrasTotal;\n';
   s += '  var signature=catIdx+"-"+dishIdx+"-"+JSON.stringify(options)+(note?"|"+note:"");\n';
   s += '  var existing=null;\n';
   s += '  for(var i=0;i<cart.length;i++){if(cart[i].signature===signature){existing=cart[i];break;}}\n';
-  s += '  if(existing){existing.qty++;}\n';
-  s += '  else{cart.push({catIdx:catIdx,dishIdx:dishIdx,signature:signature,name:dish.name,price:unitPrice,basePrice:dish.price,extrasPrice:extrasTotal,options:options,note:note,qty:1});}\n';
+  s += '  if(existing){existing.qty+=qty;if(existing.qty>99)existing.qty=99;}\n';
+  s += '  else{cart.push({catIdx:catIdx,dishIdx:dishIdx,signature:signature,name:dish.name,price:unitPrice,basePrice:dish.price,extrasPrice:extrasTotal,options:options,note:note,qty:qty});}\n';
   s += '  if(btn){showAddedFlash(btn.closest(".dish"));}\n';
   s += '  updateCart(true);\n';
   s += '}\n';

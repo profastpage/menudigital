@@ -2505,3 +2505,48 @@ Stage Summary:
 - ✅ Production deploy live + VLM-verified mobile-first
 - ⚠️ User should test the actual logo/cover upload flow from the editor to confirm the
   JSON error is gone in their workflow.
+
+---
+Task ID: qty-selector-1-99
+Agent: main (Super Z)
+Task: Agregar selector de cantidad (1-99, botones +/- e input manual) al lightbox de cada plato en la carta digital pública. Cuando un usuario hace clic en un plato, además de las notas y extras, debe poder elegir cuántas unidades agregar antes de presionar "Agregar al pedido".
+
+Work Log:
+- Editado `src/app/dashboard/[menuId]/menu-html-builder.ts`:
+  * Agregado CSS para `.dish-qty-wrap`, `.dish-qty-label`, `.dish-qty-stepper`, `.dish-qty-btn` (botones circulares con color de acento del menú), `.dish-qty-input` (input number sin spinners nativos, centrado, font-weight 800)
+  * Inyectado el bloque del selector entre `noteWrap` (Notas del pedido) y `cta` (barra sticky con Volver + Agregar al pedido) dentro de `openDishLightbox()`
+  * UI: icono SVG de bolsa de compras + label "Cantidad" + subtítulo "Mínimo 1 · Máximo 99" + stepper pill (− input +)
+  * Comportamiento:
+    - DecBtn arranca deshabilitado (qty inicial = 1)
+    - DecBtn se habilita cuando qty > 1, IncBtn se deshabilita cuando qty = 99
+    - Click en − resta 1 (clamp 1..99)
+    - Click en + suma 1 (clamp 1..99)
+    - Input manual: NO se clampea en cada keystroke (permite borrar y escribir número nuevo libremente); sí se clampea en blur y en Enter
+    - Input type=number, inputMode=numeric, pattern=[0-9]*, min=1, max=99
+    - Eliminados los spinners nativos de WebKit/Firefox vía CSS para UX limpia
+  * `window.__getDishQty()` — helper que devuelve el valor clampeado y lo sincroniza en el input
+  * `updateDishTotal()` actualizado: cuando qty > 1 muestra "PEN 450.00 (15 × PEN 30.00)" además del total; cuando qty = 1 muestra solo el precio unitario
+  * `addBtn` click handler actualizado: lee qty vía `window.__getDishQty()` y la pasa a `addToCart()`. El label del botón cambia a "Agregado (N)" cuando N > 1
+  * `addToCart(catIdx, dishIdx, btn, options, note, qty)` actualizado: acepta parámetro `qty` (default 1 si NaN/<1, max 99). Si el item ya existe en el carrito (misma signature), suma qty en lugar de siempre +1. Backward compatible: todas las llamadas existentes `addToCart(ci,di)` y `addToCart(ci,di,this)` siguen funcionando con qty=1
+- Creado `scripts/test-qty-standalone.js`: test Playwright (mobile iPhone 14 Pro) que renderiza buildMenuHTML con un mock menu y verifica:
+  1. Selector visible en lightbox (.dish-qty-wrap, .dish-qty-input value=1, 2 botones +, dec deshabilitado en 1)
+  2. Click 3× en + → value = 4
+  3. Click 1× en − → value = 3
+  4. Input manual "15" → value = 15, precio muestra "PEN 450.00 (15 × PEN 30.00)"
+  5. Input "0" → clampea a 1
+  6. Input "150" → clampea a 99
+  7. Set qty=5 + click "Agregar al pedido" → cart badge = 5, cart item qty = 5, cart total = 150
+  8. No console errors
+- Bug detectado y correguido durante el test: el handler `input` original clampeaba en cada keystroke, lo que rompía el flujo de "borrar todo y escribir número nuevo" (empty→1, luego append "1"→"11", luego append "5"→"115"→clamp 99). Fix: el handler `input` ahora solo actualiza el estado enabled/disabled de los botones y el precio total, sin tocar el valor del campo. El clampeo real sucede solo en `blur` y en `__getDishQty()`
+- Test ejecutado: TODOS los 7 escenarios pasan ✓
+- VLM review (glm-5v-turbo) sobre screenshot qty=15: confirma selector visible, diseño profesional (dorados sobre fondo oscuro), contraste correcto, sin subrayados rojos, precio matemáticamente correcto (15 × 30 = 450)
+- VLM review sobre screenshot carrito con qty=5: confirma item qty=5 visible, total = 150 correcto, sin errores visuales
+
+Stage Summary:
+- Implementación completa: selector de cantidad 1-99 con botones +, botón − y entrada manual funcionando en el lightbox de cada plato
+- Precio dinámico: se actualiza en tiempo real mostrando "(N × precio unitario)" cuando N > 1
+- Carrito respeta qty: addToCart suma N unidades en lugar de siempre +1; si el mismo plato+opciones+nota ya existe, acumula
+- Backward compatible: addToCart() sin argumento qty sigue funcionando con qty=1
+- Tests automatizados pasan al 100% (7/7 escenarios)
+- VLM confirma UX profesional, sin errores visuales
+- Artefactos: scripts/test-qty-standalone.js, download/test-menu-qty.html, download/test-qty-0[1-7]-*.png
