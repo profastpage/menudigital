@@ -2369,3 +2369,48 @@ Stage Summary:
   1. Ejecutar `supabase/mozo-public-access.sql` en Supabase SQL Editor (one-time)
   2. Verificar que `SUPABASE_SERVICE_ROLE_KEY` esté configurada en Vercel (probablemente ya lo esté)
 - Producción: https://menudigital-pro.vercel.app/ — desplegado y verificado
+
+---
+Task ID: mozo-prod-fix-and-carousel-polish
+Agent: main (Super Z)
+Task: Aplicar migración mozo-public-access a Supabase producción + hacer más delgada la nav del carrusel + eliminar badge que choca en esquina superior derecha.
+
+Work Log:
+- Conectado a Supabase producción (aws-0-sa-east-1.pooler.supabase.com) vía psycopg2 con credenciales existentes
+- Verificado estado: 45 mozos activos con qr_token, PERO la function mozo_public_lookup y la policy waiters_public_lookup_by_token NO existían (migración no aplicada)
+- Aplicada migración supabase/mozo-public-access.sql a producción:
+  - Creada function SECURITY DEFINER mozo_public_lookup(p_token) — devuelve solo columnas seguras (id, full_name, is_active, owner_id, branch_id, has_password, has_pin)
+  - Creada RLS policy waiters_public_lookup_by_token — permite SELECT anónimo por qr_token
+  - Test con token real (Luis Flores, premium): function devuelve los datos correctos
+- Verificado en producción (https://menudigital-pro.vercel.app/mozo/7f5e5fc1-0a4f-55d7-8ccc-462b904f61ba):
+  - ANTES: 404 "This page could not be found"
+  - DESPUÉS: 200 OK, muestra panel de contraseña para Luis Flores
+  - Confirmado por VLM (glm-5v-turbo): is_404=false, page_loads=true, shows_password_form=true
+
+Carousel polish (landig page home PC):
+- Identificado por VLM en screenshot audit-home-pc-2026.png (1440x900):
+  - nav_scroll: barra de categorías dentro del iframe medía ~50px, muy prominente
+  - badge_collision: rating badge "LMP / 4.9 / 320 reseñas" flotaba en top-1/2 -right-6 chocando con borde del phone frame y la floating card "Pedido WhatsApp" en bottom-1/3
+- Aplicado script scripts/thin-demo-nav.py a los 6 HTMLs demo (la-parrilla, pizzeria-bella, cafe-aurora, pollo-brasa, burger-lab, sushi-niwa):
+  - .nav padding 14px 0 → 8px 0 (más oscuro también: 0.78 → 0.85 alpha)
+  - .nav-item padding 8px 18px → 5px 13px, font-size 13.5px → 12px, border-radius 24px → 18px
+  - .nav-inner gap 8px → 6px, padding 0 20px → 0 14px
+  - .nav-item.active box-shadow reducido
+- Eliminado rating badge de src/components/landing/hero.tsx (motion.div con LMP avatares + 4.9 + 320 reseñas)
+- Verificado por VLM en screenshot audit-home-pc-after.png:
+  - nav_thinned: true, height_px_estimate: 32 (antes 50)
+  - badge_removed: true
+  - any_remaining_issues: "Ninguna"
+
+Otros checks:
+- iframe sandbox: ya estaba correcto (sandbox="allow-scripts allow-popups allow-forms allow-popups-to-escape-sandbox", sin allow-same-origin)
+- 63 URLs Unsplash verificadas con HEAD requests — todas 200 OK (no broken images)
+- Build Next.js compila exitosamente (53 páginas estáticas generadas)
+- Commiteado y pusheado a main (commit 5382be6) — Vercel redeploy automático
+
+Stage Summary:
+- ✅ MOZO 404 en producción RESUELTO (migración aplicada directamente a Supabase)
+- ✅ Carrusel nav scroll hecho más delgado (50px → 32px)
+- ✅ Badge que chocaba en esquina superior derecha ELIMINADO
+- ✅ Build exitoso, push a main, Vercel redeploy automático
+- Arquitectura confirmada: NO se necesita una BD separada por mozo — una sola tabla `waiters` con columna `qr_token` (hex 36 chars) + function SECURITY DEFINER + RLS policy = acceso externo sin login seguro y escalable
