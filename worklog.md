@@ -2228,3 +2228,94 @@ Stage Summary:
 - ✅ Verificado con VLM en mobile (390x844) y desktop (1440x900)
 - ✅ TypeScript: 0 errores en src/
 - Pendiente: git push a main → deploy automático Vercel
+
+---
+Task ID: whatsapp-top-nav + mozo-external-access
+Agent: main (Super Z)
+Task: 2 correcciones UX solicitadas por usuario con VLM:
+1. Mover botón WhatsApp del plan Full/Premium al menú superior (era FAB flotante en bottom-right)
+2. Hacer que el panel del MOZO sea enlace externo sin necesidad de login del dueño (arrastraba 404 en /mozo sin token)
+3. VLM verificar todo + git push a main con deploy a Vercel
+
+Work Log:
+- Análisis VLM de capturas del usuario:
+  * Imagen 1: dashboard mobile con FAB WhatsApp flotante en bottom-right (circulado en verde), flecha apuntando al top nav → usuario quiere botón movido al top
+  * Imagen 2: 404 en /mozo (sin token) → usuario piensa que el mozo necesita login del dueño, pero la arquitectura ya es externa; solo faltaba landing page en /mozo
+- Editado /home/z/my-project/src/components/support/support-whatsapp-button.tsx:
+  * Nueva variant="inline-icon" — botón compacto h-11 w-11 (mismo tamaño que InstallAppButton y SupportWidget)
+  * Estilo: bg-[#25D366]/15 + border-[#25D366]/30 + WhatsAppIcon verde (no FAB blanco grande)
+  * Popup oscuro (#1a1a2e) en lugar de popup blanco del FAB — coherente con dashboard dark theme
+  * Indicador online: punto verde 2x2px (sin pulse animación para no distraer en el header)
+  * Lógica preservada: premium/full → "Abrir WhatsApp" directo; free/pro → "Ver planes Premium" → modal upsell
+  * Mensaje pre-rellenado contextual según ruta (igual que variant dashboard)
+  * Variant inline-icon NO se oculta en /r/, /qr/, /mozo/ (la decide el caller)
+  * FAB flotante preservado solo para variantes landing/dashboard/always-on (dashboard FAB ya no se usa)
+
+- Editado /home/z/my-project/src/components/dashboard/dashboard-shell.tsx:
+  * Eliminado <SupportWhatsAppButton variant="dashboard" /> al final del div principal (ya no hay FAB flotante)
+  * Añadido <SupportWhatsAppButton variant="inline-icon" /> en:
+    - Sidebar desktop (top, entre "MenuPro" y el nav, con flex-1 para empujarlo a la derecha)
+    - Header mobile (entre InstallAppButton y SupportWidget, mismo tamaño h-11 w-11)
+  * Comentarios actualizados explicando la nueva ubicación
+
+- Creado /home/z/my-project/src/app/mozo/page.tsx (nueva ruta /mozo sin token):
+  * Metadata: title "Panel del Mozo — MenuPro", robots noindex
+  * Renderiza <MozoLanding /> del client component
+
+- Creado /home/z/my-project/src/app/mozo/mozo-landing-client.tsx:
+  * Hero con icono UtensilsCrossed en cuadrado morado gradient
+  * Headline "Panel del Mozo"
+  * Sub-headline explícito: "Ingresa con tu enlace único o código QR. No necesitas iniciar sesión con la cuenta del dueño."
+  * Form con input + botón "Ingresar al panel →"
+  * Parser de input flexible: acepta URL completa, /mozo/{token}, mozo/{token}, o token solo
+    - Usa new URL() para extraer la última parte del path si es URL
+    - Valida: mínimo 8 chars, solo alfanumérico + _ + -
+    - Redirige a /mozo/{token} vía router.push()
+  * 3 info cards:
+    - "¿Cómo obtengo mi acceso?" — explica QR o enlace del dueño
+    - "¿Pide contraseña?" — explica password opcional
+    - "Acceso externo" — funciona en cualquier dispositivo
+  * Header con logo MenuPro + "Soy dueño →" link a /login
+  * Footer con "¿No tienes tu enlace? Pídelo al dueño" + link a /
+
+- Editado /home/z/my-project/src/app/dashboard/mozos/mozos-client.tsx:
+  * Imports añadidos: ExternalLink, Info de lucide-react
+  * Nueva función openMozoPanel(w) — abre /mozo/{token} en nueva pestaña
+  * Banner morado gradient al inicio explicando:
+    "Los mozos acceden por enlace externo — no necesitan tu cuenta"
+    Con 4 chips: Acceso externo / QR o URL única / Contraseña opcional / Sin login del dueño
+  * Botón "Abrir" añadido en cada tarjeta de mozo (primero en la fila de acciones)
+    - Estilo: bg-[#9d4edd]/15 + text-[#c77dff] (morado, distinto del resto)
+    - Abre /mozo/{token} en nueva pestaña
+  * Hint de URL externa al final de cada tarjeta (si tiene qr_token):
+    - /mozo/{primeros 12 chars}… · Externo · sin login
+  * Modal QR mejorado:
+    - Banner recordatorio: "Importante: Este enlace es externo. El mozo lo abre desde su celular sin iniciar sesión con tu cuenta."
+    - Botón secundario "Abrir panel del mozo en nueva pestaña"
+
+Verificación con Playwright + VLM (mobile-first 390x844 + desktop 1280x800):
+- /mozo (sin token):
+  * HTTP 200 (antes era 404)
+  * VLM confirmó: título "Panel del Mozo", form para pegar enlace, sub-headline "No necesitas iniciar sesión con la cuenta del dueño", 3 info cards
+- /mozo/{token-falso}:
+  * Redirige correctamente desde el form (parser funciona)
+  * Llega a /mozo/{token} → 404 solo porque el token no existe en DB (comportamiento correcto)
+- Test page temporal /test-whatsapp-inline:
+  * VLM confirmó 4 secciones (Plan Full, Premium, Free, Pro) cada una con WhatsApp inline-icon button
+  * VLM confirmó header con logo MenuPro + badge Full + WhatsApp button verde + SupportWidget ?
+  * Click en botón Full → popup abre con "Soporte MenuPro" + "En línea ahora" + "Abrir WhatsApp"
+  * Click en botón Free → popup abre con "Ver planes Premium" → click → modal upsell abre con header dorado "SOPORTE WHATSAPP PREMIUM" + "Hazte Premium y obtén soporte WhatsApp directo" + "Ver planes y hacer upgrade"
+  * Desktop 1280x800: layout responsive, botón visible en top-right del header
+- Test page eliminada tras verificación (no se commit-eó)
+
+TypeScript:
+- 0 errores en archivos modificados (verificado con `npx tsc --noEmit | grep` filtrando los archivos cambiados)
+- Errores pre-existing en examples/, scripts/, skills/ no relacionados
+
+Stage Summary:
+- ✅ WhatsApp movido al top nav (mobile header + desktop sidebar) — ya NO hay FAB flotante en dashboard
+- ✅ /mozo landing page elimina el 404 — explica que el acceso es externo sin login del dueño
+- ✅ /dashboard/mozos ahora deja clarísimo que el mozo es enlace externo (banner + botón Abrir + URL hint)
+- ✅ VLM verificó mobile + desktop, popup de WhatsApp, modal upsell, parser del form /mozo
+- ✅ Arquitectura de seguridad preservada: /mozo/[token] sigue siendo externo (no requiere auth), contraseña sigue siendo opcional y se setea desde /dashboard/mozos (Premium/Full)
+- ✅ Commit 1eec499 pusheado a origin/main → Vercel auto-deploy
