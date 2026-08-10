@@ -2550,3 +2550,76 @@ Stage Summary:
 - Tests automatizados pasan al 100% (7/7 escenarios)
 - VLM confirma UX profesional, sin errores visuales
 - Artefactos: scripts/test-qty-standalone.js, download/test-menu-qty.html, download/test-qty-0[1-7]-*.png
+
+---
+Task ID: hybrid-flow-carta-comanda
+Agent: main (Super Z)
+Task: Implementar flujo híbrido carta digital ↔ comanda interna. Cuando un cliente final envía un pedido desde la carta pública (/r/[slug]) y el owner del menú es plan Premium o Full, además de abrir WhatsApp, se crea automáticamente una comanda interna con auto-asignación de mozo libre y notificaciones push bidireccionales cocina↔mozo.
+
+Work Log:
+- Audios del usuario transcritos correctamente:
+  * Audio 1 (2:13 min, 6 chunks): comanda cocina↔mozo, estados simplificados (enviada → en_preparacion → lista → entregada), notificaciones push con sonido + vibración bidireccionales
+  * Audio 2 (48s, 2 chunks): dueño configura max_tables por mozo (1-20), mesas activas configurables desde panel cliente
+
+- Migración SQL `supabase/hybrid-flow-migration.sql` (idempotente, 175 líneas):
+  * Columna `waiters.max_tables INT DEFAULT 4 CHECK 1..20`
+  * Tabla puente `waiter_tables(waiter_id, table_id)` con RLS owner-only
+  * Tabla `notifications(id, owner_id, waiter_id, order_id, type, title, body, sound, vibrate, is_read, created_at)` con RLS
+  * Function `auto_assign_waiter(p_owner)`: busca primer mozo activo sin orders abiertas, ordena por menor carga de pedidos hoy
+  * Function `create_order_from_public_menu(p_payload JSONB)`: crea order con status='enviada', inserta items, notificaciones new_order (cocina) + order_assigned (mozo), registra historial
+  * Function `notify_order_status_change(p_order_id, p_status, p_by_waiter_id)`: crea push cuando cocina cambia status
+  * Trigger `trg_order_status_change AFTER UPDATE OF status ON orders`: invoca notify_order_status_change automáticamente
+  * Function `get_next_order_number(p_owner)`: idempotente, genera #0001, #0002, ...
+
+- API `POST /api/comandas/from-public-menu` (route.ts, 215 líneas):
+  * No requiere auth (cliente final no autenticado)
+  * Usa SUPABASE_SERVICE_ROLE_KEY + RPC create_order_from_public_menu()
+  * Verifica menú publicado + plan Premium/Full del owner
+  * Free/Pro: retorna code='plan_not_eligible' con whatsapp_only=true (status 200, no error)
+  * Rate limit: 50 comandas/owner/5min → 429
+  * Validación items: qty 1-99, price >= 0, name string
+  * Response: { ok, order_id, order_number, waiter_id?, status, subtotal, whatsapp_also }
+
+- API `GET /api/comandas/from-public-menu?menu_id=xxx`: detecta si menú tiene comanda interna habilitada
+
+- API `/api/notifications` (route.ts):
+  * GET: lista notificaciones por owner, opcional ?waiter_id= y ?unread=1
+  * POST: marca como leídas por ids[] o all:true
+
+- API `/api/waiters/[id]` PATCH: acepta `max_tables` (1-20)
+
+- Frontend carta digital (`menu-html-builder.ts`):
+  * `MenuData.plan` agregado al tipo en `src/lib/menu-utils.ts`
+  * `r/[slug]/page.tsx`: setea `plan` en fullMenu desde profile
+  * `RESTAURANT.plan` expuesto al JS del menú público
+  * `addToCart()`: guarda `dishId: dish.id` en cada cart item (para menu_item_id)
+  * `sendWhatsApp()`: si plan=premium|full, dispara XHR POST /api/comandas/from-public-menu con payload {menu_id, items:[{menu_item_id, menu_item_name, menu_item_price, quantity, notes}], customer_*, notes} en paralelo a window.open(wa.me). Fire-and-forget, no bloquea WhatsApp.
+  * `showComandaToast(orderNum, hasWaiter)`: toast visual inferior premium con icono ✓ verde, "Pedido #0042 enviado a cocina" + "Mozo asignado automáticamente" o "En cola, sin mozo libre"
+  * CSS `.comanda-toast` con slide-up animation, golden border, blur background
+
+- Script `scripts/apply-hybrid-flow.py`: aplica migración SQL a prod Supabase. Requiere SUPABASE_DB_PASSWORD env var.
+
+- Test `scripts/test-hybrid-flow.js` (Playwright mobile iPhone 14 Pro):
+  * Mockea API /api/comandas/from-public-menu y wa.me
+  * Plan premium: ✓ API llamada 1 vez, ✓ toast visible, ✓ no console errors
+  * Plan free: ✓ API NO llamada (correcto), ✓ no console errors
+
+- VLM review (glm-5v-turbo) sobre screenshot plan premium:
+  * ✓ Toast visible con "Pedido #0042 enviado a cocina"
+  * ✓ Subtítulo "Mozo asignado automáticamente"
+  * ✓ Diseño premium (oscuro + dorado + icono ✓ verde con glow)
+  * ✓ Tipografía y jerarquía correctas
+
+- Commits pushed a main:
+  * 353b363 feat(hybrid): flujo híbrido carta digital ↔ comanda interna (Premium/Full)
+  * a9bb113 test: hybrid flow Playwright + VLM review passes
+  * Auto-deploy Vercel disparado automáticamente por integración GitHub→Vercel
+
+Stage Summary:
+- Flujo híbrido implementado end-to-end: carta digital → WhatsApp + comanda interna simultáneos para Premium/Full
+- Auto-asignación inteligente de mozo libre (balanceo de carga por menor pedidos hoy)
+- Notificaciones push bidireccionales cocina↔mozo creadas en BD, listas para conectar con Web Push API
+- Plan matrix respetada: Free/Pro solo WhatsApp; Premium/Full híbrido
+- Tests automatizados pasan al 100% (premium triggerea API, free no la triggerea)
+- VLM confirma UX profesional del toast de confirmación
+- Para activar en producción: ejecutar `SUPABASE_DB_PASSWORD=xxx python3 scripts/apply-hybrid-flow.py`
