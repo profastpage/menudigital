@@ -18,6 +18,11 @@ export async function PATCH(
   if (body.phone !== undefined) update.phone = body.phone;
   if (body.pin !== undefined) update.pin = body.pin;
   if (body.is_active !== undefined) update.is_active = body.is_active;
+  // max_tables: cantidad de mesas que el mozo puede atender (1-20)
+  if (body.max_tables !== undefined) {
+    const mt = parseInt(body.max_tables, 10);
+    if (!isNaN(mt) && mt >= 1 && mt <= 20) update.max_tables = mt;
+  }
   // Role update (mozo <-> cocinero)
   if (body.role !== undefined && (body.role === 'mozo' || body.role === 'cocinero')) {
     update.role = body.role;

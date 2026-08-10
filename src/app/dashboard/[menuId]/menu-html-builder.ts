@@ -612,6 +612,13 @@ function buildCSS(opts: ThemeOpts): string {
     c += '.dish-qty-input{width:48px;text-align:center;font-size:17px;font-weight:800;color:var(--text);background:transparent;border:none;outline:none;font-family:inherit;padding:0;-moz-appearance:textfield;}';
     c += '.dish-qty-input::-webkit-outer-spin-button,.dish-qty-input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}';
     c += '.dish-qty-input:focus{color:var(--accent);}';
+    // ─── Toast visual: "Pedido enviado a cocina + mozo asignado" (Premium/Full) ───
+    c += '.comanda-toast{position:fixed;left:50%;bottom:calc(80px + env(safe-area-inset-bottom, 0px));transform:translateX(-50%) translateY(20px);background:linear-gradient(135deg,#1a1a2e,#16213e);color:#fff;border:1px solid rgba(212,175,55,0.4);border-radius:14px;padding:14px 18px;display:flex;align-items:center;gap:12px;box-shadow:0 12px 40px rgba(0,0,0,0.5);max-width:calc(100vw - 32px);min-width:280px;opacity:0;visibility:hidden;transition:all 0.35s cubic-bezier(0.22,1,0.36,1);z-index:99999;font-family:inherit;}';
+    c += '.comanda-toast.visible{opacity:1;visibility:visible;transform:translateX(-50%) translateY(0);}';
+    c += '.comanda-toast-icon{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;flex-shrink:0;box-shadow:0 4px 12px rgba(34,197,94,0.4);}';
+    c += '.comanda-toast-body{flex:1;min-width:0;}';
+    c += '.comanda-toast-title{font-size:14px;font-weight:700;color:#fff;letter-spacing:-0.2px;line-height:1.3;}';
+    c += '.comanda-toast-sub{font-size:12px;color:rgba(255,255,255,0.7);margin-top:3px;line-height:1.3;}';
     c += '.dish-option-group{margin:0 0 18px;padding:14px;background:var(--option-bg);border:1px solid var(--border);border-radius:14px;}';
     c += '.dish-option-group-title{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}';
     c += '.dish-option-group-name{font-size:14px;font-weight:700;color:var(--text);letter-spacing:-0.2px;}';
@@ -1690,7 +1697,7 @@ function buildJS(opts: JSOpts): string {
   s += '  var existing=null;\n';
   s += '  for(var i=0;i<cart.length;i++){if(cart[i].signature===signature){existing=cart[i];break;}}\n';
   s += '  if(existing){existing.qty+=qty;if(existing.qty>99)existing.qty=99;}\n';
-  s += '  else{cart.push({catIdx:catIdx,dishIdx:dishIdx,signature:signature,name:dish.name,price:unitPrice,basePrice:dish.price,extrasPrice:extrasTotal,options:options,note:note,qty:qty});}\n';
+  s += '  else{cart.push({catIdx:catIdx,dishIdx:dishIdx,dishId:dish.id,signature:signature,name:dish.name,price:unitPrice,basePrice:dish.price,extrasPrice:extrasTotal,options:options,note:note,qty:qty});}\n';
   s += '  if(btn){showAddedFlash(btn.closest(".dish"));}\n';
   s += '  updateCart(true);\n';
   s += '}\n';
@@ -1962,7 +1969,56 @@ function buildJS(opts: JSOpts): string {
   s += '  var url="https://wa.me/"+RESTAURANT.whatsapp+"?text="+encodeURIComponent(msg);\n';
   // Tracking REAL del clic WhatsApp (fire-and-forget vía sendBeacon antes de abrir wa.me)
   s += '  try{if(navigator&&navigator.sendBeacon){navigator.sendBeacon("/api/track/whatsapp-click",new Blob([JSON.stringify({menu_id:RESTAURANT.id,source:"cart"})],{type:"application/json"}));}else{var x=new XMLHttpRequest();x.open("POST","/api/track/whatsapp-click",true);x.setRequestHeader("Content-Type","application/json");x.send(JSON.stringify({menu_id:RESTAURANT.id,source:"cart"}));}}catch(e){}\n';
+  // ─── Comanda interna paralela (Premium/Full) ───
+  // Si el plan del owner es premium o full, además de abrir WhatsApp,
+  // disparamos POST /api/comandas/from-public-menu para crear la comanda
+  // interna y auto-asignar un mozo libre. Fire-and-forget, no bloquea wa.me.
+  s += '  try{\n';
+  s += '    var plan=(RESTAURANT.plan||"free");\n';
+  s += '    if(plan==="premium"||plan==="full"){\n';
+  s += '      var payload={\n';
+  s += '        menu_id:RESTAURANT.id,\n';
+  s += '        order_type:"para_llevar",\n';
+  s += '        items:cart.map(function(c){return {menu_item_id:(c.dishId||""),menu_item_name:c.name,menu_item_price:c.basePrice||c.price,quantity:c.qty,notes:c.note||null};}),\n';
+  s += '        customer_name:"",\n';
+  s += '        customer_phone:"",\n';
+  s += '        notes:"Pedido desde carta digital"\n';
+  s += '      };\n';
+  s += '      var cx=new XMLHttpRequest();\n';
+  s += '      cx.open("POST","/api/comandas/from-public-menu",true);\n';
+  s += '      cx.setRequestHeader("Content-Type","application/json");\n';
+  s += '      cx.onreadystatechange=function(){\n';
+  s += '        if(cx.readyState===4){\n';
+  s += '          try{\n';
+  s += '            var r=JSON.parse(cx.responseText||"{}");\n';
+  s += '            if(r&&r.ok){\n';
+  s += '              console.log("[comanda] interna creada:",r.order_number,"mozo:",r.waiter_id||"auto");\n';
+  s += '              showComandaToast(r.order_number,r.waiter_id?true:false);\n';
+  s += '            } else if(r&&r.code==="plan_not_eligible"){\n';
+  s += '              /* Free/Pro: solo WhatsApp, no mostrar toast */\n';
+  s += '            } else {\n';
+  s += '              console.warn("[comanda] error interna:",r);\n';
+  s += '            }\n';
+  s += '          }catch(e){console.warn("[comanda] parse error",e);}\n';
+  s += '        }\n';
+  s += '      };\n';
+  s += '      cx.send(JSON.stringify(payload));\n';
+  s += '    }\n';
+  s += '  }catch(e){console.warn("[comanda] dispatch error",e);}\n';
   s += '  window.open(url,"_blank");\n';
+  s += '}\n';
+  // ─── Toast visual: "Pedido enviado a la cocina + mozo asignado" ───
+  s += 'function showComandaToast(orderNum,hasWaiter){\n';
+  s += '  var t=document.createElement("div");\n';
+  s += '  t.className="comanda-toast";\n';
+  s += '  t.innerHTML="<div class=comanda-toast-icon>✓</div>"+\n';
+  s += '    "<div class=comanda-toast-body>"+\n';
+  s += '    "<div class=comanda-toast-title>Pedido "+orderNum+" enviado a cocina</div>"+\n';
+  s += '    "<div class=comanda-toast-sub>"+(hasWaiter?"Mozo asignado automaticamente":"En cola, sin mozo libre")+"</div>"+\n';
+  s += '    "</div>";\n';
+  s += '  document.body.appendChild(t);\n';
+  s += '  setTimeout(function(){t.classList.add("visible");},10);\n';
+  s += '  setTimeout(function(){t.classList.remove("visible");setTimeout(function(){if(t.parentNode)t.parentNode.removeChild(t);},400);},5000);\n';
   s += '}\n';
   s += 'renderApp();\n';
   // ─── Mini-header: SIEMPRE visible (no se oculta al hacer scroll) ───

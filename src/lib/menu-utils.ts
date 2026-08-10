@@ -49,6 +49,9 @@ export interface MenuData {
   social_youtube?: string | null;
   social_web?: string | null;
   categories?: CategoryData[];
+  // Plan del owner (para feature gating en el cliente público).
+  // Se setea en r/[slug]/page.tsx. Por defecto 'free'.
+  plan?: 'free' | 'pro' | 'premium' | 'full';
 }
 
 export interface CategoryData {

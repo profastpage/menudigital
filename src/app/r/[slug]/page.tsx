@@ -152,6 +152,7 @@ export default async function PublicMenuPage({
   const fullMenu: MenuData = {
     ...menu,
     branding_text: showBranding ? 'Creado con MenuPro' : null,
+    plan: (profile?.plan as MenuData['plan']) || 'free',
     categories: categoriesWithDishes,
   } as MenuData;
 
