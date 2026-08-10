@@ -122,7 +122,7 @@ BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM pg_proc WHERE proname = 'get_next_order_number'
   ) THEN
-    CREATE FUNCTION get_next_order_number(p_owner UUID) RETURNS TEXT AS $$
+    CREATE FUNCTION get_next_order_number(p_owner UUID) RETURNS TEXT AS $_$
       DECLARE
         v_count INT;
         v_num TEXT;
@@ -131,7 +131,7 @@ BEGIN
         v_num := '#' || lpad((v_count + 1)::TEXT, 4, '0');
         RETURN v_num;
       END;
-    $$ LANGUAGE plpgsql SECURITY DEFINER;
+    $_$ LANGUAGE plpgsql SECURITY DEFINER;
     RAISE NOTICE '✅ Función get_next_order_number creada';
   END IF;
 END $$;
@@ -318,13 +318,23 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- ============================================================
 -- 8. Trigger: cuando cocina actualiza orders.status, llamar notify_order_status_change
+--    PostgreSQL triggers no aceptan argumentos en EXECUTE FUNCTION,
+--    así que usamos una función wrapper RETURNS TRIGGER.
 -- ============================================================
+CREATE OR REPLACE FUNCTION trg_fn_order_status_change()
+RETURNS TRIGGER AS $$
+BEGIN
+  PERFORM notify_order_status_change(NEW.id, NEW.status, NULL);
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
 DROP TRIGGER IF EXISTS trg_order_status_change ON orders;
 CREATE TRIGGER trg_order_status_change
   AFTER UPDATE OF status ON orders
   FOR EACH ROW
   WHEN (OLD.status IS DISTINCT FROM NEW.status)
-  EXECUTE FUNCTION notify_order_status_change(NEW.id, NEW.status, NULL);
+  EXECUTE FUNCTION trg_fn_order_status_change();
 
 -- ============================================================
 -- 9. Política RLS para que la función create_order_from_public_menu

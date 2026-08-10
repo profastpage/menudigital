@@ -134,29 +134,36 @@ export function buildMenuHTML(data: MenuData, opts?: { isPreview?: boolean }): s
   html += '  </div>\n';
   html += '</div>\n';
   // Mini-header sticky — barra superior SIEMPRE VISIBLE con logo + nombre + toggle tema + estado.
-  // Reemplaza al mini-header anterior (que solo aparecía en scroll > 80px).
-  // El toggle de tema está integrado aquí (ya NO es un botón flotante separado).
+  // Fondo OSCURO (no color de marca) — el color de marca solo aparece en la barra de progreso inferior.
+  // Incluye una barra de progreso de lectura que se rellena al hacer scroll por la carta.
   html += '<div class="mini-header" id="miniHeader" aria-hidden="false">\n';
-  html += '  <div class="mini-header-left">\n';
-  html += '    <img class="mini-header-logo" id="miniHeaderLogo" alt="" />\n';
-  html += '    <span class="mini-header-name" id="miniHeaderName"></span>\n';
-  html += '  </div>\n';
-  html += '  <div class="mini-header-right">\n';
+  html += '  <div class="mini-header-inner">\n';
+  html += '    <div class="mini-header-left">\n';
+  html += '      <img class="mini-header-logo" id="miniHeaderLogo" alt="" />\n';
+  html += '      <span class="mini-header-name" id="miniHeaderName"></span>\n';
+  html += '    </div>\n';
+  html += '    <div class="mini-header-right">\n';
   // Install App button — integrado en el header superior (a la IZQUIERDA del toggle de tema)
   // Se oculta tras instalar (.installed → display:none) y reaparece si se desinstala (appuninstalled event)
   if (!isPreview) {
-    html += '    <button class="mini-header-install-btn" id="mbnInstallBtn" aria-label="Instalar App" title="Instalar App">\n';
-    html += '      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>\n';
-    html += '    </button>\n';
+    html += '      <button class="mini-header-install-btn" id="mbnInstallBtn" aria-label="Instalar App" title="Instalar App">\n';
+    html += '        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>\n';
+    html += '      </button>\n';
   }
   // Theme toggle integrado en el header superior (NO es botón flotante)
   if (!isPreview) {
-    html += '    <button class="mini-header-theme-toggle theme-toggle-btn" id="themeToggleBtn" aria-label="Cambiar tema" title="Cambiar tema">\n';
-    html += '      <svg class="theme-toggle-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>\n';
-    html += '      <svg class="theme-toggle-icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>\n';
-    html += '    </button>\n';
+    html += '      <button class="mini-header-theme-toggle theme-toggle-btn" id="themeToggleBtn" aria-label="Cambiar tema" title="Cambiar tema">\n';
+    html += '        <svg class="theme-toggle-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>\n';
+    html += '        <svg class="theme-toggle-icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>\n';
+    html += '      </button>\n';
   }
-  html += '    <span class="mini-header-status open" id="miniHeaderStatus">Abierto</span>\n';
+  html += '      <span class="mini-header-status open" id="miniHeaderStatus">Abierto</span>\n';
+  html += '    </div>\n';
+  html += '  </div>\n';
+  // Barra de progreso de lectura — se rellena de 0% a 100% al hacer scroll por toda la carta.
+  // El fill usa el color de marca (var(--accent)); el track es sutil sobre el fondo oscuro.
+  html += '  <div class="mini-header-progress" id="miniHeaderProgress" aria-hidden="true">\n';
+  html += '    <div class="mini-header-progress-fill" id="miniHeaderProgressFill"></div>\n';
   html += '  </div>\n';
   html += '</div>\n';
   // ─── TOP CATEGORIES BAR (fixed TOP, immediately below mini-header) ───
@@ -760,18 +767,25 @@ function buildCSS(opts: ThemeOpts): string {
   }
   // En mobile, mover el botón para no chocar con scroll-top-btn (right:14px ya está ok, son verticales)
 
-  // ─── MINI-HEADER STICKY (SIEMPRE VISIBLE, color principal de la carta) ───
+  // ─── MINI-HEADER STICKY (SIEMPRE VISIBLE, fondo OSCURO — no color de marca) ───
   // Barra superior compacta con nombre del restaurante + install btn + toggle tema + estado (Abierto/Cerrado)
   // Ahora SIEMPRE visible en el top (ya NO aparece solo al hacer scroll).
-  // IMPORTANTE: el background usa el color principal de la carta (var(--accent)) con texto blanco.
-  c += '.mini-header{position:fixed;top:0;left:0;right:0;z-index:101;background:linear-gradient(135deg,var(--accent),rgba(var(--accent-rgb),0.92));backdrop-filter:blur(22px) saturate(180%);-webkit-backdrop-filter:blur(22px) saturate(180%);border-bottom:1px solid rgba(0,0,0,0.12);box-shadow:0 4px 20px rgba(var(--accent-rgb),0.25);padding:10px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;transform:translateY(0);transition:transform 0.35s cubic-bezier(0.32,0.72,0,1);-webkit-tap-highlight-color:transparent;box-sizing:border-box;padding-top:calc(10px + env(safe-area-inset-top, 0px));}';
+  // IMPORTANTE: el background es OSCURO SIEMPRE (independiente del tema light/dark de la carta)
+  // para dar contraste y jerarquía visual. El color de marca solo aparece en la barra de progreso inferior.
+  c += '.mini-header{position:fixed;top:0;left:0;right:0;z-index:101;background:linear-gradient(180deg,#0a0a14 0%,#050509 100%);backdrop-filter:blur(22px) saturate(180%);-webkit-backdrop-filter:blur(22px) saturate(180%);border-bottom:1px solid rgba(255,255,255,0.06);box-shadow:0 4px 24px rgba(0,0,0,0.55);padding:10px 16px 0;display:flex;flex-direction:column;transform:translateY(0);transition:transform 0.35s cubic-bezier(0.32,0.72,0,1);-webkit-tap-highlight-color:transparent;box-sizing:border-box;padding-top:calc(10px + env(safe-area-inset-top, 0px));}';
+  c += '.mini-header-inner{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;}';
   c += '.mini-header-left{display:flex;align-items:center;gap:10px;min-width:0;flex:1;}';
-  c += '.mini-header-logo{width:32px;height:32px;border-radius:50%;object-fit:cover;flex-shrink:0;background:rgba(255,255,255,0.22);border:2px solid rgba(255,255,255,0.55);}';
-  c += '.mini-header-name{font-size:15px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;letter-spacing:-0.2px;text-shadow:0 1px 3px rgba(0,0,0,0.18);}';
+  c += '.mini-header-logo{width:32px;height:32px;border-radius:50%;object-fit:cover;flex-shrink:0;background:rgba(255,255,255,0.08);border:2px solid rgba(255,255,255,0.18);}';
+  c += '.mini-header-name{font-size:15px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;letter-spacing:-0.2px;text-shadow:0 1px 3px rgba(0,0,0,0.5);}';
   c += '.mini-header-right{display:flex;align-items:center;gap:8px;flex-shrink:0;}';
-  c += '.mini-header-status{font-size:11px;font-weight:700;padding:3px 8px;border-radius:10px;flex-shrink:0;background:rgba(255,255,255,0.2);color:#fff;border:1px solid rgba(255,255,255,0.35);}';
-  c += '.mini-header-status.open{background:rgba(255,255,255,0.22);color:#fff;border:1px solid rgba(255,255,255,0.45);}';
-  c += '.mini-header-status.closed{background:rgba(0,0,0,0.35);color:rgba(255,255,255,0.92);border:1px solid rgba(0,0,0,0.25);}';
+  c += '.mini-header-status{font-size:11px;font-weight:700;padding:3px 8px;border-radius:10px;flex-shrink:0;background:rgba(255,255,255,0.1);color:#fff;border:1px solid rgba(255,255,255,0.18);}';
+  c += '.mini-header-status.open{background:rgba(34,197,94,0.18);color:#86efac;border:1px solid rgba(34,197,94,0.35);}';
+  c += '.mini-header-status.closed{background:rgba(239,68,68,0.18);color:#fca5a5;border:1px solid rgba(239,68,68,0.35);}';
+  // ─── Barra de progreso de lectura (page view) ───
+  // Track sutil + fill con color de marca. Se rellena de 0% a 100% al hacer scroll por toda la carta.
+  // Indica al usuario cuánto de la carta ha visto y cuánto falta.
+  c += '.mini-header-progress{width:100%;height:3px;background:rgba(255,255,255,0.06);margin-top:8px;overflow:hidden;border-radius:0;}';
+  c += '.mini-header-progress-fill{height:100%;width:0%;background:linear-gradient(90deg,var(--accent),var(--gold));transition:width 0.08s linear;box-shadow:0 0 8px rgba(var(--accent-rgb),0.6);}';
   // (eliminado) .nav.with-mini-header — ya no se necesita porque .nav está oculto en mobile
   // ─── Install App button en mini-header (icono blanco sobre fondo accent) ───
   c += '.mini-header-install-btn{flex-shrink:0;width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.35);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.25s cubic-bezier(0.32,0.72,0,1);-webkit-tap-highlight-color:transparent;}';
@@ -1483,6 +1497,28 @@ function buildJS(opts: JSOpts): string {
   s += '    var updateMbnTopBtn=function(){if(window.pageYOffset>400){mbnTopBtn.classList.add("visible-after-scroll");}else{mbnTopBtn.classList.remove("visible-after-scroll");}};\n';
   s += '    window.addEventListener("scroll",updateMbnTopBtn,{passive:true});\n';
   s += '    updateMbnTopBtn();\n';
+  s += '  }\n';
+  // ─── Barra de progreso de lectura (page view) en mini-header ───
+  // Se rellena de 0% (top de la carta) a 100% (bottom de la carta).
+  // Calcula: scrollTop / (scrollHeight - innerHeight) * 100, clampeado 0..100.
+  s += '  var mhProgressFill=document.getElementById("miniHeaderProgressFill");\n';
+  s += '  if(mhProgressFill){\n';
+  s += '    var updateMhProgress=function(){\n';
+  s += '      var sh=document.documentElement.scrollHeight||document.body.scrollHeight||0;\n';
+  s += '      var ch=window.innerHeight||document.documentElement.clientHeight||0;\n';
+  s += '      var st=window.pageYOffset||document.documentElement.scrollTop||document.body.scrollTop||0;\n';
+  s += '      var maxScroll=sh-ch;\n';
+  s += '      var pct=maxScroll>0?(st/maxScroll)*100:0;\n';
+  s += '      if(pct<0)pct=0;if(pct>100)pct=100;\n';
+  s += '      mhProgressFill.style.width=pct+"%";\n';
+  s += '    };\n';
+  s += '    window.addEventListener("scroll",updateMhProgress,{passive:true});\n';
+  s += '    window.addEventListener("resize",updateMhProgress,{passive:true});\n';
+  s += '    updateMhProgress();\n';
+  s += '    // Re-calcular tras carga de imágenes (el scrollHeight cambia)\n';
+  s += '    setTimeout(updateMhProgress,300);\n';
+  s += '    setTimeout(updateMhProgress,1000);\n';
+  s += '    setTimeout(updateMhProgress,2500);\n';
   s += '  }\n';
   // Theme toggle: cycle dark↔light, persist in localStorage (key: menupro-theme)
   // Wired a TODOS los .theme-toggle-btn (ahora hay uno dentro del mini-header, no un botón flotante)
