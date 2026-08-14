@@ -373,7 +373,7 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount, lockedDu
         })),
       };
       setPreviewHtml(buildMenuHTML(data, { isPreview: true }));
-    }, 400);
+    }, 700);
     return () => clearTimeout(timer);
   }, [menu, categories, theme, socials, plan, initialMenu.id, initialMenu.slug, profile.id, showPreviewMobile]);
 
@@ -743,7 +743,7 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount, lockedDu
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Error');
       setTheme((t) => ({ ...t, cover_url: data.url }));
-      toast.success('Portada subida');
+      toast.success('Portada actualizada ✓', { duration: 2500 });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Error al subir portada');
     } finally {
@@ -892,14 +892,20 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount, lockedDu
               <div className="font-semibold truncate text-sm sm:text-base">{menu.name || 'Sin nombre'}</div>
               <div className="flex items-center gap-2 text-[10px] sm:text-xs text-white/40">
                 {saving ? (
-                  <><Loader2 className="w-3 h-3 animate-spin" /> Guardando...</>
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                    <Loader2 className="w-3 h-3 animate-spin" /> Guardando…
+                  </span>
                 ) : savedAt ? (
-                  <><CheckCircle2 className="w-3 h-3 text-emerald-500" /> {savedAt.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}</>
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    <CheckCircle2 className="w-3 h-3" /> Guardado · {savedAt.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}
+                  </span>
                 ) : (
-                  'Auto-guardado'
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-white/5 text-white/50 border border-white/10">
+                    Auto-guardado activo
+                  </span>
                 )}
                 {menu.is_published && (
-                  <span className="text-emerald-400">· Publicado</span>
+                  <span className="inline-flex items-center gap-1 text-emerald-400">· Publicado</span>
                 )}
               </div>
             </div>
@@ -1006,6 +1012,7 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount, lockedDu
                   imagesCount={imagesCount}
                   shape="circle"
                   size={120}
+                  label="logo"
                 />
               </div>
 
@@ -1775,6 +1782,7 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount, lockedDu
                             imagesCount={imagesCount}
                             shape="square"
                             size={64}
+                            label="dish"
                           />
                         </div>
                         <div className="space-y-2 min-w-0 flex-1">
@@ -1858,6 +1866,7 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount, lockedDu
                                     imagesCount={imagesCount}
                                     shape="square"
                                     size={56}
+                                    label="gallery"
                                   />
                                 )}
                               </div>

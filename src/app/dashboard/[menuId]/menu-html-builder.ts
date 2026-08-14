@@ -1012,12 +1012,12 @@ function buildJS(opts: JSOpts): string {
   s += '  var app=document.getElementById("app");\n';
   s += '  var html="";\n';
   // Cover image — fondo HERO detrás del header (con srcset si la URL está optimizada)
-  s += '  if(RESTAURANT.theme_cover_url){var _csrc=imgMedium(RESTAURANT.theme_cover_url),_css=imgSrcset(RESTAURANT.theme_cover_url);html+="<div class=\\"hero\\"><img src=\\""+escapeHtml(_csrc)+"\\" "+(_css?"srcset=\\""+escapeHtml(_css)+"\\" sizes=\\"100vw\\" ":"")+"alt=\\"cover\\" onerror=\\"this.remove()\\"/></div>";}\n';
+  s += '  if(RESTAURANT.theme_cover_url){var _csrc=imgMedium(RESTAURANT.theme_cover_url),_css=imgSrcset(RESTAURANT.theme_cover_url);html+="<div class=\\"hero\\"><img src=\\""+escapeHtml(_csrc)+"\\" "+(_css?"srcset=\\""+escapeHtml(_css)+"\\" sizes=\\"100vw\\" ":"")+"alt=\\"cover\\" loading=\\"eager\\" fetchpriority=\\"high\\" onerror=\\"this.remove()\\"/></div>";}\n';
   // Header
   s += '  html+="<header class=\\"header\\">";\n';
   s += '  html+="<div class=\\"logo-wrap\\">";\n';
   s += '  html+="<div class=\\"logo-placeholder\\">"+escapeHtml(RESTAURANT.name.charAt(0).toUpperCase())+"</div>";\n';
-  s += '  if(RESTAURANT.logo_url){html+="<img src=\\""+escapeHtml(RESTAURANT.logo_url)+"\\" class=\\"logo\\" alt=\\"logo\\" onerror=\\"this.remove()\\"/>";}\n';
+  s += '  if(RESTAURANT.logo_url){html+="<img src=\\""+escapeHtml(RESTAURANT.logo_url)+"\\" class=\\"logo\\" alt=\\"logo\\" loading=\\"eager\\" onerror=\\"this.remove()\\"/>";}\n';
   s += '  html+="</div>";\n';
   s += '  html+="<h1 class=\\"restaurant-name\\">"+escapeHtml(RESTAURANT.name)+"</h1>";\n';
   s += '  if(RESTAURANT.slogan){html+="<div class=\\"slogan\\">"+escapeHtml(RESTAURANT.slogan)+"</div>";}\n';

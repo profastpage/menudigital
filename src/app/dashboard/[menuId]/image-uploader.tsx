@@ -14,6 +14,8 @@ interface Props {
   imagesCount: number;
   shape?: 'circle' | 'square';
   size?: number;
+  /** Etiqueta descriptiva del tipo de imagen — se muestra en toasts: 'Logo subido ✓', 'Portada subida ✓', 'Foto del plato subida ✓' */
+  label?: 'logo' | 'cover' | 'dish' | 'gallery';
 }
 
 interface QuotaInfo {
@@ -31,6 +33,7 @@ export function ImageUploader({
   imagesCount,
   shape = 'square',
   size = 80,
+  label = 'dish',
 }: Props) {
   const [url, setUrl] = useState(initialUrl);
   const [uploading, setUploading] = useState(false);
@@ -90,7 +93,13 @@ export function ImageUploader({
         if (!res.ok) throw new Error(data.error || 'Error');
         setUrl(data.url);
         onUploaded(data.url);
-        toast.success('Imagen subida');
+        const labelMap: Record<string, string> = {
+          logo: 'Logo actualizado ✓',
+          cover: 'Portada actualizada ✓',
+          dish: 'Foto del plato actualizada ✓',
+          gallery: 'Imagen de galería subida ✓',
+        };
+        toast.success(labelMap[label] || 'Imagen subida ✓', { duration: 2500 });
       } catch (err) {
         toast.error(err instanceof Error ? err.message : 'Error al subir');
       } finally {
@@ -277,10 +286,27 @@ export function ImageUploader({
           <p className="text-xs text-white/40">
             {url ? 'Imagen cargada' : 'Sube desde tu dispositivo o arrastra aquí'}
           </p>
-          {!canUpload && !url && (
-            <p className="text-xs text-amber-400">
-              Límite alcanzado ({maxImages}). Upgrade a Pro para imágenes ilimitadas.
-            </p>
+          {/* Cuota restante — visible SIEMPRE en Free, oculta en planes ilimitados */}
+          {maxImages !== -1 && (
+            <div className="flex items-center gap-1.5 text-[11px]">
+              <span className={'inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full border ' + (canUpload ? 'bg-white/5 text-white/50 border-white/10' : 'bg-amber-500/10 text-amber-400 border-amber-500/20')}>
+                <ImageIcon className="w-2.5 h-2.5" />
+                {canUpload
+                  ? String(maxImages - imagesCount) + ' de ' + String(maxImages) + ' imágenes disponibles'
+                  : 'Límite alcanzado (' + String(maxImages) + ')'}
+              </span>
+              {!canUpload && (
+                <a href="/dashboard/billing" className="text-[#d4af37] hover:underline">
+                  Upgrade a Pro →
+                </a>
+              )}
+            </div>
+          )}
+          {maxImages === -1 && (
+            <div className="flex items-center gap-1 text-[11px] text-emerald-400/80">
+              <Sparkles className="w-2.5 h-2.5" />
+              Imágenes ilimitadas ({plan.name})
+            </div>
           )}
 
           {/* Botón "Quitar fondo" — solo visible si: */}
