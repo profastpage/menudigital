@@ -122,10 +122,12 @@ export function formatPrice(amount: number, currency: string = 'S/'): string {
 }
 
 // Hex → RGB string (para CSS variables)
-export function hexToRgbStr(hex: string): string {
+export function hexToRgbStr(hex: string | undefined | null): string {
+  if (!hex || typeof hex !== 'string' || hex.length < 7) return '26, 26, 46'; // fallback #1a1a2e
   const r = parseInt(hex.substr(1, 2), 16);
   const g = parseInt(hex.substr(3, 2), 16);
   const b = parseInt(hex.substr(5, 2), 16);
+  if (isNaN(r) || isNaN(g) || isNaN(b)) return '26, 26, 46';
   return `${r}, ${g}, ${b}`;
 }
 

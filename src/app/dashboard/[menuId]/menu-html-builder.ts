@@ -320,7 +320,8 @@ function buildCSS(opts: ThemeOpts): string {
   // Orbes decorativos (orbs) — visibles en ambos temas, pero con menor opacidad en light mode
   c += 'body::before,body::after{content:"";position:fixed;width:500px;height:500px;border-radius:50%;filter:blur(140px);opacity:0.18;z-index:0;pointer-events:none;transition:opacity 0.4s;}';
   c += 'body::before{background:var(--accent);top:-200px;right:-150px;}';
-  c += 'body::after{background:var(--gold);bottom:-200px;left:-150px;}';
+  // Body::after orb usa --secondary (color secundario del tema) — antes era siempre gold (hardcodeado)
+  c += 'body::after{background:var(--secondary);bottom:-200px;left:-150px;}';
   // En light mode, los orbs son muy invasivos → reducir opacidad
   c += ':root[data-theme="light"] body::before,:root[data-theme="light"] body::after{opacity:0.07;}';
   // Si el tema por defecto del dueño ES light, también reducir
@@ -400,13 +401,15 @@ function buildCSS(opts: ThemeOpts): string {
   }
 
   // Section
-  const sectionMaxW = layout === 'single' ? '640px' : '1100px';
+  // single = 1 col SIEMPRE (mobile + desktop) — respeta la elección del usuario
+  // double = 1 col mobile, 2 col tablet+ (mejor aprovechamiento en pantallas grandes)
+  // grid = 1/2/3 cols responsivo
+  const sectionMaxW = layout === 'single' ? '640px' : (layout === 'double' ? '1100px' : '1280px');
   // scroll-margin-top: compensa el mini-header SIEMPRE visible (~54px) + 16px gap al hacer click en chip de categoría
   c += `.section{padding:24px 20px 8px;max-width:${sectionMaxW};margin:0 auto;width:100%;scroll-margin-top:calc(70px + env(safe-area-inset-top, 0px));}`;
-  // En desktop: single layout usa 2 columnas para aprovechar mejor el espacio
-  c += '@media(min-width:880px){.section.single-layout{max-width:920px;}.section.single-layout .dish-grid{grid-template-columns:repeat(2,1fr);gap:18px;}}';
   c += '.section-title{font-size:21px;font-weight:700;margin-bottom:18px;display:flex;align-items:center;gap:12px;letter-spacing:-0.3px;}';
-  c += '.section-title::before{content:"";width:4px;height:22px;background:linear-gradient(180deg,var(--accent),var(--gold));border-radius:2px;}';
+  // Section-title accent bar: mezcla accent + secondary (para que el color secundario sea visible)
+  c += '.section-title::before{content:"";width:4px;height:22px;background:linear-gradient(180deg,var(--accent),var(--secondary));border-radius:2px;}';
 
   // ─── Layout: contenedor de platos ───
   // PedidosYa/Rappi style: cards con imagen grande arriba → grid responsivo
@@ -418,16 +421,25 @@ function buildCSS(opts: ThemeOpts): string {
     c += '@media(min-width:480px){.dishes-grid{grid-template-columns:1fr 1fr;}}';
     c += '@media(min-width:1024px){.dishes-grid{grid-template-columns:1fr 1fr 1fr;}}';
   } else {
-    // single = 1 col mobile, 2 col tablet+ (mejor aprovechamiento, estilo PedidosYa)
+    // single = 1 col SIEMPRE (mobile + desktop) — el usuario eligió 1 col, se respeta
     c += '.dishes-grid{display:grid;grid-template-columns:1fr;gap:14px;}';
-    c += '@media(min-width:640px){.dishes-grid{grid-template-columns:1fr 1fr;}}';
   }
 
   // ─── DISH CARD — PedidosYa/Rappi style universal ───
-  // Siempre: imagen grande arriba (160px mobile, 180px desktop) + info abajo.
+  // Siempre: imagen grande arriba (aspect ratio variable según imageSize) + info abajo.
   // Si no hay imagen, placeholder con inicial del plato (gradient accent).
-  // imageSize solo controla si se muestra la imagen o no (none = sin imagen).
+  // imageSize ahora controla TRES cosas:
+  //  - none: oculta la imagen por completo
+  //  - small: aspect 16/9 (más ancha, poca presencia visual)
+  //  - medium: aspect 16/10 (default, balanceado)
+  //  - large: aspect 4/3 (más alta, más presencia)
+  //  - hero: aspect 1/1 (cuadrada, máxima presencia)
   const showImg = imageSize !== 'none';
+  const aspectRatio = imageSize === 'small' ? '16/9'
+    : imageSize === 'medium' ? '16/10'
+    : imageSize === 'large' ? '4/3'
+    : imageSize === 'hero' ? '1/1'
+    : '16/10';
 
   // Base dish — columna siempre (imagen arriba, info abajo)
   c += '.dish{background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;cursor:pointer;position:relative;transition:transform 0.3s cubic-bezier(0.4,0,0.2,1),box-shadow 0.3s,border-color 0.3s;opacity:0;transform:translateY(20px);display:flex;flex-direction:column;}';
@@ -436,9 +448,9 @@ function buildCSS(opts: ThemeOpts): string {
   c += '@media(hover:hover){.dish:hover{transform:translateY(-4px);box-shadow:0 14px 32px rgba(0,0,0,0.18);border-color:rgba(var(--accent-rgb),0.35);}}';
   c += '.dish:active{transform:translateY(-1px) scale(0.997);}';
 
-  // HERO IMAGE WRAPPER (siempre 16/10 aspect, overflow hidden para zoom hover)
+  // HERO IMAGE WRAPPER (aspect ratio dinámico según imageSize, overflow hidden para zoom hover)
   if (showImg) {
-    c += '.dish-img-wrap{position:relative;width:100%;aspect-ratio:16/10;overflow:hidden;background:linear-gradient(135deg,var(--glass),var(--glass-strong));flex-shrink:0;}';
+    c += `.dish-img-wrap{position:relative;width:100%;aspect-ratio:${aspectRatio};overflow:hidden;background:linear-gradient(135deg,var(--glass),var(--glass-strong));flex-shrink:0;}`;
     c += '.dish-img{width:100%;height:100%;object-fit:cover;display:block;transition:transform 0.55s cubic-bezier(0.2,0,0.2,1);}';
     c += '.dish:hover .dish-img{transform:scale(1.06);}';
     // Placeholder cuando no hay image_url — gradient con inicial del plato
@@ -686,17 +698,27 @@ function buildCSS(opts: ThemeOpts): string {
   c += '.mbn-top-btn:active{transform:scale(0.9);}';
 
   // ─── Favorite button (heart icon) on each dish ───
-  c += '.dish-fav-btn{position:absolute;top:8px;right:8px;width:34px;height:34px;border-radius:50%;background:rgba(0,0,0,0.55);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:none;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:3;transition:transform 0.2s,background 0.2s;-webkit-tap-highlight-color:transparent;}';
+  // Default position: top-LEFT (antes era top-RIGHT, chocaba con .carta-card-price-overlay
+  // que está en top:8px;right:8px — ahora corazón va a la izquierda, precio a la derecha).
+  c += '.dish-fav-btn{position:absolute;top:8px;left:8px;width:34px;height:34px;border-radius:50%;background:rgba(0,0,0,0.55);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:none;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:4;transition:transform 0.2s,background 0.2s;-webkit-tap-highlight-color:transparent;}';
   c += '.dish-fav-btn:active{transform:scale(0.85);}';
   c += '.dish-fav-btn svg{width:18px;height:18px;transition:fill 0.2s,stroke 0.2s;}';
   c += '.dish-fav-btn.is-fav{background:rgba(var(--accent-rgb),0.95);color:#fff;}';
   c += '.dish-fav-btn.is-fav svg{fill:#fff;}';
   c += '@media(hover:hover){.dish-fav-btn:hover{transform:scale(1.1);background:rgba(0,0,0,0.7);}.dish-fav-btn.is-fav:hover{background:var(--accent);}}';
-  // En rappi-list el fav va top-left de la imagen
-  c += '.rappi-item .dish-fav-btn{top:6px;right:6px;width:28px;height:28px;}';
+  // En rappi-list: top-LEFT (antes right:6px → chocaba con add-btn bottom-right en imagen 88x88)
+  c += '.rappi-item .dish-fav-btn{top:6px;left:6px;width:28px;height:28px;}';
   c += '.rappi-item .dish-fav-btn svg{width:14px;height:14px;}';
-  // En expanded/classic card el fav va top-right de la imagen
-  c += '.dish-img-wrap .dish-fav-btn{top:8px;right:8px;}';
+  // En expanded/classic card: top-LEFT (default, no choca con price que está abajo en .dish-info)
+  c += '.dish-img-wrap .dish-fav-btn{top:8px;left:8px;}';
+  // En carta-card (carrusel): el "Top" featured badge va top-left, así que heart va top-right PERO
+  // el price-overlay también va top-right → ocultamos el featured badge si heart está presente
+  // (en la práctica: heart tiene z-index 4, price-overlay z-index 3 — heart gana).
+  // Mejor: dejamos heart en top-left también para carta-card (featured badge ahora se omite cuando
+  // hay imagen y fav-btn presente via CSS).
+  c += '.carta-card .dish-fav-btn{top:8px;left:8px;}';
+  // Si existe featured badge + fav-btn en carta-card: ocultamos featured (heart tiene prioridad visual)
+  c += '.carta-card:has(.dish-fav-btn) .carta-card-featured{display:none;}';
 
   // ─── PWA install overlay (tooltip con instrucciones iOS/fallback) ───
   c += '.pwa-install-overlay{position:fixed;inset:0;background:rgba(7,7,11,0.72);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);z-index:250;display:flex;align-items:center;justify-content:center;padding:24px;opacity:0;pointer-events:none;transition:opacity 0.25s;}';
@@ -836,21 +858,22 @@ function buildCSS(opts: ThemeOpts): string {
     c += '.carta-track{display:flex;gap:12px;padding:4px 16px 12px;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;-webkit-overflow-scrolling:touch;scroll-behavior:smooth;}';
     c += '.carta-track::-webkit-scrollbar{display:none;}';
     c += '.carta-track.paused{scroll-behavior:auto;}';
-    // Cada card del carrusel (aspect 1/1, snap-start)
+    // Cada card del carrusel (aspect dinámico según imageSize, snap-start)
     c += '.carta-card{flex:0 0 160px;scroll-snap-align:start;background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;cursor:pointer;position:relative;transition:transform 0.25s,border-color 0.25s;opacity:0;transform:translateY(15px);}';
     c += '.carta-card.revealed{opacity:1;transform:translateY(0);}';
     c += '@media(min-width:480px){.carta-card{flex:0 0 180px;}}';
     c += '@media(min-width:640px){.carta-card{flex:0 0 200px;}}';
     c += '@media(hover:hover){.carta-card:hover{transform:translateY(-3px);border-color:rgba(var(--accent-rgb),0.4);box-shadow:0 10px 24px rgba(0,0,0,0.16);}}';
-    // Imagen del card (cuadrada, 1/1 aspect)
-    c += '.carta-card-img-wrap{position:relative;width:100%;aspect-ratio:1/1;overflow:hidden;background:linear-gradient(135deg,var(--glass),var(--glass-strong));}';
+    // Imagen del card (aspect dinámico según imageSize — antes siempre 1/1)
+    c += `.carta-card-img-wrap{position:relative;width:100%;aspect-ratio:${aspectRatio};overflow:hidden;background:linear-gradient(135deg,var(--glass),var(--glass-strong));}`;
     c += '.carta-card-img{width:100%;height:100%;object-fit:cover;display:block;transition:transform 0.5s cubic-bezier(0.2,0,0.2,1);}';
     c += '@media(hover:hover){.carta-card:hover .carta-card-img{transform:scale(1.07);}}';
     c += '.carta-card-placeholder{width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--accent),rgba(var(--accent-rgb),0.55));color:#fff;font-size:46px;font-weight:900;letter-spacing:-2px;}';
     // Precio overlay (top-right, fondo translúcido accent)
-    c += '.carta-card-price-overlay{position:absolute;top:8px;right:8px;background:rgba(0,0,0,0.55);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);color:#fff;padding:4px 8px;border-radius:10px;font-size:11px;font-weight:700;}';
+    // Precio overlay (top-RIGHT de la imagen, fondo translúcido negro)
+    c += '.carta-card-price-overlay{position:absolute;top:8px;right:8px;background:rgba(0,0,0,0.55);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);color:#fff;padding:4px 8px;border-radius:10px;font-size:11px;font-weight:700;z-index:3;}';
     // Add btn overlay (bottom-right de la imagen)
-    c += '.carta-card-add{position:absolute;bottom:8px;right:8px;width:36px;height:36px;border-radius:50%;background:var(--accent);color:#fff;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 12px rgba(var(--accent-rgb),0.4);transition:transform 0.2s;}';
+    c += '.carta-card-add{position:absolute;bottom:8px;right:8px;width:36px;height:36px;border-radius:50%;background:var(--accent);color:#fff;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 12px rgba(var(--accent-rgb),0.4);transition:transform 0.2s;z-index:3;}';
     c += '.carta-card-add:active{transform:scale(0.92);}';
     c += '.carta-card-add svg{width:16px;height:16px;}';
     // Info debajo de la imagen (nombre + descripción pequeña)
