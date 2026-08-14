@@ -188,6 +188,11 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount, lockedDu
   const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
   const importFileRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
+  // Refs a los iframes de preview (desktop + mobile) para preservar scroll position
+  const desktopPreviewRef = useRef<HTMLIFrameElement | null>(null);
+  const mobilePreviewRef = useRef<HTMLIFrameElement | null>(null);
+  // Scroll position guardada antes de actualizar srcDoc — se restaura tras el load
+  const savedScrollRef = useRef<number | null>(null);
 
   // Marcar como dirty cuando cambia algo
   useEffect(() => {
@@ -283,8 +288,22 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount, lockedDu
   }, [menu, categories, theme, socials, save]);
 
   // Vista previa en vivo (debounced)
+  // IMPORTANTE: preserva el scroll position del iframe antes de regenerar srcDoc.
+  // Cuando srcDoc cambia, el navegador recarga el iframe desde cero y pierde el scroll.
+  // Por eso capturamos scrollTop antes de setPreviewHtml y lo restauramos tras el load.
   useEffect(() => {
     const timer = setTimeout(() => {
+      // 1. Capturar scroll position actual del iframe visible (desktop o mobile)
+      const activeIframe = showPreviewMobile
+        ? mobilePreviewRef.current
+        : desktopPreviewRef.current;
+      if (activeIframe?.contentWindow) {
+        try {
+          savedScrollRef.current = activeIframe.contentWindow.scrollY || activeIframe.contentWindow.pageYOffset || 0;
+        } catch {
+          savedScrollRef.current = null;
+        }
+      }
       const data = {
         id: initialMenu.id,
         user_id: profile.id,
@@ -356,7 +375,7 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount, lockedDu
       setPreviewHtml(buildMenuHTML(data, { isPreview: true }));
     }, 400);
     return () => clearTimeout(timer);
-  }, [menu, categories, theme, socials, plan, initialMenu.id, initialMenu.slug, profile.id]);
+  }, [menu, categories, theme, socials, plan, initialMenu.id, initialMenu.slug, profile.id, showPreviewMobile]);
 
   async function handlePublish() {
     setPublishing(true);
@@ -2020,10 +2039,27 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount, lockedDu
           </div>
           <div className="flex-1 bg-black rounded-2xl overflow-hidden border border-white/10 relative">
             <iframe
+              ref={desktopPreviewRef}
               srcDoc={previewHtml}
               title="Preview"
               className="w-full h-full border-0"
               sandbox="allow-scripts allow-same-origin"
+              onLoad={() => {
+                // Restaurar scroll position tras recarga del iframe (preserva UX de preview en vivo)
+                // Doble rAF: espera 2 frames para asegurar que el DOM del iframe terminó de parsear
+                // antes de hacer scrollTo (en algunos browsers, onLoad dispara antes del layout)
+                if (savedScrollRef.current != null && desktopPreviewRef.current?.contentWindow) {
+                  const target = savedScrollRef.current;
+                  savedScrollRef.current = null;
+                  requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                      try {
+                        desktopPreviewRef.current?.contentWindow?.scrollTo(0, target);
+                      } catch { /* cross-origin */ }
+                    });
+                  });
+                }
+              }}
             />
           </div>
           {plan.limits.hasBranding && (
@@ -2069,10 +2105,24 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount, lockedDu
             </div>
             <div className="flex-1 bg-black overflow-hidden p-2">
               <iframe
+                ref={mobilePreviewRef}
                 srcDoc={previewHtml}
                 title="Preview mobile"
                 className="w-full h-full border-0 rounded-xl"
                 sandbox="allow-scripts allow-same-origin"
+                onLoad={() => {
+                  if (savedScrollRef.current != null && mobilePreviewRef.current?.contentWindow) {
+                    const target = savedScrollRef.current;
+                    savedScrollRef.current = null;
+                    requestAnimationFrame(() => {
+                      requestAnimationFrame(() => {
+                        try {
+                          mobilePreviewRef.current?.contentWindow?.scrollTo(0, target);
+                        } catch { /* cross-origin */ }
+                      });
+                    });
+                  }
+                }}
               />
             </div>
           </div>
