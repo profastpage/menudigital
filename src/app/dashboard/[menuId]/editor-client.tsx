@@ -1347,7 +1347,8 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount, lockedDu
                   <div className="text-xs uppercase tracking-wider text-white/40 mb-3">Personalización manual</div>
                 </div>
 
-                {/* Layout */}
+                {/* Layout — solo visible en Pro+. En Free siempre 1 columna (sin confusión). */}
+                {plan.id !== 'free' && (
                 <div className="space-y-2">
                   <Label>Layout de platos</Label>
                   <div className="grid grid-cols-2 gap-2">
@@ -1358,25 +1359,23 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount, lockedDu
                       <button
                         key={opt.v}
                         type="button"
-                        disabled={plan.id === 'free' && opt.v !== 'single'}
                         onClick={() => setTheme({ ...theme, layout: opt.v as any })}
                         className={`p-3 rounded-lg border text-sm transition ${
                           (theme.layout === opt.v || (theme.layout === 'grid' && opt.v === 'double'))
                             ? 'border-[#d4af37] bg-[#d4af37]/10 text-[#d4af37]'
                             : 'border-white/10 bg-white/5 text-white/70 hover:bg-white/10'
-                        } disabled:opacity-40 disabled:cursor-not-allowed`}
+                        }`}
                       >
                         <div className="text-base mb-1">{opt.icon}</div>
                         {opt.label}
                       </button>
                     ))}
                   </div>
-                  {plan.id === 'free' && (
-                    <p className="text-xs text-white/40">2 columnas requiere plan Pro.</p>
-                  )}
                 </div>
+                )}
 
-                {/* Tamaño de imagen */}
+                {/* Tamaño de imagen — solo Pro+. Free siempre usa 'medium' (default). */}
+                {plan.id !== 'free' && (
                 <div className="space-y-2">
                   <Label>Tamaño de imagen del plato</Label>
                   <div className="grid grid-cols-5 gap-2">
@@ -1390,21 +1389,22 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount, lockedDu
                       <button
                         key={opt.v}
                         type="button"
-                        disabled={plan.id === 'free' && opt.v !== 'medium'}
                         onClick={() => setTheme({ ...theme, image_size: opt.v as any })}
                         className={`p-2 rounded-lg border text-xs transition ${
                           theme.image_size === opt.v
                             ? 'border-[#d4af37] bg-[#d4af37]/10 text-[#d4af37]'
                             : 'border-white/10 bg-white/5 text-white/70 hover:bg-white/10'
-                        } disabled:opacity-40 disabled:cursor-not-allowed`}
+                        }`}
                       >
                         {opt.label}
                       </button>
                     ))}
                   </div>
                 </div>
+                )}
 
-                {/* Estilo de tarjeta */}
+                {/* Estilo de tarjeta — solo Pro+. Free siempre usa 'expanded' (default). */}
+                {plan.id !== 'free' && (
                 <div className="space-y-2">
                   <Label>Estilo de tarjeta</Label>
                   <div className="grid grid-cols-3 gap-2">
@@ -1416,21 +1416,22 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount, lockedDu
                       <button
                         key={opt.v}
                         type="button"
-                        disabled={plan.id === 'free' && opt.v !== 'expanded'}
                         onClick={() => setTheme({ ...theme, card_style: opt.v as any })}
                         className={`p-2 rounded-lg border text-xs transition ${
                           theme.card_style === opt.v
                             ? 'border-[#d4af37] bg-[#d4af37]/10 text-[#d4af37]'
                             : 'border-white/10 bg-white/5 text-white/70 hover:bg-white/10'
-                        } disabled:opacity-40 disabled:cursor-not-allowed`}
+                        }`}
                       >
                         {opt.label}
                       </button>
                     ))}
                   </div>
                 </div>
+                )}
 
-                {/* Fuente */}
+                {/* Fuente — solo Pro+. Free siempre usa Inter (default). */}
+                {plan.id !== 'free' && (
                 <div className="space-y-2">
                   <Label>Fuente tipográfica</Label>
                   <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
@@ -1438,40 +1439,27 @@ export function EditorClient({ initialMenu, plan, profile, imagesCount, lockedDu
                       <button
                         key={font}
                         type="button"
-                        disabled={plan.id === 'free' && font !== 'Inter'}
                         onClick={() => setTheme({ ...theme, font })}
                         style={{ fontFamily: font }}
                         className={`p-2 rounded-lg border text-sm transition ${
                           theme.font === font
                             ? 'border-[#d4af37] bg-[#d4af37]/10 text-[#d4af37]'
                             : 'border-white/10 bg-white/5 text-white/70 hover:bg-white/10'
-                        } disabled:opacity-40 disabled:cursor-not-allowed`}
+                        }`}
                       >
                         {font}
                       </button>
                     ))}
                   </div>
                 </div>
+                )}
 
-                {/* Color secundario */}
-                <div className="space-y-2">
-                  <Label>Color secundario (fondo)</Label>
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="color"
-                      value={theme.color_secondary}
-                      onChange={(e) => setTheme({ ...theme, color_secondary: e.target.value })}
-                      disabled={plan.id === 'free'}
-                      className="w-12 h-10 rounded cursor-pointer disabled:opacity-40"
-                    />
-                    <Input
-                      value={theme.color_secondary}
-                      onChange={(e) => setTheme({ ...theme, color_secondary: e.target.value })}
-                      disabled={plan.id === 'free'}
-                      className="bg-white/5 border-white/10 text-white disabled:opacity-40"
-                    />
-                  </div>
-                </div>
+                {/* Color secundario (fondo) — REMOVIDO: era misleading.
+                    Solo cambiaba un orb decorativo con opacity 0.18 (casi invisible),
+                    no el fondo real. Para evitar confusión al cliente, se quita.
+                    El campo `theme.color_secondary` se mantiene en DB para no romper
+                    menús existentes que ya tengan un valor guardado, simplemente no
+                    se expone en la UI. */}
 
                 {/* URL Cover */}
                 <div className="space-y-2">
